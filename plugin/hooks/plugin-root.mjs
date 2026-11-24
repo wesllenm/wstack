@@ -16,3 +16,14 @@ export function pluginRoots() {
   if (env && real(env) === pluginReal) roots.push(norm(env));
   return [...new Set(roots.filter(Boolean))];
 }
+
+// A pasta do plugin, relativa à raiz do projeto ($CLAUDE_PROJECT_DIR), quando o plugin roda de dentro do próprio projeto:
+// o repositório do wstack com o marketplace local apontando para o clone (docs/decisions.md, no ambiente do wstack, o
+// plugin vem do clone). Fora desse caso, ''. Compara caminhos reais: um link para a pasta do plugin não a põe no projeto.
+export function pluginInProject() {
+  const project = process.env.CLAUDE_PROJECT_DIR;
+  const top = project ? real(project) : '';
+  if (!top || !pluginReal) return '';
+  const fold = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+  return fold(pluginReal).startsWith(`${fold(top)}/`) ? pluginReal.slice(top.length + 1) : '';
+}

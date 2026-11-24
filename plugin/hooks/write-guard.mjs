@@ -3,7 +3,10 @@
 // hooks e os scripts que eles e o hook aprovador rodam): o plugin muda por atualização, nunca por edição, e um script
 // alterado seria aprovado pelo script-allow. Vale por qualquer caminho que leve a ela (link simbólico, relativo, a pasta
 // que o Claude Code informa), sem depender da regra deny do settings.json do projeto.
-import { pluginRoots } from './plugin-root.mjs';
+// Exceção: o plugin que roda de dentro do próprio projeto (o repositório do wstack, plugin carregado do clone) é código
+// do projeto e muda por edição e PR; aí o script-allow só aprova script igual ao da branch padrão em origin
+// (docs/decisions.md, edição do plugin no próprio wstack).
+import { pluginInProject, pluginRoots } from './plugin-root.mjs';
 import { inside, physical, writeVerdict } from './write-rule.mjs';
 
 let d = '';
@@ -16,7 +19,7 @@ process.stdin.on('data', (c) => (d += c)).on('end', () => {
   const p = (/^(\/|[A-Za-z]:[\\/])/.test(file) ? file : `${cwd}/${file}`).replace(/\\/g, '/');
   let r;
   try { r = physical(p); } catch (e) { out(`DENY caminho que o hook não resolve: ${e.message}`); return; }
-  if (pluginRoots().some((root) => inside(p, root) || inside(r, root))) {
+  if (!pluginInProject() && pluginRoots().some((root) => inside(p, root) || inside(r, root))) {
     out(`DENY gravação na pasta do plugin wstack (muda por atualização do plugin, não por edição): ${file}`);
     return;
   }

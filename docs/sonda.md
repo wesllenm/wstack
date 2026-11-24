@@ -272,3 +272,35 @@ Mudança feita (0.0.7):
   marcas em `.claude/agent-memory` e `~/.claude/agent-memory`. O agente de projeto é o controle.
 - Sufixo novo na linha `PRINCIPAL-ATIVO-`. Roteiro igual; trazer a linha final de uma sessão nova com
   `wstack 0.0.7 carregado.`. O `.claude/agents/sonda-projeto.md` sai junto com o `"agent"`.
+
+## Resultado da sonda 3 com a 0.0.7 (2026-11-24)
+
+Antes da rodada, o setup script do ambiente `wstack` passou a instalar o plugin de um marketplace local, a pasta do
+clone (`claude plugin marketplace add /home/user/wstack`, depois `claude plugin install wstack@wstack`), no lugar do
+marketplace do GitHub e das atualizações forçadas. Sessão nova: `wstack 0.0.7 carregado.`, cache só com `0.0.7`,
+registros user e project em `178e14d`, com `installedAt` igual a `lastUpdated` (19:55 UTC). O
+`known_marketplaces.json` dá `wstack` com `source: directory`, `/home/user/wstack`; o `.claude/settings.json` continua
+declarando a origem GitHub, que a sessão na nuvem não usa. Linha da skill:
+
+`sonda-agentes: versão=0.0.7 cache=0.0.7 principal=PRINCIPAL-ATIVO-Vm52 calibração-projeto=ok chamada-curta=erro chamada-prefixo=ok folha-a=<curto erro, prefixo ok> folha-b=<curto erro, prefixo ok> controle=falhou pre-curto=abacaxi-7q pre-prefixo=abacaxi-7q variável-no-agente=trocada memória-projeto=não gravou memória-plugin=não gravou`
+
+O erro de todo nome que falhou: `Agent type '<nome>' not found. Available agents: sonda-projeto, wstack:sonda-folha-a,
+wstack:sonda-folha-b, wstack:sonda-memoria, wstack:sonda-pre-curto, wstack:sonda-pre-prefixo`.
+
+Leitura:
+- **Fato 0 resolvido por outro caminho: o plugin é carregado do clone.** As folhas devolveram
+  `/home/user/wstack/plugin/hooks` no lugar de `${CLAUDE_PLUGIN_ROOT}`, embora o `installPath` dos dois registros aponte
+  para `.../cache/wstack/wstack/0.0.7`: o registro não diz a pasta carregada. Cada sessão clona o repositório de novo,
+  então carrega o plugin da branch em que abriu, sem trocar o script. Falta ver acontecer: a primeira sessão depois do
+  próximo merge tem de subir com a versão nova sem mudança no script.
+- **B decidido.** A calibração respondeu: `sonda-projeto`, agente do projeto, aparece e é achado pelo nome curto.
+  A lista aceita nome curto e a chamada usa o nome exato; o nome real de um agente do plugin é `wstack:<nome>`, então
+  entrada curta de agente do plugin some da lista (`sonda-memoria`, listada nas duas formas, só aparece com prefixo) e
+  chamada curta não o acha.
+- **C: `skills:` pré-carrega skill do plugin pelos dois nomes** (`abacaxi-7q` nas duas folhas, sem ferramentas).
+- **D: `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente** (agora pela pasta do clone).
+- **E sem decisão.** Nenhum dos dois agentes com `memory: project` e só TaskList ganhou Read, Write ou Edit, nenhum
+  citou pasta de memória (`LINHA: NENHUMA`, apesar de `MEMORIA: sim`, que é a palavra do agente) e nada foi gravado:
+  não existe `.claude/agent-memory` nem `~/.claude/agent-memory`. O controle de projeto deu o mesmo que o plugin, então
+  o que se mediu é que a memória não acrescenta ferramentas a agente com `tools:` restrito, não se ela vale em agente
+  de plugin. Para decidir, os dois agentes precisam declarar Read, Write e Edit.

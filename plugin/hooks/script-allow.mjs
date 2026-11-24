@@ -11,9 +11,14 @@
 // o script trataria outro repositório. Fora disso o hook não diz nada e vale o pedido de permissão normal. Os outros
 // hooks (path-guard, redirect-guard, push-guard) continuam conferindo o mesmo comando, e o pedido deles vale sobre esta
 // aprovação.
+// Plugin rodando de dentro do próprio projeto (o repositório do wstack, plugin carregado do clone): lá a ferramenta de
+// escrita edita o plugin, então só aprova com a pasta inteira do plugin igual à da branch padrão em origin (o que passou
+// por PR): nada alterado, apagado ou fora do git, nem marcado para o git não ver. Um script pode importar hooks e outros
+// módulos, por isso a pasta inteira, não só o script chamado. Sem origin/<branch padrão>, não aprova.
 import { existsSync, realpathSync } from 'node:fs';
 import { foreignRepo, git } from './git-repo.mjs';
-import { pluginRoots } from './plugin-root.mjs';
+import { pluginInProject, pluginRoots } from './plugin-root.mjs';
+import { defaultBranches } from './protected-paths.mjs';
 
 // Scripts que o harness liberava, com os interpretadores aceitos ('' = execução direta). O que envia trabalho para a
 // nuvem (enviar-nuvem.sh) pede aprovação de propósito e fica fora; nova-atividade, recall e permission-asks nunca foram
@@ -68,7 +73,24 @@ function atProjectRoot(cwd) {
   }
 }
 
-export const verdict = (cmd, cwd) => (form(cmd) && atProjectRoot(cwd) ? 'ALLOW' : '');
+// Pasta do plugin no projeto igual à de origin/<branch padrão>; true quando o plugin não está no projeto
+function reviewed() {
+  const rel = pluginInProject();
+  if (!rel) return true;
+  try {
+    const dir = real(process.env.CLAUDE_PROJECT_DIR);
+    const base = `refs/remotes/origin/${defaultBranches()[0] ?? 'main'}`;
+    git(dir, 'rev-parse', '--verify', '-q', `${base}^{commit}`);
+    git(dir, 'diff', '--quiet', base, '--', rel); // código 1 (diferença) lança
+    if (git(dir, 'ls-files', '--others', '--', rel) !== '') return false;
+    // assume-unchanged (letra minúscula) e skip-worktree (S) escondem do diff a mudança na árvore
+    return !git(dir, 'ls-files', '-v', '--', rel).split('\n').some((l) => /^(?:[a-z]|S) /.test(l));
+  } catch {
+    return false;
+  }
+}
+
+export const verdict = (cmd, cwd) => (form(cmd) && atProjectRoot(cwd) && reviewed() ? 'ALLOW' : '');
 
 let d = '';
 process.stdin.on('data', (c) => (d += c)).on('end', () => {

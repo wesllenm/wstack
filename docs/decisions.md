@@ -126,3 +126,44 @@ skill que o projeto não usa. No projeto que tem o arquivo, o gate é o mesmo (`
 padrão (40 edições), o session-start e o iteration-guard criam `.claude/.session/` e o push-guard pede aprovação para
 todo push fora de `ccr-` e `wip/` (sem `activity_branch`). Decidir se o plugin fica inerte sem `.claude/risk.conf`,
 mantendo só as travas de segurança.
+
+## 2026-11-24: no ambiente do wstack, o plugin vem do clone
+
+Muda a decisão de 2026-11-24 "plugin atualizado ao iniciar a sessão na nuvem".
+
+**Decisão:** o setup script do ambiente `wstack` instala o plugin de um marketplace local, a pasta do clone
+(`claude plugin marketplace add /home/user/wstack` e `claude plugin install wstack@wstack`), sem `autoUpdate` e sem
+atualização forçada.
+
+**Por quê** (`docs/sonda.md`, sonda 3, fato 0 e resultado com a 0.0.7):
+- O `autoUpdate` não atualizou o plugin na partida, e o setup script só roda quando o ambiente remonta o container
+  (troca do script ou dos hosts, ou cache vencido, cerca de 7 dias). Cada versão nova exigia mexer no script.
+- Marketplace local é carregado da própria pasta: na sessão com o script novo, `${CLAUDE_PLUGIN_ROOT}` virou
+  `/home/user/wstack/plugin`, embora o `installed_plugins.json` registre a pasta de cache. Cada sessão clona o
+  repositório de novo, então carrega o plugin da branch em que abriu.
+
+**O que muda:**
+- Falta ver acontecer: a primeira sessão depois do próximo merge tem de subir com a versão nova sem troca no script.
+- Vale só para o ambiente do próprio wstack, cujo clone é o plugin. O ambiente de outro projeto continua instalando do
+  GitHub e fica na versão do dia da montagem; como ele se atualiza fica pendente para a 2.4.
+- O write-guard recusa gravação na pasta do plugin, e agora essa pasta é `plugin/` do clone: Edit e Write em
+  `plugin/` seriam recusados nas sessões deste ambiente. Resolvido na decisão seguinte.
+
+## 2026-11-24: edição do plugin no próprio wstack
+
+**Decisão:** quando a pasta real do plugin fica dentro do projeto (`$CLAUDE_PROJECT_DIR`), o write-guard deixa a
+ferramenta de escrita gravar nela. É o caso do repositório do wstack com o plugin carregado do clone; um link para a
+pasta do plugin não conta. Nesse caso, o script-allow só aprova os scripts do plugin com a pasta `plugin/` inteira igual
+à de `origin/<branch padrão>`: nada alterado, apagado, fora do git ou marcado para o git não ver
+(`assume-unchanged`, `skip-worktree`). Sem `origin/<branch padrão>`, não aprova.
+
+**Por quê:** no ambiente do wstack o plugin é o código do projeto e muda por edição e PR; a recusa impedia o
+desenvolvimento dele. O write-guard recusava a pasta do plugin para que um script alterado não fosse aprovado pelo
+script-allow; a comparação com a branch padrão mantém isso: script ou módulo alterado na sessão volta a pedir
+aprovação, e só o que passou por PR roda sem pedir. A pasta inteira, porque um script importa hooks e módulos.
+
+**Risco aceito:** o hook alterado vale já na sessão (o plugin é lido da pasta), então a sessão pode afrouxar as
+próprias travas, inclusive o push-guard. Na nuvem isso já era possível pelo Bash (decisão "trava por texto na nuvem");
+o que muda é que no wstack a alteração sai da VM pelo push, porque `plugin/` é código do repositório e não é caminho
+protegido. A barreira é o PR revisado e a proteção da `main`. Fora da nuvem, o path-guard continua pedindo aprovação
+para comando que cite a pasta do plugin.

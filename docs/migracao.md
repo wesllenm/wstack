@@ -31,8 +31,9 @@ nuvem em `plugin/cloud/`, testes e provas em `plugin/tests/` (CI em `.github/wor
   allow" (`test-hook-commands.sh`) passa trivialmente, porque a fixture não tem `allow`; e a classificação de
   `.claude/cloud/` como CRITICA (`test-cloud-setup.sh`) usa uma fixture que já declara esse `critical`. A 2.4 troca as
   fixtures pelos modelos.
-- O write-guard recusa a pasta do plugin carregado. Rodar o plugin direto do checkout do wstack (em vez do cache)
-  recusaria editar o próprio código-fonte nessa sessão.
+- O write-guard recusa a pasta do plugin carregado, salvo quando ela fica dentro do projeto: rodando o plugin direto
+  do checkout do wstack, o próprio código-fonte é editável, e o script-allow só aprova com `plugin/` igual à
+  `origin/main` (`docs/decisions.md`, edição do plugin no próprio wstack).
 - Novo, sem arquivo de origem: `script-allow` (hook aprovador) e os testes `test-risk-conf`, `test-script-allow`,
   `test-verify-on-stop` e `test-plugin-paths`.
 - As provas `prove-*.sh` foram adaptadas, mas não rodaram (custam modelo).

@@ -128,6 +128,21 @@ expect ok Write "${plug}x/hooks/a.mjs"
 expect ok Write "$work/cfg/plugins/cache/wstack/wstack/0.0.1/a.txt"
 guard=$orig_guard
 
+# o plugin rodando de dentro do próprio projeto (o repositório do wstack, plugin carregado do clone): a pasta dele é
+# código do projeto e a ferramenta de escrita grava lá; o .git continua recusado. Um link para a pasta não a põe no
+# projeto, e outro projeto continua sem gravar nela.
+self=$work/wstack
+git init -q "$self" && mkdir -p "$self/plugin/scripts" && cp -r "$(dirname "$orig_guard")" "$self/plugin/hooks"
+guard=$self/plugin/hooks/write-guard.sh
+PROJECT=$self expect ok Write "$self/plugin/hooks/push-guard.mjs" "$self"
+PROJECT=$self expect ok Edit plugin/scripts/classify-diff.sh "$self"
+PROJECT=$self expect ok Write "$self/plugin/.claude-plugin/plugin.json" "$self"
+PROJECT=$self expect deny Write "$self/.git/config" "$self"
+expect deny Write "$self/plugin/hooks/push-guard.mjs"
+ln -s "$self/plugin" "$work/pluglink"
+PROJECT=$work/pluglink expect deny Write "$self/plugin/hooks/push-guard.mjs" "$work/pluglink"
+guard=$orig_guard
+
 if [ "$fails" -eq 0 ]; then echo "test-write-guard: todos os casos passaram"; exit 0; fi
 echo "test-write-guard: $fails falha(s)"
 exit 1
