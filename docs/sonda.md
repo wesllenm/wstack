@@ -63,22 +63,33 @@ Decide onde ficam os scripts que as skills e os hooks rodam: **A**, dentro do pl
 
 Os números do passo B:
 
-| Número | O que libera | Lê-se, se rodou |
-|---|---|---|
-| 4 | nada (controle) | a sessão não está no modo que pede aprovação: o passo B não vale |
-| 1 | `Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/sonda-allow.sh 1)` | a regra aceita a variável, escrita do mesmo jeito que na skill |
-| 2 | `Bash(bash /root/.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 2)` | caminho absoluto com `*` na versão casa (só serve onde a home é `/root`) |
-| 3 | `Bash(bash */.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 3)` | `*` no começo casa (serve em qualquer home, mas casa com qualquer pasta que termine assim) |
-| 5 | o hook `sonda-node` devolve `allow` | a aprovação vinda de hook dispensa a regra |
+| Número | O que libera | Só se aplica se | Lê-se, se rodou |
+|---|---|---|---|
+| 4 | nada (controle) | sempre | a sessão não está no modo que pede aprovação: o passo B não vale |
+| 1 | `Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/sonda-allow.sh 1)` | a = variável só no Bash | a regra libera comando com a variável escrita |
+| 2 | `Bash(bash /root/.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 2)` | a = variável trocada no texto | caminho absoluto com `*` na versão casa (só serve onde a home é `/root`) |
+| 3 | `Bash(bash */.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 3)` | a = variável trocada no texto | `*` no começo casa (serve em qualquer home, mas casa com qualquer pasta que termine assim) |
+| 5 | o hook `sonda-node` devolve `allow` para o comando exato | sempre | a aprovação vinda de hook dispensa a regra |
 
-Regra de decisão: **A** se a e c deram certo e rodou o 1, o 3 ou o 5 (uma forma que não depende da home); senão,
-**B**. Se só o 2 rodou, B: a regra amarra o projeto à home da nuvem.
+A regra é comparada com o texto do comando que o agente manda, não com o caminho que o bash expande; por isso a coluna
+"só se aplica se". Um 1 negado não prova que a forma da regra está errada: o Claude Code pode pedir aprovação para
+todo comando com `${...}`, mesmo com regra que casa. Para o workflow, a leitura é a mesma: comando com a variável
+escrita não roda sem pedido por regra.
+
+Regra de decisão:
+- **A** se a e c deram certo e rodou o 1 ou o 3 (uma regra que não depende da home). Se foi o 1, A depende de a
+  variável existir no Bash, o que só esta sessão mediu.
+- **A com hook aprovador** se a e c deram certo, o 1 e o 3 não rodaram e o 5 rodou. É outro desenho: o plugin aprova
+  os próprios scripts por hook, comparando o comando exato (nunca um padrão). Fica para o desenvolvedor decidir.
+- **B** nos outros casos. Se só o 2 rodou, B: a regra amarra o projeto à home da nuvem.
 
 Roteiro, depois do merge na main:
 
 1. Abrir uma sessão NOVA no ambiente `wstack` (o setup script instala o plugin da main) e trocar o modo de permissão
    para o que pede aprovação antes de cada ação (não o automático: nele um classificador responde aos pedidos e o
    passo B não mede nada).
-2. Pedir "rode a sonda de caminhos do wstack". No passo A, aprovar; no passo B, negar todo pedido que aparecer; no
-   passo C, aprovar se aparecer pedido (não deve aparecer: o hook nega sozinho).
+2. Pedir "rode a sonda de caminhos do wstack". No passo A, aprovar só desta vez (nunca "não perguntar de novo": a regra
+   gravada liberaria números do passo B). No passo B, negar todo pedido que aparecer com um "No" simples, sem dizer
+   ao agente o que fazer diferente; se ele parar depois de uma negação, responder "continue a sonda". No passo C,
+   aprovar só desta vez se aparecer pedido (não deve aparecer: o hook nega sozinho).
 3. Trazer a tabela e a linha final `sonda-caminhos: a=... b=... c=...`.
