@@ -199,3 +199,39 @@ dia da montagem até o ambiente remontar. A decisão "plugin atualizado ao inici
 
 Próximo passo: abrir uma sessão nova no ambiente `wstack`. Com `wstack 0.0.5 carregado.`, rodar a sonda de agentes
 (fatos A a E); com 0.0.3, o container guardado não foi remontado.
+
+## Resultado da sonda 3, fatos A a E (2026-11-24)
+
+Sessão nova no ambiente `wstack`, depois da troca do setup script: `wstack 0.0.5 carregado.`, cache só com `0.0.5`,
+registros user e project em `a576405`, gravados às 19:19 UTC. A troca do script fez o ambiente remontar o container,
+e o plugin foi instalado na montagem, não atualizado pelo `autoUpdate` (o fato 0 continua falho). Linha da skill:
+
+`sonda-agentes: versão=0.0.5 cache=0.0.5 principal=PRINCIPAL-ATIVO-Kx94 chamada-curta=erro chamada-prefixo=erro folha-a=<curto erro, prefixo erro> folha-b=<curto erro, prefixo erro> controle=falhou pre-curto=erro pre-prefixo=erro variável-no-agente=não memória=<ferramentas a mais: não>`
+
+Na linha, `chamada-prefixo=erro` é recusa por falta de ferramentas (o agente foi achado), e `variável-no-agente=não` e
+`memória=não` são falta de dado. Os erros, com o texto exato:
+
+| Chamada | Erro |
+|---|---|
+| `sonda-memoria`, `sonda-folha-a`, `sonda-folha-b`, `sonda-pre-prefixo`, `general-purpose` | `Agent type '<nome>' not found. Available agents: wstack:sonda-folha-b, wstack:sonda-memoria, wstack:sonda-pre-curto, wstack:sonda-pre-prefixo` |
+| `wstack:sonda-folha-a` | `Agent type 'wstack:sonda-folha-a' not found.` (mesma lista) |
+| `wstack:sonda-memoria`, `wstack:sonda-folha-b`, `wstack:sonda-pre-curto`, `wstack:sonda-pre-prefixo` | `Agent '<nome>' would be spawned with zero tools — refusing. Its tools list resolved to nothing: unrecognized [TodoWrite]. Fix the agent's tools frontmatter or pass a different subagent_type.` |
+
+`.claude/agent-memory` não existia ao fim da sonda.
+
+Leitura:
+- **A ok.** `"agent": "wstack:sonda-principal"` no `settings.json` do projeto ligou o agente do plugin: a linha
+  `PRINCIPAL-ATIVO-Kx94` veio no prompt e o controle falhou.
+- **B: só a forma com prefixo vale, na lista e na chamada.** A lista `Agent(...)` foi aplicada (o controle
+  `general-purpose` não foi achado). Dela só entraram as entradas com prefixo: `sonda-folha-a`, listada só pelo nome
+  curto, sumiu nas duas formas; as listadas com prefixo (ou nas duas formas) aparecem como `wstack:<nome>`. Na chamada,
+  o nome curto nunca foi achado, nem para as listadas nas duas formas.
+- **`TodoWrite` não existe nesta versão do Claude Code.** Um agente cujo `tools:` não resolve nada não é iniciado. Por
+  isso os subagentes não rodaram. No `sonda-principal`, que tem outras ferramentas, a entrada foi ignorada sem erro.
+- **C, D e E sem dado**, porque nenhum subagente rodou. Único indício de E: o `wstack:sonda-memoria`, com
+  `memory: project`, foi recusado por ficar sem ferramentas, então a memória não acrescentou ferramentas antes dessa
+  checagem. Não prova que não acrescenta num agente que chega a rodar.
+
+Para a 2.3, já decidido pelos dados: os agentes do harness citam agentes do plugin, em `Agent(...)` e na chamada,
+sempre como `wstack:<nome>`. Para medir C, D e E, a sonda precisa de outra rodada com os agentes da sonda declarando,
+no lugar de `TodoWrite`, uma ferramenta que exista e não leia arquivos.
