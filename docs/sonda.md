@@ -334,3 +334,11 @@ Leitura:
   sessão na nuvem, e o resultado não separa agente de plugin de agente de projeto. Hipótese não conferida: a sessão na
   nuvem usa a memória hospedada do Claude Code (o servidor MCP `memory`) e não monta a memória de agente. Só uma
   sessão local decide; a 2.3 não espera por ela (`docs/decisions.md`, agentes do plugin sem `memory:`).
+
+## Fim da sonda 3 (2026-11-24)
+
+A sonda 3 terminou: B, C e D decididos, E pendente para sessão local (`docs/decisions.md`, agentes do plugin sem
+`memory:`). Saíram o `"agent": "wstack:sonda-principal"` do `.claude/settings.json`, que fazia toda sessão deste
+repositório abrir como o agente da sonda e só delegar aos agentes dela, e o `.claude/agents/sonda-projeto.md`. Os
+agentes e as skills `sonda-*` do plugin ficam até os agentes reais entrarem na 2.3. Para repetir a sonda, inclusive o
+passo E numa sessão local, é preciso devolver os dois: sem eles, a calibração (B.1) e o controle de E dão erro.
