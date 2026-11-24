@@ -2,7 +2,7 @@
 name: sonda-pre-curto
 description: Sonda 3 do wstack. Pré-carrega a skill de prova pelo nome curto; não usar em outro trabalho.
 model: haiku
-tools: TodoWrite
+tools: TaskList
 skills:
   - sonda-alvo
 ---

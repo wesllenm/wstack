@@ -2,7 +2,7 @@
 name: sonda-memoria
 description: Sonda 3 do wstack. Agente com memory project; não usar em outro trabalho.
 model: haiku
-tools: TodoWrite
+tools: TaskList
 memory: project
 ---
 

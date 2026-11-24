@@ -25,8 +25,8 @@ o erro da ferramenta, se vier, é o dado. Em toda chamada de subagente, relate t
 
 ## B. Delegação
 
-O agente da sonda só pode delegar a uma lista fechada: `sonda-folha-a` está nela pelo nome curto, `sonda-folha-b` com o
-prefixo `wstack:`, e `sonda-memoria` com os dois. Chame, um por vez, nesta ordem, com o pedido "responda conforme as suas
+O agente da sonda só pode delegar a uma lista fechada: `sonda-folha-a` e `sonda-folha-b` estão nela com o prefixo
+`wstack:`, e `sonda-memoria` com os dois (a rodada anterior mostrou que entrada só pelo nome curto some da lista). Chame, um por vez, nesta ordem, com o pedido "responda conforme as suas
 instruções":
 
 1. `sonda-memoria` e depois `wstack:sonda-memoria` (calibração: listado nas duas formas, então só a forma do nome na
@@ -58,7 +58,7 @@ se veio o texto com cifrão e chaves, não trocou.
 
 ## E. Memória
 
-Da resposta de `sonda-memoria` (passo B.1), relate as três linhas. O agente foi declarado só com a ferramenta TodoWrite;
+Da resposta de `sonda-memoria` (passo B.1), relate as três linhas. O agente foi declarado só com a ferramenta TaskList;
 se ele tem Read, Write ou Edit, foi a memória que as acrescentou. Depois rode `ls -la .claude/agent-memory 2>&1 | head`
 e relate a saída.
 

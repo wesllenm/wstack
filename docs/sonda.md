@@ -142,7 +142,7 @@ sessão real; o resultado decide como a 2.3 escreve os agentes e a 2.4, o `setti
 | B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | calibração: `sonda-memoria`, listada nas duas formas, chamada pelos dois nomes (só a forma da chamada pode falhar); `sonda-folha-a` listada pelo nome curto e `sonda-folha-b` com prefixo, cada uma chamada pelos dois nomes; controle: `general-purpose`, fora da lista, tem de falhar. Sem A, B não mede a lista | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md`, `agents/sonda-memoria.md` |
 | C. `skills:` pré-carrega skill do plugin pelo nome curto e/ou com prefixo | o subagente, sem ferramenta de leitura, responde a marca `abacaxi-7q` da skill, ou `NENHUM`; o número de ferramentas usadas vem junto | `agents/sonda-pre-curto.md`, `agents/sonda-pre-prefixo.md`, `skills/sonda-alvo` |
 | D. `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente | os subagentes devolvem o texto como o veem: caminho absoluto ou `${...}` | os mesmos agentes |
-| E. `memory: project` vale em agente de plugin | declarado só com TodoWrite, o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
+| E. `memory: project` vale em agente de plugin | declarado só com TaskList (era TodoWrite até a 0.0.5), o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
 
 Leitura para a 2.3: os agentes usam, em `skills:` e `Agent(...)`, a forma de nome que funcionou (as duas, se as duas
 funcionaram, fica a com prefixo, que é a documentada); `${CLAUDE_PLUGIN_ROOT}` só entra no corpo de agente se D der
@@ -160,3 +160,86 @@ Roteiro, depois do merge na main:
 3. Trazer a tabela e a linha final `sonda-agentes: ...`.
 4. Se A der NENHUMA com a versão 0.0.5, repetir numa segunda sessão nova: o plugin pode ter sido atualizado durante a
    partida, depois de o Claude Code resolver o `"agent"`.
+
+## Resultado da sonda 3, fato 0 (2026-11-24)
+
+**Fato 0 falhou: o `autoUpdate` não atualizou o plugin ao iniciar a sessão na nuvem.** Os fatos A a E não foram
+medidos: a skill `wstack:sonda-agentes` não existia (`Unknown skill`) e nenhum agente `sonda-*` estava disponível.
+
+Duas sessões novas no ambiente `wstack`, abertas depois do merge da sonda 3 (`a576405`, 19:10 UTC), deram o mesmo:
+
+- `wstack 0.0.3 carregado.` no `SessionStart`.
+- Cache só com `0.0.3`; em `installed_plugins.json`, os registros de escopo user e project no commit `473e458` (sonda 2),
+  com `installedAt` igual a `lastUpdated`: 17:42 UTC, o mesmo instante nas duas sessões. Os registros vieram do
+  container guardado pelo ambiente, não de uma instalação na partida, e nada os atualizou depois.
+- A cópia do marketplace (`~/.claude/plugins/marketplaces/wstack`) também em `473e458`, com
+  `extraKnownMarketplaces.wstack.autoUpdate: true` nas configurações do usuário. O commit `ec5a2f8` (0.0.4) também não
+  chegou.
+- A linha `PRINCIPAL-ATIVO-` não apareceu, como esperado com a 0.0.3 (o `"agent"` cita um agente que ela não tem).
+
+A atualização à mão funciona: na sessão, `claude plugin marketplace update wstack` levou o marketplace a `a576405`, e
+`claude plugin update wstack@wstack` (escopo project, padrão) e `claude plugin update wstack@wstack --scope user`
+levaram os dois registros à 0.0.5 ("Restart to apply changes"). Mas isso vale só para aquele container: uma sessão
+retomada ou nova parte do container guardado.
+
+Mudança feita: o setup script do ambiente `wstack` passou a rodar, depois do `install` e do `autoUpdate`, as três
+atualizações (cada uma com `|| echo` de aviso, para não impedir a sessão de subir):
+
+```bash
+claude plugin marketplace update wstack
+claude plugin update wstack@wstack --scope user
+claude plugin update wstack@wstack --scope project
+```
+
+Não provado: se trocar o script força o ambiente a remontar o container guardado (o esperado), e se o `--scope
+project` acha o projeto, já que o script roda da pasta acima do repositório (o escopo user basta para carregar o
+plugin). Mesmo que funcione, o script só roda quando o container é montado do zero: o plugin continua na versão do
+dia da montagem até o ambiente remontar. A decisão "plugin atualizado ao iniciar a sessão na nuvem"
+(`docs/decisions.md`) supunha o `autoUpdate` e precisa ser revista.
+
+Próximo passo: abrir uma sessão nova no ambiente `wstack`. Com `wstack 0.0.5 carregado.`, rodar a sonda de agentes
+(fatos A a E); com 0.0.3, o container guardado não foi remontado.
+
+## Resultado da sonda 3, fatos A a E (2026-11-24)
+
+Sessão nova no ambiente `wstack`, depois da troca do setup script: `wstack 0.0.5 carregado.`, cache só com `0.0.5`,
+registros user e project em `a576405`, gravados às 19:19 UTC. A troca do script fez o ambiente remontar o container,
+e o plugin foi instalado na montagem, não atualizado pelo `autoUpdate` (o fato 0 continua falho). Linha da skill:
+
+`sonda-agentes: versão=0.0.5 cache=0.0.5 principal=PRINCIPAL-ATIVO-Kx94 chamada-curta=erro chamada-prefixo=erro folha-a=<curto erro, prefixo erro> folha-b=<curto erro, prefixo erro> controle=falhou pre-curto=erro pre-prefixo=erro variável-no-agente=não memória=<ferramentas a mais: não>`
+
+Na linha, `chamada-prefixo=erro` é recusa por falta de ferramentas (o agente foi achado), e `variável-no-agente=não` e
+`memória=não` são falta de dado. Os erros, com o texto exato:
+
+| Chamada | Erro |
+|---|---|
+| `sonda-memoria`, `sonda-folha-a`, `sonda-folha-b`, `sonda-pre-prefixo`, `general-purpose` | `Agent type '<nome>' not found. Available agents: wstack:sonda-folha-b, wstack:sonda-memoria, wstack:sonda-pre-curto, wstack:sonda-pre-prefixo` |
+| `wstack:sonda-folha-a` | `Agent type 'wstack:sonda-folha-a' not found.` (mesma lista) |
+| `wstack:sonda-memoria`, `wstack:sonda-folha-b`, `wstack:sonda-pre-curto`, `wstack:sonda-pre-prefixo` | `Agent '<nome>' would be spawned with zero tools — refusing. Its tools list resolved to nothing: unrecognized [TodoWrite]. Fix the agent's tools frontmatter or pass a different subagent_type.` |
+
+`.claude/agent-memory` não existia ao fim da sonda.
+
+Leitura:
+- **A ok.** `"agent": "wstack:sonda-principal"` no `settings.json` do projeto ligou o agente do plugin: a linha
+  `PRINCIPAL-ATIVO-Kx94` veio no prompt e o controle falhou.
+- **B: só a forma com prefixo vale, na lista e na chamada.** A lista `Agent(...)` foi aplicada (o controle
+  `general-purpose` não foi achado). Dela só entraram as entradas com prefixo: `sonda-folha-a`, listada só pelo nome
+  curto, sumiu nas duas formas; as listadas com prefixo (ou nas duas formas) aparecem como `wstack:<nome>`. Na chamada,
+  o nome curto nunca foi achado, nem para as listadas nas duas formas.
+- **`TodoWrite` não existe nesta versão do Claude Code.** Um agente cujo `tools:` não resolve nada não é iniciado. Por
+  isso os subagentes não rodaram. No `sonda-principal`, que tem outras ferramentas, a entrada foi ignorada sem erro.
+- **C, D e E sem dado**, porque nenhum subagente rodou. Único indício de E: o `wstack:sonda-memoria`, com
+  `memory: project`, foi recusado por ficar sem ferramentas, então a memória não acrescentou ferramentas antes dessa
+  checagem. Não prova que não acrescenta num agente que chega a rodar.
+
+Para a 2.3, já decidido pelos dados: os agentes do harness citam agentes do plugin, em `Agent(...)` e na chamada,
+sempre como `wstack:<nome>`. Para medir C, D e E, a sonda precisa de outra rodada com os agentes da sonda declarando,
+no lugar de `TodoWrite`, uma ferramenta que exista e não leia arquivos.
+
+Mudança feita (0.0.6): os cinco agentes chamados pela sonda declaram `tools: TaskList`; o `sonda-principal` troca
+`TodoWrite` por `TaskList`, lista `wstack:sonda-folha-a` com o prefixo (para a folha A rodar e dar dado de D) e tem
+um sufixo novo na linha `PRINCIPAL-ATIVO-` (o anterior está registrado acima). Roteiro igual ao da sonda 3; trazer a
+linha final `sonda-agentes: ...` de uma sessão nova com `wstack 0.0.6 carregado.`. O ambiente só instala a versão
+nova se remontar o container (o `autoUpdate` não atualiza na partida, fato 0). Na rodada anterior, a remontagem
+veio da troca do setup script. Se a sessão subir com 0.0.5, atualizar o plugin nela não serve: o `"agent"` e os agentes
+são lidos na partida.
