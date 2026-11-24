@@ -25,7 +25,7 @@ Performance (categorias do diff): contagem de comandos e de chamadas nos testes;
 
 Camada determinística de referência (o `lead` e o `risk.conf` são donos; aqui só o que a revisão assume):
 - build com `TreatWarningsAsErrors`, `AnalysisLevel` recomendado e `EnforceCodeStyleInBuild`; `dotnet format --verify-no-changes`; `SquadOS.ArchitectureTests`; `dotnet list SquadOS.slnx package --vulnerable --include-transitive`; gitleaks no CI. Stryker.NET está previsto para o CI (pendência em `ci/README.md`); sem ferramenta local, não há mutante para triar.
-- `SonarAnalyzer.CSharp` **não foi adotado** (licença SSAL, decisão de 2026-11-04); `Meziantou.Analyzer` só com perfil enxuto e depois de limpar o residual: não cobrar do revisor o que esses analisadores cobririam.
+- `SonarAnalyzer.CSharp` (licença SSAL) e `Meziantou.Analyzer` só entram por decisão do projeto em `docs/decisions.md`, o segundo com perfil enxuto e depois de limpar o residual: não cobrar do revisor o que esses analisadores cobririam.
 - Sinais de qualidade (`quality-signals.sh`): produtor `cobertura` com `coverlet.collector` sobre o filtro da suíte rápida (`Category!=Integration&Category!=E2E`), mais `jscpd` com `--format csharp`; async aparece com o nome do método. Linha no `risk.conf` é decisão do `lead`.
 - Em `ask`: `.editorconfig`, `Directory.Build.props`, `GlobalSuppressions.cs`, `*.ruleset` e os projetos de teste de arquitetura.
 

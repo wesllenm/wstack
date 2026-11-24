@@ -187,3 +187,17 @@ o ambiente em que o wstack é desenvolvido e testado não mostra a memória func
   corpo do agente vira o caminho do plugin.
 - **Pendente:** rodar o passo E numa sessão local. Se a memória valer em agente de plugin, um agente pode passar a usá-la
   numa mudança própria, com decisão nova.
+
+## 2026-11-24: subagente isolado nasce do HEAD (`worktree.baseRef`)
+
+**Decisão:** o `settings.json` modelo do projeto (2.4) grava `"worktree": { "baseRef": "head" }`. A skill lead conta com
+isso para delegar com `isolation: worktree` (seção Delegação) e para abrir atividade com `claude -w` (Modo paralelo
+assistido).
+
+**Por quê** (medido no harness de origem em 2026-11-18, Claude Code 2.1.133 ou mais novo): sem a chave, o subagente com
+`isolation: worktree` nasceu da branch padrão (a sonda isolada devolveu o commit da `main` com o HEAD da sessão em
+outro commit), sem o trabalho em andamento nem o plano; com a chave, nasceu do HEAD, e a mudança valeu na sessão sem
+reiniciar. Mudança não commitada não vai para a worktree em nenhum dos casos.
+
+**O que muda:** a citação do arquivo de gotchas da origem sai da skill lead, que passa a dizer o efeito da chave. A 2.4
+confere a chave no modelo do `settings.json`.

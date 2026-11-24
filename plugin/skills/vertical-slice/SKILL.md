@@ -45,7 +45,7 @@ Adotar desde a primeira feature.
 
 ## Brownfield
 
-Features novas em slices com controller, service e repositório; código existente em outra estrutura só migra com demanda aprovada para isso (o próprio SquadOS concluiu a migração em 2026-10-27). Se o projeto tiver outra estrutura consistente, ela prevalece e a divergência vai para `docs/decisions.md`.
+Features novas em slices com controller, service e repositório; código existente em outra estrutura só migra com demanda aprovada para isso. Se o projeto tiver outra estrutura consistente, ela prevalece e a divergência vai para `docs/decisions.md`.
 
 ## Restrições e cuidados
 

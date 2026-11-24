@@ -40,7 +40,7 @@ Ferramentas, exemplos e comandos da stack em `reference/<stack>.md` nesta pasta:
 
 ## Camada 1 — regras estáticas
 
-Regras de performance do analisador da stack como erro (§6.4 do bootstrap e referência da stack). Pegam no build, sem revisão.
+Regras de performance do analisador da stack como erro (build com avisos tratados como erro; as regras de cada stack estão na referência dela). Pegam no build, sem revisão.
 
 ## Camada 2 — contagem nos testes
 

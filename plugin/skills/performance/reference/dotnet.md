@@ -4,7 +4,7 @@ Versões: .NET 10 (SDK do `global.json`), EF Core 10 + Npgsql, xUnit v2. Ferrame
 
 ## Camada 1 — regras estáticas
 
-`Directory.Build.props` já liga `AnalysisLevel 10.0-recommended`, `EnforceCodeStyleInBuild` e `TreatWarningsAsErrors`. Regras de performance a conferir no `.editorconfig` (por regra, valem também as desligadas por padrão): CA1826, CA1827, CA1829, CA1851, CA1859 e CA1860 como `warning`; CA1848 (`LoggerMessage`) como `suggestion`, obrigatória só em caminho quente. Analisadores extras (`SonarAnalyzer.CSharp`, `Meziantou.Analyzer`) dependem da medição de avisos aprovada no bootstrap (ver `docs/decisions.md`); `.editorconfig`, `Directory.Build.props`, `GlobalSuppressions.cs` e `*.ruleset` ficam em `ask`.
+`Directory.Build.props` já liga `AnalysisLevel 10.0-recommended`, `EnforceCodeStyleInBuild` e `TreatWarningsAsErrors`. Regras de performance a conferir no `.editorconfig` (por regra, valem também as desligadas por padrão): CA1826, CA1827, CA1829, CA1851, CA1859 e CA1860 como `warning`; CA1848 (`LoggerMessage`) como `suggestion`, obrigatória só em caminho quente. Analisadores extras (`SonarAnalyzer.CSharp`, `Meziantou.Analyzer`) dependem de uma medição de avisos aprovada pelo projeto e registrada em `docs/decisions.md`; `.editorconfig`, `Directory.Build.props`, `GlobalSuppressions.cs` e `*.ruleset` ficam em `ask`.
 
 ## Camada 2 — contagem nos testes
 
