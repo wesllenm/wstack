@@ -8,6 +8,7 @@
 # Código: 0 sem candidato, 1 com candidato, 2 uso errado, 3 produtor falhou ou não gerou relatório.
 set -uo pipefail
 
+self_dir=$(cd "$(dirname "$0")" && pwd -P) # antes do cd: $0 pode ser relativo
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 3
 root=$(pwd)
 CONF="$root/.claude/risk.conf"
@@ -53,4 +54,4 @@ while IFS= read -r line; do
 done < "$CONF"
 
 [ "$ran" -gt 0 ] || { echo "nenhum produtor 'quality' no risk.conf${*:+ para: $*}; nada a medir"; exit 0; }
-node "$root/.claude/scripts/quality-diff.mjs" "${args[@]}"
+node "$self_dir/quality-diff.mjs" "${args[@]}"

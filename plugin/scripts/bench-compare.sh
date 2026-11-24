@@ -8,14 +8,15 @@
 #   bench   = <categoria> -> <comando que grava o TSV comum em $BENCH_TSV>
 #   profile = <categoria> -> <comando que grava o resumo do perfil em $BENCH_PROFILE_OUT>   (opcional)
 # Os comandos rodam com cwd na raiz da versão medida e recebem: BENCH_CATEGORY, BENCH_TSV, BENCH_RAW
-# (pasta de rascunho), BENCH_PROFILE_OUT e BENCH_SCRIPTS (scripts da versão atual, mesmo na base).
+# (pasta de rascunho), BENCH_PROFILE_OUT e BENCH_SCRIPTS (a pasta de scripts do plugin, a mesma na base e no diff).
 # Código de saída: 0 sem achado, 1 com achado, 2 uso errado, 3 falha de execução.
 set -uo pipefail
 
+# os scripts do plugin (os mesmos na base e no diff); antes do cd: $0 pode ser relativo
+export BENCH_SCRIPTS=$(cd "$(dirname "$0")" && pwd -P)
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 3
 root=$(pwd)
 CONF="$root/.claude/risk.conf"
-export BENCH_SCRIPTS="$root/.claude/scripts"
 
 [ "$#" -gt 0 ] || { echo "uso: bench-compare.sh <categoria>..." >&2; exit 2; }
 # a categoria entra no s/// do sed em cmd_for: com / ou ; ela fecharia a expressão e injetaria o comando e do GNU sed

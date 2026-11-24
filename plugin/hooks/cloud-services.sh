@@ -18,13 +18,13 @@ cd "$root" || exit 0
 
 # Orçamento: o hook morre em 300 s (settings.json); Docker e retrato usam no máximo 130 s e os serviços, o que sobrar até 280 s.
 budget=280
-setup="$root/.claude/cloud/setup.sh"
+setup="$(cd "$(dirname "$0")/.." && pwd -P)/cloud/setup.sh"
 if [ -f "$setup" ]; then
   # Só o stdout do setup chega ao contexto, e só as linhas que o próprio setup formata: o stderr pode citar nomes de
   # arquivo do repositório (mensagens de erro de ferramentas), e texto do repositório no contexto é instrução em potencial.
   if ! why=$(timeout 70 bash "$setup" --docker 2> /dev/null); then
     why=$(grep -m1 '^o daemon do Docker não subiu: ' <<< "$why")
-    echo "Sessão na nuvem: ${why:-o daemon do Docker não subiu (prazo de 70 s esgotado)}; tentar 'bash .claude/cloud/setup.sh --docker'."
+    echo "Sessão na nuvem: ${why:-o daemon do Docker não subiu (prazo de 70 s esgotado)}; tentar 'bash $setup --docker'."
   fi
   lacking=$(timeout 60 bash "$setup" --check 2> /dev/null)
   case $? in
@@ -32,9 +32,9 @@ if [ -f "$setup" ]; then
     1)
       echo "Sessão na nuvem: o ambiente não tem tudo o que as stacks do projeto pedem:"
       grep '^- falta: ' <<< "$lacking"
-      echo "Rodar 'bash .claude/cloud/setup.sh' na sessão (idempotente) antes de implementar; o que ele não resolver vira bloqueio registrado."
+      echo "Rodar 'bash $setup' na sessão (idempotente) antes de implementar; o que ele não resolver vira bloqueio registrado."
       ;;
-    *) echo "Sessão na nuvem: a conferência do ambiente não concluiu (setup.sh --check); rodar 'bash .claude/cloud/setup.sh --check' na sessão." ;;
+    *) echo "Sessão na nuvem: a conferência do ambiente não concluiu (setup.sh --check); rodar 'bash $setup --check' na sessão." ;;
   esac
 fi
 

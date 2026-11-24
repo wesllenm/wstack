@@ -19,6 +19,7 @@ fail() { echo "sessions: $1" >&2; [ "$hook" = 1 ] && exit 0; exit "${2:-3}"; }
 input=""; [ "$hook" = 1 ] && input=$(cat)
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
+self_dir=$(cd "$(dirname "$0")" && pwd -P) # antes do cd: $0 pode ser relativo
 cd "${CLAUDE_PROJECT_DIR:-.}" 2> /dev/null || fail "diretório do projeto inacessível"
 top=$(git rev-parse --show-toplevel 2> /dev/null) || fail "fora de um repositório git"
 top=$(cd "$top" && pwd -P)
@@ -70,14 +71,14 @@ case "$cmd" in
       prev=$(field "$dir/$me.session" sid)
       if [ "$prev" != "$sid" ]; then
         echo "ATENÇÃO: outra sessão do Claude Code está ativa nesta mesma worktree ($top), vista há $(age "$(numfield "$dir/$me.session" seen)")."
-        echo "Duas sessões na mesma worktree editam os mesmos arquivos e misturam os gates. Encerre uma delas, ou abra esta atividade numa worktree própria (.claude/scripts/nova-atividade.sh <nome>)."
+        echo "Duas sessões na mesma worktree editam os mesmos arquivos e misturam os gates. Encerre uma delas, ou abra esta atividade numa worktree própria (bash $self_dir/nova-atividade.sh <nome>)."
       fi
     fi
     write_me "$sid" "$now"
     mapfile -t oth < <(others)
     if [ "${#oth[@]}" -gt 0 ]; then
       if [ "$is_main" = 1 ]; then
-        echo "Esta sessão está no checkout principal e há ${#oth[@]} atividade(s) em paralelo em outras worktrees. Para uma atividade nova, independente dessas, use .claude/scripts/nova-atividade.sh <nome> em vez de trabalhar aqui."
+        echo "Esta sessão está no checkout principal e há ${#oth[@]} atividade(s) em paralelo em outras worktrees. Para uma atividade nova, independente dessas, use bash $self_dir/nova-atividade.sh <nome> em vez de trabalhar aqui."
       fi
       echo "Atividades em paralelo neste repositório (declare os arquivos do plano com sessions.sh claim e confira com sessions.sh check):"
       for f in "${oth[@]}"; do

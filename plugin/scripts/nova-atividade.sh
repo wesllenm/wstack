@@ -36,8 +36,9 @@ git -C "$main" worktree add -q -b "$branch" "$path" "$base" || exit 3
 
 # O runtime isolado vem do worktree-env.sh do checkout principal (nunca o da ref escolhida em --base, que pode ser de
 # terceiros e nem existir nela); só depois os arquivos locais com segredos de desenvolvimento são copiados.
-if [ -f "$main/.claude/scripts/worktree-env.sh" ]; then
-  if ! ( cd "$path" && bash "$main/.claude/scripts/worktree-env.sh" alloc ); then
+wenv="$(cd "$(dirname "$0")" && pwd -P)/worktree-env.sh"
+if [ -f "$wenv" ]; then
+  if ! ( cd "$path" && bash "$wenv" alloc ); then
     # sem runtime isolado a atividade colidiria com as outras: desfaz worktree e branch em vez de deixar meia abertura
     git -C "$main" worktree remove --force "$path" && git -C "$main" branch -D -q "$branch"
     echo "atividade não aberta: sem slot de runtime livre; worktree e branch desfeitas" >&2

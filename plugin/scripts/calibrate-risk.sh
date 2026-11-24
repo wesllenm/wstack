@@ -7,8 +7,8 @@
 set -uo pipefail
 
 n=${1:-100}
+classify="$(cd "$(dirname "$0")" && pwd -P)/classify-diff.sh" # antes do cd: $0 pode ser relativo
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 1
-classify=".claude/scripts/classify-diff.sh"
 [ -f "$classify" ] || { echo "$classify não encontrado" >&2; exit 2; }
 
 declare -A count reason
