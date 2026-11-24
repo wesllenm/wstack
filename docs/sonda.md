@@ -304,3 +304,11 @@ Leitura:
   não existe `.claude/agent-memory` nem `~/.claude/agent-memory`. O controle de projeto deu o mesmo que o plugin, então
   o que se mediu é que a memória não acrescenta ferramentas a agente com `tools:` restrito, não se ela vale em agente
   de plugin. Para decidir, os dois agentes precisam declarar Read, Write e Edit.
+
+## Fato 0 visto acontecer (2026-11-24)
+
+Primeira sessão depois do merge da 0.0.8 (`139b1fa`), sem troca no setup script: `wstack 0.0.8 carregado.`, com o
+cache só em `0.0.7`. O `session-start.sh` tira a versão do `plugin.json` da pasta do próprio hook, então rodou de
+`/home/user/wstack/plugin`: o merge chegou sozinho. Na mesma sessão, Edit em `plugin/hooks/write-guard.mjs` (e o Edit
+que o desfez) foi aceito, pela exceção do plugin dentro do projeto. Edição pelo shell não serve de prova: o
+write-guard só vê as ferramentas de escrita.

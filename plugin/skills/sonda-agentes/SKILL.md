@@ -65,15 +65,16 @@ se veio o texto com cifrão e chaves, não trocou.
 ## E. Memória
 
 Das respostas de `sonda-projeto` (agente do projeto, o controle) e de `wstack:sonda-memoria` (agente do plugin), ambas
-do passo B.1, relate as quatro linhas e quantas ferramentas cada um usou. Os dois foram declarados só com a ferramenta
-TaskList e com `memory: project`; se um deles tem Read, Write ou Edit, foi a memória que as acrescentou. As linhas
-`MEMORIA` e `LINHA` são o que o próprio agente diz e não bastam: a prova é o arquivo gravado. Rode
+do passo B.1, relate as quatro linhas e quantas ferramentas cada um usou. Os dois foram declarados com TaskList, Read,
+Write e Edit e com `memory: project`: com as ferramentas de escrita garantidas, o que se mede é se o prompt do agente
+recebe a pasta de memória e se ele grava nela. As linhas `MEMORIA` e `LINHA` são o que o próprio agente diz e não
+bastam: a prova é o arquivo gravado. Rode
 `ls -laR .claude/agent-memory ~/.claude/agent-memory 2>&1 | head -40` e
 `grep -rn 'MARCA-' .claude/agent-memory ~/.claude/agent-memory 2>&1 | head` e relate as saídas.
 
 Leitura: `MARCA-PROJETO` gravada e `MARCA-PLUGIN` não, a memória vale em agente de projeto e é ignorada em agente de
-plugin; as duas gravadas, vale nos dois; nenhuma, a memória não acrescenta ferramentas a agente com `tools:` restrito
-(e E não decide sobre o plugin). Se `sonda-projeto` deu erro em B.1, diga que falta o controle.
+plugin; as duas gravadas, vale nos dois; nenhuma, a memória não chegou a nenhum dos dois (veja a linha `LINHA`) e E
+não decide sobre o plugin. Se `sonda-projeto` deu erro em B.1, diga que falta o controle.
 
 Os arquivos gravados são estado da sonda: não faça commit deles.
 
