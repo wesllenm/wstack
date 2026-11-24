@@ -119,5 +119,6 @@ Leitura:
 - **aprovação por hook ok:** o 5 foi liberado pelo hook, não por regra.
 - **c ok:** o hook Node do plugin importou um módulo da mesma pasta e um de `lib/`.
 
-Pela regra de decisão, o resultado cai em "A com hook aprovador", e o desenvolvedor escolheu essa opção
+A regra de decisão não previa um passo B sem valor (o controle rodou), então ela não decide sozinha. Com a e c
+certos, o 5 aprovado por hook e nenhuma regra mensurável, o desenvolvedor escolheu "A com hook aprovador"
 (`docs/decisions.md`, scripts no plugin, aprovados por hook).

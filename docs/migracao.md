@@ -1,8 +1,7 @@
 # Migração do harness para o plugin
 
-Inventário da unidade 2.1: para onde vai cada arquivo do harness genérico (documento de bootstrap v2.16, 121 blocos
-`<!-- arquivo: <caminho> -->`). Nada foi movido ainda; as unidades 2.2 a 2.4 fazem a mudança e esta tabela é a lista
-de conferência delas.
+Inventário da unidade 2.1: para onde vai cada arquivo do harness genérico (121 arquivos). Nada foi movido ainda; as
+unidades 2.2 a 2.4 fazem a mudança e esta tabela é a lista de conferência delas.
 
 Destinos:
 - **plugin:** vai para `plugin/<pasta>/` e é igual em todo projeto. Hooks entram em `plugin/hooks/hooks.json`; scripts
@@ -10,10 +9,13 @@ Destinos:
   plugin).
 - **modelo do projeto:** vira modelo em `plugin/templates/`, e o `/wstack:bootstrap` gera a cópia no projeto, que o
   projeto mantém.
+- **depois da 0.1.0:** modelo do projeto que fica fora da 2.4 (`docs/decisions.md`, 2026-11-24, destinos do
+  inventário).
+- **docs do wstack:** documento deste repositório, fora do plugin.
 - **fora:** não vai para o wstack.
 
-Classe é a do harness de origem: `mirror` (o bloco é o arquivo), `template` (o bloco é a versão genérica de um arquivo
-que tem dados do projeto de origem) ou `seed` (o projeto cria e mantém).
+Classe: `mirror` (o arquivo é igual em todo projeto), `template` (versão genérica de um arquivo que cada projeto
+preenche) ou `seed` (o projeto cria e mantém).
 
 ## Hooks
 
@@ -25,16 +27,16 @@ de `$CLAUDE_PROJECT_DIR`.
 |---|---|---|---|---|
 | `.claude/hooks/checkpoint-tests.sh` | mirror | plugin | PreToolUse Bash, TaskCompleted | lê `checkpoint` do risk.conf do projeto |
 | `.claude/hooks/closed-forms.mjs` | mirror | plugin | módulo | |
-| `.claude/hooks/cloud-services.sh` | mirror | plugin | SessionStart | lê `cloud_service`/`cloud_ready` do risk.conf do projeto |
-| `.claude/hooks/dotnet-allow.mjs` | mirror | plugin | módulo | módulo de stack .NET, carregado por `allow_module = dotnet` |
-| `.claude/hooks/dotnet-allow.sh` | mirror | plugin | (via path-guard) | idem |
+| `.claude/hooks/cloud-services.sh` | mirror | plugin | SessionStart | lê `cloud_service`/`cloud_ready` do risk.conf do projeto; chama o `cloud/setup.sh` pelo caminho do projeto, que muda com ele |
+| `.claude/hooks/dotnet-allow.mjs` | mirror | plugin | módulo | módulo de stack .NET: o path-guard o importa quando o risk.conf declara `allow_module = dotnet` |
+| `.claude/hooks/dotnet-allow.sh` | mirror | plugin | PreToolUse Bash, se registrado | hook próprio (o teste e a skill lead o tratam assim), mas não registrado no `settings.json` de origem; a 2.2 decide se entra no `hooks.json` |
 | `.claude/hooks/edit-check.sh` | mirror | plugin | PostToolUse edição | lê as regras do risk.conf do projeto |
 | `.claude/hooks/git-read-allow.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/git-read-allow.sh` | mirror | plugin | PreToolUse Bash | |
 | `.claude/hooks/git-repo.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/iteration-guard.sh` | mirror | plugin | PostToolUse edição | |
 | `.claude/hooks/notify.sh` | mirror | plugin | Notification | renomear as variáveis de ambiente que levam o nome do projeto de origem |
-| `.claude/hooks/path-guard.mjs` | mirror | plugin | módulo | proteção revista: os hooks e scripts saem do projeto; protege o `settings.json` (com a versão fixada do plugin) e o `risk.conf` do projeto |
+| `.claude/hooks/path-guard.mjs` | mirror | plugin | módulo | proteção revista: os hooks e scripts saem do projeto; protege o `settings.json` (com a versão fixada do plugin) e o `risk.conf` do projeto, e cobre os caminhos do plugin (seu pedido vale sobre a aprovação do hook aprovador) |
 | `.claude/hooks/path-guard.sh` | mirror | plugin | PreToolUse Bash | idem |
 | `.claude/hooks/protected-paths.mjs` | mirror | plugin | módulo | lista de caminhos protegidos revista como no path-guard |
 | `.claude/hooks/push-guard.mjs` | mirror | plugin | módulo | |
@@ -42,14 +44,14 @@ de `$CLAUDE_PROJECT_DIR`.
 | `.claude/hooks/redirect-guard.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/redirect-guard.sh` | mirror | plugin | PreToolUse Bash | |
 | `.claude/hooks/risk-conf.mjs` | mirror | plugin | módulo | lê `$CLAUDE_PROJECT_DIR/.claude/risk.conf`, não a pasta `.claude` onde o arquivo está |
-| `.claude/hooks/session-start.sh` | mirror | plugin | SessionStart | |
-| `.claude/hooks/verify-on-stop.sh` | template | plugin | Stop | `SOLUTION`, `BUILD_CMD`, `LINT_CMD` e `TEST_CMD` saem do arquivo e viram chaves do risk.conf |
+| `.claude/hooks/session-start.sh` | mirror | plugin | SessionStart | o wstack já tem um `plugin/hooks/session-start.sh` (o da sonda); o que fica continua imprimindo `wstack <versão> carregado.`, que é como se confere a versão em uso |
+| `.claude/hooks/verify-on-stop.sh` | template | plugin | Stop | `SOLUTION`, `BUILD_CMD`, `LINT_CMD` e `TEST_CMD` saem do arquivo e viram chaves do risk.conf; exige o arquivo de calibração (ver pendência 3) |
 | `.claude/hooks/write-guard.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/write-guard.sh` | mirror | plugin | PreToolUse edição | |
 | `.claude/hooks/write-rule.mjs` | mirror | plugin | módulo | |
 
-Novo na 2.2, sem bloco de origem: o hook aprovador dos scripts do plugin (PreToolUse Bash), com a lista de formas
-exatas.
+Novo na 2.2, sem arquivo de origem: o hook aprovador dos scripts do plugin (PreToolUse Bash), com a forma fechada de
+cada script e seus argumentos.
 
 ## Scripts
 
@@ -58,26 +60,26 @@ caminho muda.
 
 | Arquivo | Classe | Destino | Chamado por | Ajuste |
 |---|---|---|---|---|
-| `.claude/scripts/bdn-to-tsv.cs` | mirror | plugin | comando de desempenho do risk.conf | módulo de stack .NET |
-| `.claude/scripts/bench-compare.sh` | mirror | plugin | skills lead, performance, review-rubric; agente performance-agent | |
-| `.claude/scripts/bundle-size.sh` | mirror | plugin | comando de desempenho do risk.conf | módulo de frontend |
-| `.claude/scripts/calibrate-risk.sh` | mirror | plugin | skill lead | |
+| `.claude/scripts/bdn-to-tsv.cs` | mirror | plugin | comando `bench` do risk.conf, por `$BENCH_SCRIPTS` | módulo de stack .NET |
+| `.claude/scripts/bench-compare.sh` | mirror | plugin | skills lead, performance, review-rubric; agente performance-agent | exporta `BENCH_SCRIPTS` com a pasta de scripts do projeto: passa a ser a do plugin |
+| `.claude/scripts/bundle-size.sh` | mirror | plugin | comando `bench` do risk.conf, por `$BENCH_SCRIPTS` | módulo de frontend; o risk.conf modelo traz o exemplo |
+| `.claude/scripts/calibrate-risk.sh` | mirror | plugin | skill lead | chama o classify-diff pelo caminho do projeto |
 | `.claude/scripts/check-findings.mjs` | mirror | plugin | skills lead, review-rubric; agentes de revisão | |
-| `.claude/scripts/check-trajectory.mjs` | mirror | fora | só a matriz de garantias | avaliação comportamental do workflow; volta se ela for portada |
-| `.claude/scripts/checkpoint.sh` | mirror | plugin | skill lead; path-guard, protected-paths, redirect-guard | |
-| `.claude/scripts/classify-diff.sh` | mirror | plugin | skills lead, commit; agente lead; pr-risk-gate | |
-| `.claude/scripts/compare-bench.sh` | mirror | plugin | bench-compare | |
-| `.claude/scripts/compare-results.mjs` | mirror | fora | só a matriz de garantias | idem check-trajectory |
-| `.claude/scripts/criterion-to-tsv.sh` | seed | modelo do projeto | comando de desempenho do risk.conf | ver pendência 3 |
-| `.claude/scripts/diff-smells.mjs` | mirror | plugin | skills lead, clean-code; workflow gates | ver pendência 1 |
-| `.claude/scripts/enviar-nuvem.sh` | mirror | plugin | skill lead | |
-| `.claude/scripts/folded-top.sh` | seed | modelo do projeto | comando de desempenho do risk.conf | ver pendência 3 |
-| `.claude/scripts/hot-methods.cs` | mirror | plugin | comando de desempenho do risk.conf | módulo de stack .NET |
+| `.claude/scripts/check-trajectory.mjs` | mirror | fora | só a matriz de garantias | ver pendência 5 |
+| `.claude/scripts/checkpoint.sh` | mirror | plugin | skill lead | importa `../hooks/protected-paths.mjs`: depende de `scripts/` e `hooks/` lado a lado |
+| `.claude/scripts/classify-diff.sh` | mirror | plugin | skills lead, commit; agente lead; calibrate-risk | o CLAUDE.md e o risk.conf modelo citam o caminho |
+| `.claude/scripts/compare-bench.sh` | mirror | plugin | bench-compare, por `$BENCH_SCRIPTS` | |
+| `.claude/scripts/compare-results.mjs` | mirror | fora | só a matriz de garantias | ver pendência 5 |
+| `.claude/scripts/criterion-to-tsv.sh` | seed | plugin | comando `bench` do risk.conf, por `$BENCH_SCRIPTS` | módulo de stack Rust |
+| `.claude/scripts/diff-smells.mjs` | mirror | plugin | skills lead, clean-code; workflow gates (depois da 0.1.0, baixando o wstack) | |
+| `.claude/scripts/enviar-nuvem.sh` | mirror | plugin | skill lead | pede aprovação de propósito: fica fora do hook aprovador |
+| `.claude/scripts/folded-top.sh` | seed | plugin | comando `profile` do risk.conf (opcional, sem exemplo no modelo) | módulo de perfil (Rust, C/C++, Go) |
+| `.claude/scripts/hot-methods.cs` | mirror | plugin | comando `profile` do risk.conf (opcional, sem exemplo no modelo) | módulo de stack .NET; o uso no cabeçalho cita o caminho do projeto |
 | `.claude/scripts/map-staleness.mjs` | mirror | plugin | SessionStart | vira hook do plugin |
 | `.claude/scripts/nova-atividade.sh` | mirror | plugin | skill lead | |
-| `.claude/scripts/otlp-sink.mjs` | mirror | plugin | session-start, summarize-runs | |
+| `.claude/scripts/otlp-sink.mjs` | mirror | plugin | session-start, summarize-runs | recebe a telemetria que o `env` do settings.json modelo aponta para ele |
 | `.claude/scripts/permission-asks.mjs` | mirror | plugin | skill lead | |
-| `.claude/scripts/pr-risk-gate.mjs` | mirror | plugin | workflow merge-por-risco | ver pendência 1 |
+| `.claude/scripts/pr-risk-gate.mjs` | mirror | plugin | workflow merge-por-risco (depois da 0.1.0, baixando o wstack) | |
 | `.claude/scripts/prove-redirect-guard.sh` | template | plugin (`tests/`) | à mão, com `claude -p` | prova com o Claude Code real; fora do CI |
 | `.claude/scripts/prove-write-matrix.sh` | template | plugin (`tests/`) | à mão, com `claude -p` | idem |
 | `.claude/scripts/prune-merged.sh` | mirror | plugin | skill lead | |
@@ -95,23 +97,26 @@ caminho muda.
 | `.claude/scripts/test-path-guard.sh` | template | plugin (`tests/`) | CI do wstack | casos revistos com a proteção nova |
 | `.claude/scripts/test-permission-asks.sh` | mirror | plugin (`tests/`) | CI do wstack | |
 | `.claude/scripts/test-prune-merged.sh` | mirror | plugin (`tests/`) | CI do wstack | |
-| `.claude/scripts/test-push-guard.sh` | template | plugin (`tests/`) | CI do wstack | |
+| `.claude/scripts/test-push-guard.sh` | template | plugin (`tests/`) | CI do wstack | um caso confere uma linha do arquivo de gotchas da origem: sai |
 | `.claude/scripts/test-redirect-guard.sh` | mirror | plugin (`tests/`) | CI do wstack | |
 | `.claude/scripts/test-write-guard.sh` | mirror | plugin (`tests/`) | CI do wstack | |
-| `.claude/scripts/validate-result.mjs` | mirror | fora | nenhum | idem check-trajectory |
+| `.claude/scripts/validate-result.mjs` | mirror | fora | nenhum | ver pendência 5 |
 | `.claude/scripts/worktree-env.sh` | mirror | plugin | skill lead; nova-atividade | |
 
 ## Nuvem
 
 | Arquivo | Classe | Destino | Unidade | Ajuste |
 |---|---|---|---|---|
-| `.claude/cloud/setup.sh` | mirror | plugin | 2.2 | passa a instalar o plugin com `autoUpdate` (`docs/decisions.md`, 2026-11-24, plugin atualizado); trocar o exemplo de imagem que leva nome da stack do projeto de origem |
+| `.claude/cloud/setup.sh` | mirror | plugin | 2.2 | chamado pelo cloud-services e pela skill lead pelo caminho do projeto, que muda; é também o texto colado no setup script do ambiente, que roda antes de o plugin existir na máquina, então precisa funcionar sozinho e instalar o plugin (ver pendência 2); trocar o exemplo de imagem que leva nome da stack do projeto de origem |
 | `.claude/cloud/hosts.conf` | template | modelo do projeto | 2.4 | |
 
 ## Agentes
 
 Todos para `plugin/agents/`, na unidade 2.3, com os caminhos de script trocados pelos do plugin. Os `template` vão na
-versão genérica do bloco.
+versão genérica. A conferir na 2.3: o Claude Code pode ignorar campos do frontmatter em agentes de plugin
+(`mcpServers`, `hooks`, `permissionMode`); `database-helper`, `database-reviewer` e `performance-agent` declaram
+`mcpServers: [database]`, que também depende da configuração de MCP do projeto (depois da 0.1.0). Os `skills:` do
+frontmatter citam skills sem o prefixo `wstack:`: conferir se resolvem dentro do plugin.
 
 | Arquivo | Classe | Destino |
 |---|---|---|
@@ -170,42 +175,53 @@ Para `plugin/skills/`, na unidade 2.3 (ficam `/wstack:<nome>`), salvo a `verify-
 
 | Arquivo | Classe | Destino | Unidade | Ajuste |
 |---|---|---|---|---|
-| `.claude/settings.json` | template | modelo do projeto | 2.4 | fica só com as permissões e o plugin fixado numa versão; a seção `hooks` vai para `plugin/hooks/hooks.json` (2.2) e as regras `allow` de `.claude/scripts/...` saem (o hook aprovador as substitui) |
-| `.claude/risk.conf` | template | modelo do projeto | 2.4 | ganha as chaves de build, formato e teste do verify-on-stop |
-| `CLAUDE.md` | template | modelo do projeto | 2.4 | |
-| `.github/workflows/claude-review.yml` | template | modelo do projeto | ver pendência 2 | |
-| `.github/workflows/gates.yml` | template | modelo do projeto | ver pendência 2 | roda o diff-smells (pendência 1) |
-| `.github/workflows/merge-por-risco.yml` | mirror | modelo do projeto | ver pendência 2 | roda o pr-risk-gate (pendência 1) |
-| `.mcp.json` | seed | modelo do projeto | ver pendência 2 | só para projeto com banco |
-| `.claude/toolbox/tools.yaml` | seed | modelo do projeto | ver pendência 2 | idem |
-| `docs/review-calibration.md` | seed | modelo do projeto | ver pendência 2 | é o arquivo de aprendizado que o verify-on-stop exige |
-| `docs/harness-capabilities.md` | seed | modelo do projeto | ver pendência 4 | |
+| `.claude/settings.json` | template | modelo do projeto | 2.4 | a seção `hooks` vai para `plugin/hooks/hooks.json` (2.2); as regras de `.claude/scripts/...` saem (o hook aprovador as substitui, salvo o script que pede aprovação de propósito); ficam as permissões, `agent` (passa a `wstack:lead`), `worktree.baseRef` (a skill lead depende dele), o `env` da telemetria (o otlp-sink a recebe) e o plugin fixado numa versão (ver pendência 2) |
+| `.claude/risk.conf` | template | modelo do projeto | 2.4 | ganha as chaves de build, formato e teste do verify-on-stop; os comentários que citam `.claude/scripts/` e `.claude/hooks/` passam a citar o plugin; as linhas `critical = .claude/hooks/*`, `.claude/scripts/*` e `.claude/cloud/*` apontam para pastas que deixam de existir no projeto |
+| `CLAUDE.md` | template | modelo do projeto | 2.4 | cita `.claude/scripts/classify-diff.sh` (passa a citar o script do plugin) e importa `@docs/gotchas.md` (a 2.4 cria o arquivo ou tira o import) |
+| `.github/workflows/claude-review.yml` | template | depois da 0.1.0 | | |
+| `.github/workflows/gates.yml` | template | depois da 0.1.0 | | baixa o wstack na versão fixada e roda o diff-smells de lá |
+| `.github/workflows/merge-por-risco.yml` | mirror | depois da 0.1.0 | | baixa o wstack na versão fixada e roda o pr-risk-gate de lá |
+| `.mcp.json` | seed | depois da 0.1.0 | | só para projeto com banco |
+| `.claude/toolbox/tools.yaml` | seed | depois da 0.1.0 | | idem |
+| `docs/review-calibration.md` | seed | depois da 0.1.0 | | o verify-on-stop (2.2) exige este arquivo: ver pendência 3 |
+| `docs/harness-capabilities.md` | seed | docs do wstack | 2.2 | a matriz descreve os hooks, que passam a ser do plugin |
 
-## Ajustes em todos os arquivos (2.2 e 2.3)
+## Ajustes em todos os arquivos (2.2 a 2.4)
 
-- **Caminhos:** `"$CLAUDE_PROJECT_DIR"/.claude/hooks/...` e `.claude/scripts/...` viram caminhos do plugin. No texto de
-  skill e agente, `${CLAUDE_PLUGIN_ROOT}` (o Claude Code troca pelo caminho); nos hooks, a pasta do próprio arquivo.
+- **Caminhos:** `"$CLAUDE_PROJECT_DIR"/.claude/hooks/...`, `.claude/scripts/...` e `.claude/cloud/...` viram caminhos
+  do plugin, inclusive nos modelos do projeto (settings.json, risk.conf, CLAUDE.md). No texto de skill e agente,
+  `${CLAUDE_PLUGIN_ROOT}` (o Claude Code troca pelo caminho); nos hooks e scripts, a pasta do próprio arquivo.
 - **Referências ao documento de origem:** 39 arquivos citam seções "§" do documento de bootstrap, que não vem para o
   wstack. Cada citação vira o trecho que importa ou uma referência a documento do wstack.
-- **Decisões e gotchas datados:** 4 arquivos citam decisões datadas do projeto de origem (`redirect-guard.mjs`,
-  `protected-paths.mjs`, `path-guard.mjs`, `merge-por-risco.yml`) e 11 citam o arquivo de gotchas dele. O porquê que
-  sustenta uma trava vira decisão nova em `docs/decisions.md` deste repositório, com a evidência; a citação sai.
+- **Decisões datadas da origem:** 5 arquivos as citam (`session-start.sh`, `redirect-guard.mjs`,
+  `protected-paths.mjs`, `path-guard.mjs`, `merge-por-risco.yml`). O porquê que sustenta uma trava vira decisão nova
+  em `docs/decisions.md` deste repositório, com a evidência; a citação sai (senão apontaria para outra decisão do
+  wstack).
+- **Gotchas:** só a skill lead (o `worktree.baseRef`) e o `test-push-guard.sh` citam o arquivo de gotchas da origem;
+  essas citações saem, e o porquê vira decisão do wstack quando sustentar uma trava. As outras citações de
+  `docs/gotchas.md` (CLAUDE.md, verify-on-stop, pr-risk-gate, skills lead, refactoring, observability, concurrency,
+  query-plan, security, recall) mandam o projeto escrever no próprio arquivo de gotchas: ficam.
 - **Nomes do projeto de origem:** além dos três arquivos marcados acima, a conferência final é o grep da condição de
   parada.
-- **Sondas:** as peças das sondas 1 e 2 (skills `sonda` e `sonda-caminhos`, `sonda-*` em hooks e scripts, as regras
-  `allow` de teste do `.claude/settings.json` deste repositório) saem quando os hooks reais entrarem.
+- **Sondas:** as peças das sondas 1 e 2 (skills `sonda` e `sonda-caminhos`, `sonda-*` em hooks e scripts, o hook
+  `session-start.sh` da sonda, as regras `allow` de teste do `.claude/settings.json` deste repositório) saem quando os
+  hooks reais entrarem.
 
-## Pendências (decisão do desenvolvedor)
+## Pendências
 
-1. **Scripts que o GitHub Actions do projeto roda** (`pr-risk-gate.mjs`, `diff-smells.mjs`): o runner do CI não tem o
-   plugin. Opções: o workflow baixa o wstack na versão fixada no `settings.json` do projeto; ou o bootstrap copia
-   esses dois scripts para o projeto (exceção à decisão de scripts no plugin).
-2. **Modelos fora da lista da 2.4:** a 2.4 cita risk.conf, CLAUDE.md, hosts.conf, settings.json e verify-<app>. Os
-   três workflows, `.mcp.json`, `tools.yaml` e `docs/review-calibration.md` também são do projeto: entram na 2.4
-   (perguntados pelo bootstrap quando não detectados) ou ficam para depois da 0.1.0.
-3. **Seeds que são conversores de stack** (`criterion-to-tsv.sh`, `folded-top.sh`): pela regra, seed vira modelo do
-   projeto; mas não têm dado do projeto, como os conversores .NET que vão para o plugin. Proposta: plugin.
-4. **`docs/harness-capabilities.md`:** é a matriz de garantias dos hooks, que agora são do plugin. Proposta: documento
-   do wstack (`docs/`), não modelo do projeto.
-5. **Avaliação comportamental** (`check-trajectory.mjs`, `compare-results.mjs`, `validate-result.mjs`): marcada fora
-   porque nada no fluxo os chama e os dados da avaliação não estão no documento. Volta se a avaliação for portada.
+1. *(decidida: workflows baixam o wstack na versão fixada; ver `docs/decisions.md`)*
+2. **Versão fixada e atualização automática:** o plano fixa o plugin numa versão no `settings.json` do projeto, e o
+   setup script da nuvem liga `autoUpdate`, que leva o plugin à última versão do marketplace. Para conviverem, a
+   versão fixada precisa ser a referência que o marketplace declara (o `autoUpdate` atualiza dentro dela), e o setup
+   script da nuvem precisa declarar a mesma referência que o projeto. A conferir na 2.4, com o `claude plugin
+   validate` e uma sessão de teste.
+3. **Arquivo de calibração da revisão:** ficou para depois da 0.1.0, mas o verify-on-stop, que entra na 2.2, exige
+   esse arquivo (é onde a sessão registra o aprendizado antes de encerrar). Opções: o arquivo entra na 2.4 como
+   modelo do projeto; ou o verify-on-stop passa a aceitar a falta dele até a 0.1.0 (o gate de aprendizado fica
+   desligado nesse projeto).
+4. *(decididas: os conversores de stack vão para o plugin; a matriz de garantias vira docs do wstack; os modelos fora
+   da lista da 2.4 ficam para depois da 0.1.0)*
+5. **Avaliação comportamental** (`check-trajectory.mjs`, `compare-results.mjs`, `validate-result.mjs`): fora agora,
+   porque nada no fluxo os chama e as tarefas e o executor da avaliação não estão no material genérico. Proposta:
+   retomar depois da 0.1.0, no repositório wstack (não no plugin), decidindo entre portar estes scripts e usar o
+   `claude plugin eval` do Claude Code.
