@@ -14,7 +14,7 @@ Stack real do portal (`src/portal`): SvelteKit 3.1 como SPA estática (`adapter-
 
 ## Camada 3 — tamanho do bundle
 
-Total comprimido por tipo (js, css), determinístico, pode virar achado (TAMANHO: +5% e +2 KB) e aceita orçamento. Medido pelo `.claude/scripts/bundle-size.sh` sobre `src/portal/build` (adaptador estático: o build é `build/`, não `dist/`); o script emite o TSV comum e é do `lead` (não editar daqui). Linhas do `risk.conf` (propostas, ainda não adotadas porque **nenhum caminho `hot` está declarado**):
+Total comprimido por tipo (js, css), determinístico, pode virar achado (TAMANHO: +5% e +2 KB) e aceita orçamento. Medido pelo `bundle-size.sh` do plugin sobre `src/portal/build` (adaptador estático: o build é `build/`, não `dist/`); o script emite o TSV comum e é do `lead` (não editar daqui). Linhas do `risk.conf` (propostas, ainda não adotadas porque **nenhum caminho `hot` está declarado**):
 
 ```ini
 hot    = src/portal/src/* -> Bundle

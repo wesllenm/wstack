@@ -39,7 +39,7 @@ bench   = MetricsSummary -> dotnet run -c Release --project tests/SquadOS.Benchm
 profile = MetricsSummary -> dotnet run -c Release --project tests/SquadOS.Benchmarks -- --filter '*' --anyCategories "$BENCH_CATEGORY" --job short --profiler EP --artifacts "$BENCH_RAW" && dotnet run "$BENCH_SCRIPTS/hot-methods.cs" -- "$BENCH_RAW" 15 > "$BENCH_PROFILE_OUT"
 ```
 
-Adaptadores prontos em `.claude/scripts/` (`bdn-to-tsv.cs`, `hot-methods.cs`; apps de arquivo único do .NET 10, rodam sob o `global.json` do repositório). Conferir, no primeiro uso real, as opções `--memory`, `--threading`, `--exceptions`, `--profiler EP` e os campos do JSON (`Benchmarks`, `FullName`, `Parameters`, `Statistics.Mean`, `Memory.BytesAllocatedPerOperation`, `Memory.Gen2Collections`, `Memory.TotalOperations`, `Metrics[].Descriptor.Id`) contra `--help` e um relatório real.
+Adaptadores prontos na pasta de scripts do plugin, que o `bench-compare.sh` exporta em `$BENCH_SCRIPTS` para os comandos `bench` e `profile` (`bdn-to-tsv.cs`, `hot-methods.cs`; apps de arquivo único do .NET 10, rodam sob o `global.json` do repositório). Conferir, no primeiro uso real, as opções `--memory`, `--threading`, `--exceptions`, `--profiler EP` e os campos do JSON (`Benchmarks`, `FullName`, `Parameters`, `Statistics.Mean`, `Memory.BytesAllocatedPerOperation`, `Memory.Gen2Collections`, `Memory.TotalOperations`, `Metrics[].Descriptor.Id`) contra `--help` e um relatório real.
 
 ## Camada 3b — suíte instrumentada
 

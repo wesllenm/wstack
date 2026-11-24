@@ -1,4 +1,4 @@
-# Performance — Bash (scripts de CI, hooks e `.claude/scripts`)
+# Performance — Bash (scripts de CI e hooks do projeto)
 
 Raramente se aplica. Só quando o script estiver num caminho quente: hook `Stop` (roda a cada turno), `ci/in-container.sh` ou laço sobre milhares de arquivos.
 

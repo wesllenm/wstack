@@ -1,6 +1,6 @@
 # Performance — Node (JavaScript e TypeScript no SquadOS)
 
-Onde há JS/TS no repositório: o portal (`src/portal`, SvelteKit 3 compilado para SPA estática; o que é específico de tela está em `web-frontend.md`) e scripts de ferramenta em `.claude/scripts/*.mjs`. **Não há código Node em caminho de requisição**: a API é .NET e o Node só roda na build, nos testes e nas ferramentas. Por isso as camadas de servidor Node (contagem de comandos de banco, atraso do event loop, harness de benchmark) **não se aplicam**; não gerar `js-bench.mjs`, `cpuprofile-top.mjs` nem `perf-snapshot.mjs` enquanto nenhum caminho `hot` em JS existir. Alvo Node 24 (`.nvmrc`); testes com Vitest 5.
+Onde há JS/TS no repositório: o portal (`src/portal`, SvelteKit 3 compilado para SPA estática; o que é específico de tela está em `web-frontend.md`). **Não há código Node em caminho de requisição**: a API é .NET e o Node só roda na build, nos testes e nas ferramentas. Por isso as camadas de servidor Node (contagem de comandos de banco, atraso do event loop, harness de benchmark) **não se aplicam**; não gerar `js-bench.mjs`, `cpuprofile-top.mjs` nem `perf-snapshot.mjs` enquanto nenhum caminho `hot` em JS existir. Alvo Node 24 (`.nvmrc`); testes com Vitest 5.
 
 ## Camada 1 — regras estáticas
 

@@ -53,7 +53,7 @@ Regras de performance do analisador da stack como erro (§6.4 do bootstrap e ref
 
 Cada categoria `hot` do `risk.conf` tem benchmark e uma linha `bench` com o comando da stack (`.claude/risk.conf`). Onde o custo depende do volume, o benchmark roda com pelo menos dois tamanhos de entrada, distantes entre si (coluna `size`).
 
-Quando o diff toca uma categoria quente, rodar `.claude/scripts/bench-compare.sh <categorias>`. O que vira achado:
+Quando o diff toca uma categoria quente, rodar `${CLAUDE_PLUGIN_ROOT}/scripts/bench-compare.sh <categorias>`. O que vira achado:
 
 **Base contra diff** (precisa de versão anterior):
 

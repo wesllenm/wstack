@@ -1,6 +1,6 @@
 # Review — Sempre verificar, JavaScript e TypeScript (portal e scripts Node)
 
-Aplicar às linhas do diff em `*.ts`, `*.js` e `*.mjs` (`src/portal/**` e `.claude/scripts/*.mjs`). Código de tela Svelte tem a referência própria `web-frontend.md`. No SquadOS o Node roda na build, nos testes e em ferramentas; **não há servidor Node** (a API é .NET), então itens de servidor Node só valem para script.
+Aplicar às linhas do diff em `*.ts`, `*.js` e `*.mjs` (`src/portal/**`). Código de tela Svelte tem a referência própria `web-frontend.md`. No SquadOS o Node roda na build, nos testes e em ferramentas; **não há servidor Node** (a API é .NET), então itens de servidor Node só valem para script.
 
 - promessa sem `await` nem tratamento; `async` dentro de `forEach`; `await` em laço onde a ordem não importa; `.catch(() => {})` que engole;
 - `fetch` sem `AbortController` quando a tela pode sair antes da resposta, sem checar `response.ok` ou sem tratar corpo que não é JSON (o portal trata resposta ilegível como resultado incerto, não como sucesso);
