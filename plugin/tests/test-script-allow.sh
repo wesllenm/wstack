@@ -98,6 +98,38 @@ expect nada "bash $plugl/scripts/classify-diff.sh"
 outro=$work/outro-plugin; mkdir -p "$outro/scripts" && cp "$plug/scripts/classify-diff.sh" "$outro/scripts/"
 PROOT=$outro expect nada "bash $outro/scripts/classify-diff.sh"
 
+# o plugin rodando de dentro do próprio projeto (o repositório do wstack, plugin carregado do clone): aprova só com a pasta
+# do plugin igual à de origin/main; qualquer diferença (script, módulo que ele importa, arquivo novo, commit local não
+# publicado, arquivo escondido do git) ou a falta de origin/main faz o hook não dizer nada
+g() { git -C "$self" -c user.email=t@t -c user.name=t "$@"; }
+origin=$work/origin.git; git init -q --bare "$origin"
+self=$work/wstack; git init -q -b main "$self" && mkdir -p "$self/plugin"
+cp -r "$plug/scripts" "$plug/tests" "$plug/cloud" "$self/plugin/" && cp -r "$src" "$self/plugin/hooks"
+g add -A && g commit -q -m base && g remote add origin "$origin" && g push -q origin main 2> /dev/null
+sp=$self/plugin
+save=$proj; saveh=$hook; proj=$self; hook=$sp/hooks/script-allow.sh
+expect allow "bash $sp/scripts/classify-diff.sh --paths src/a.cs"
+expect allow "bash $sp/tests/test-path-guard.sh"
+printf 'echo x\n' >> "$sp/scripts/classify-diff.sh"
+expect nada "bash $sp/scripts/classify-diff.sh"
+g checkout -q -- plugin
+printf '// x\n' >> "$sp/hooks/closed-forms.mjs"
+expect nada "bash $sp/scripts/classify-diff.sh"
+g checkout -q -- plugin
+printf 'x\n' > "$sp/scripts/novo.sh"
+expect nada "bash $sp/scripts/classify-diff.sh"
+rm -f "$sp/scripts/novo.sh"
+printf 'echo x\n' >> "$sp/scripts/sessions.sh" && g commit -q -am local
+expect nada "bash $sp/scripts/classify-diff.sh"
+g reset -q --hard origin/main
+printf 'echo x\n' >> "$sp/scripts/classify-diff.sh" && g update-index --assume-unchanged plugin/scripts/classify-diff.sh
+expect nada "bash $sp/scripts/classify-diff.sh"
+g update-index --no-assume-unchanged plugin/scripts/classify-diff.sh && g checkout -q -- plugin
+expect allow "bash $sp/scripts/classify-diff.sh"
+g update-ref -d refs/remotes/origin/main
+expect nada "bash $sp/scripts/classify-diff.sh"
+proj=$save; hook=$saveh
+
 # payload ilegível ou sem comando: nada
 got=$(printf 'x' | CLAUDE_PROJECT_DIR=$proj bash "$hook" 2> /dev/null)
 [ -z "$got" ] || { echo "FALHOU: payload ilegível aprovou: $got"; fails=$((fails + 1)); }

@@ -146,6 +146,24 @@ atualização forçada.
 - Falta ver acontecer: a primeira sessão depois do próximo merge tem de subir com a versão nova sem troca no script.
 - Vale só para o ambiente do próprio wstack, cujo clone é o plugin. O ambiente de outro projeto continua instalando do
   GitHub e fica na versão do dia da montagem; como ele se atualiza fica pendente para a 2.4.
-- O write-guard recusa gravação na pasta do plugin, e agora essa pasta é `plugin/` do clone: nas sessões deste
-  ambiente, Edit e Write em `plugin/` passam a ser recusados (e o path-guard pede aprovação para comando que a cite). A
-  sessão que editar o plugin precisa de outro caminho; decidir antes da próxima mudança no plugin.
+- O write-guard recusa gravação na pasta do plugin, e agora essa pasta é `plugin/` do clone: Edit e Write em
+  `plugin/` seriam recusados nas sessões deste ambiente. Resolvido na decisão seguinte.
+
+## 2026-11-24: edição do plugin no próprio wstack
+
+**Decisão:** quando a pasta real do plugin fica dentro do projeto (`$CLAUDE_PROJECT_DIR`), o write-guard deixa a
+ferramenta de escrita gravar nela. É o caso do repositório do wstack com o plugin carregado do clone; um link para a
+pasta do plugin não conta. Nesse caso, o script-allow só aprova os scripts do plugin com a pasta `plugin/` inteira igual
+à de `origin/<branch padrão>`: nada alterado, apagado, fora do git ou marcado para o git não ver
+(`assume-unchanged`, `skip-worktree`). Sem `origin/<branch padrão>`, não aprova.
+
+**Por quê:** no ambiente do wstack o plugin é o código do projeto e muda por edição e PR; a recusa impedia o
+desenvolvimento dele. O write-guard recusava a pasta do plugin para que um script alterado não fosse aprovado pelo
+script-allow; a comparação com a branch padrão mantém isso: script ou módulo alterado na sessão volta a pedir
+aprovação, e só o que passou por PR roda sem pedir. A pasta inteira, porque um script importa hooks e módulos.
+
+**Risco aceito:** o hook alterado vale já na sessão (o plugin é lido da pasta), então a sessão pode afrouxar as
+próprias travas, inclusive o push-guard. Na nuvem isso já era possível pelo Bash (decisão "trava por texto na nuvem");
+o que muda é que no wstack a alteração sai da VM pelo push, porque `plugin/` é código do repositório e não é caminho
+protegido. A barreira é o PR revisado e a proteção da `main`. Fora da nuvem, o path-guard continua pedindo aprovação
+para comando que cite a pasta do plugin.
