@@ -125,3 +125,38 @@ Leitura:
 A regra de decisão não previa um passo B sem valor (o controle rodou), então ela não decide sozinha. Com a e c
 certos, o 5 aprovado por hook e nenhuma regra mensurável, o desenvolvedor escolheu "A com hook aprovador"
 (`docs/decisions.md`, scripts no plugin, aprovados por hook).
+
+# Sonda 3: agentes de plugin
+
+Os agentes do harness pré-carregam skills (`skills:`), o lead delega a uma lista fechada de agentes
+(`Agent(implementer, ...)`) e é o agente da sessão (`"agent"` no `settings.json`). A documentação do Claude Code diz que
+um agente de plugin se chama `wstack:<nome>` e que `hooks`, `mcpServers`, `permissionMode` e `initialPrompt` são
+ignorados nele, mas não diz como `skills:` e `Agent(...)` citam nomes do plugin, se `"agent"` aceita agente de plugin, se
+`memory: project` vale nele, e se contradiz sobre `${CLAUDE_PLUGIN_ROOT}` no corpo do agente. A sonda mede isso numa
+sessão real; o resultado decide como a 2.3 escreve os agentes e a 2.4, o `settings.json` modelo.
+
+| Fato | Como a sonda prova | Peças |
+|---|---|---|
+| 0. O plugin se atualiza ao iniciar (autoUpdate) | 0.0.5 na mensagem do `SessionStart` não basta (um container novo instala da main): vale só com o container restaurado do guardado ("Restored saved setup" no registro da sessão, que o wstack confere) ou com 0.0.4 e 0.0.5 juntas no cache e a data de atualização em `installed_plugins.json` | `session-start.sh` |
+| A. `"agent": "wstack:sonda-principal"` no `settings.json` do projeto liga o agente do plugin | o prompt da sessão tem a linha `PRINCIPAL-ATIVO-<sufixo>` (o sufixo só existe no prompt do agente, não na skill) e o controle de B falha | `agents/sonda-principal.md`, `.claude/settings.json` |
+| B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | calibração: `sonda-memoria`, listada nas duas formas, chamada pelos dois nomes (só a forma da chamada pode falhar); `sonda-folha-a` listada pelo nome curto e `sonda-folha-b` com prefixo, cada uma chamada pelos dois nomes; controle: `general-purpose`, fora da lista, tem de falhar. Sem A, B não mede a lista | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md`, `agents/sonda-memoria.md` |
+| C. `skills:` pré-carrega skill do plugin pelo nome curto e/ou com prefixo | o subagente, sem ferramenta de leitura, responde a marca `abacaxi-7q` da skill, ou `NENHUM`; o número de ferramentas usadas vem junto | `agents/sonda-pre-curto.md`, `agents/sonda-pre-prefixo.md`, `skills/sonda-alvo` |
+| D. `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente | os subagentes devolvem o texto como o veem: caminho absoluto ou `${...}` | os mesmos agentes |
+| E. `memory: project` vale em agente de plugin | declarado só com TodoWrite, o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
+
+Leitura para a 2.3: os agentes usam, em `skills:` e `Agent(...)`, a forma de nome que funcionou (as duas, se as duas
+funcionaram, fica a com prefixo, que é a documentada); `${CLAUDE_PLUGIN_ROOT}` só entra no corpo de agente se D der
+"trocada"; `memory: project` fica no `review-agent` só se E der "sim". Se A der "não", a 2.4 não liga o lead pelo
+`settings.json` e o desenvolvedor chama `/agents` ou a skill `lead`.
+
+Roteiro, depois do merge na main:
+
+1. Abrir uma sessão NOVA no ambiente `wstack`, em qualquer modo de permissão (a sonda não depende de pedido de
+   aprovação). Enquanto a sonda estiver na main, toda sessão nova deste repositório (na nuvem ou na máquina) começa
+   como o agente `sonda-principal`, se A funcionar: ele tem as ferramentas normais, mas só delega aos agentes da sonda.
+   O `"agent"` sai no PR seguinte.
+2. Pedir "rode a sonda de agentes do wstack (skill wstack:sonda-agentes)". Se a skill não existir, a sessão não
+   atualizou o plugin: trazer a versão da mensagem do `SessionStart`.
+3. Trazer a tabela e a linha final `sonda-agentes: ...`.
+4. Se A der NENHUMA com a versão 0.0.5, repetir numa segunda sessão nova: o plugin pode ter sido atualizado durante a
+   partida, depois de o Claude Code resolver o `"agent"`.

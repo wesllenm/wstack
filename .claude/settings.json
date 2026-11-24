@@ -2,5 +2,6 @@
   "extraKnownMarketplaces": {
     "wstack": { "source": { "source": "github", "repo": "wesllenm/wstack" } }
   },
-  "enabledPlugins": { "wstack@wstack": true }
+  "enabledPlugins": { "wstack@wstack": true },
+  "agent": "wstack:sonda-principal"
 }
