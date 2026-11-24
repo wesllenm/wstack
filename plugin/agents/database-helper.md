@@ -4,7 +4,7 @@ description: Consulta o banco real via MCP Toolbox e analisa schema, queries, í
 model: haiku
 skills:
   - query-plan
-tools: Read, Grep, Glob, Bash, mcp__database
+tools: Read, Grep, Glob, Bash, mcp__database__*
 disallowedTools: Write, Edit
 color: cyan
 ---

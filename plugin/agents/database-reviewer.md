@@ -6,7 +6,7 @@ effort: high
 skills:
   - db-evolution
   - query-plan
-tools: Read, Grep, Glob, Bash, WebFetch, mcp__database
+tools: Read, Grep, Glob, Bash, WebFetch, mcp__database__*
 disallowedTools: Write, Edit
 color: orange
 ---
