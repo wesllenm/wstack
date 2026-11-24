@@ -2,8 +2,8 @@
 
 | Fato | Como aparece | Se falhar |
 |---|---|---|
-| 1. Instala sozinho pelo `.claude/settings.json` numa sessão na nuvem | `wstack 0.0.1 carregado.` no início da sessão | instalação vira passo do setup script (`claude plugin marketplace add` + `install`) |
-| 2. Os hooks do plugin rodam | pedido de aprovação do `echo wstack-sonda` | hooks ficam no projeto, gerados pelo bootstrap |
+| 1. Instala sozinho pelo `.claude/settings.json` numa sessão na nuvem | `wstack 0.0.2 carregado.` no início da sessão | instalação vira passo do setup script (`claude plugin marketplace add` + `install`) |
+| 2. Os hooks do plugin rodam | `ask` do hook no registro da sessão para o `echo wstack-sonda` (o diálogo só aparece fora do modo automático) | hooks ficam no projeto, gerados pelo bootstrap |
 | 3. Os hooks leem a configuração do PROJETO | `sonda = projeto-wstack` no pedido e na mensagem | o caminho do projeto vem de outro jeito (cwd do payload) |
 | 4. Funciona com o repositório privado | os três acima com o repositório privado | o repositório fica público, ou o ambiente recebe acesso |
 
@@ -33,3 +33,18 @@ claude plugin install wstack@wstack
 
 Próximo passo: abrir uma sessão NOVA no ambiente `wstack`, pedir "rode a sonda do wstack" e conferir os fatos 1 a 3
 com o plugin instalado pelo setup script.
+
+## Resultado da segunda rodada (2026-11-24)
+
+Sessão nova no ambiente `wstack`, plugin 0.0.1 instalado pelo setup script, modo de permissão automático:
+**`sonda: ok`** depois de conferir o registro da sessão (a skill 0.0.1 tinha dito `falhou em 3`).
+
+- **Fato 1 ok.** `wstack 0.0.1 carregado.` no início da sessão, com plugin e projeto definidos.
+- **Fato 2 ok.** O hook `PreToolUse:Bash` rodou no `echo wstack-sonda` e devolveu `ask`. No modo automático o
+  classificador responde ao `ask` sem mostrar diálogo, e o comando rodou sem pedido visível. Por isso a skill 0.0.1,
+  que esperava o diálogo, deu falso negativo.
+- **Fato 3 ok.** `sonda = projeto-wstack` na mensagem do `SessionStart`, no `ask` do `PreToolUse` e no
+  `.claude/risk.conf`.
+
+Mudança feita (0.0.2): o passo 3 da skill confere o `ask` do hook no registro da sessão
+(`~/.claude/projects/*/<sessão>.jsonl`) em vez de esperar o diálogo.
