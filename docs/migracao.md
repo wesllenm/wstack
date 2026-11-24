@@ -17,6 +17,21 @@ Destinos:
 Classe: `mirror` (o arquivo é igual em todo projeto), `template` (versão genérica de um arquivo que cada projeto
 preenche) ou `seed` (o projeto cria e mantém).
 
+## Estado da 2.2
+
+Feita (versão 0.0.4). Hooks em `plugin/hooks/` (ligados em `hooks.json`), scripts em `plugin/scripts/`, setup da
+nuvem em `plugin/cloud/`, testes e provas em `plugin/tests/` (CI em `.github/workflows/ci.yml`), matriz de garantias em
+`docs/harness-capabilities.md`. Diferenças em relação à tabela abaixo:
+- `dotnet-allow.sh` não entrou no `hooks.json`, como na origem: o path-guard importa o `.mjs` quando o `risk.conf`
+  declara `allow_module = dotnet`.
+- O `cloud/setup.sh` ainda não instala o plugin: a instalação depende da versão fixada pelo projeto, que é da 2.4.
+- As chaves do `verify-on-stop` ficaram `verify_solution`, `verify_build`, `verify_lint` e `verify_test`.
+- Até a 2.4 criar os modelos, os testes usam fixtures em `plugin/tests/fixtures/` no lugar deles (`risk.conf`,
+  `settings.json` com as regras de Edit, `hosts.conf`).
+- Novo, sem arquivo de origem: `script-allow` (hook aprovador) e os testes `test-risk-conf`, `test-script-allow`,
+  `test-verify-on-stop` e `test-plugin-paths`.
+- As provas `prove-*.sh` foram adaptadas, mas não rodaram (custam modelo).
+
 ## Hooks
 
 Todos para `plugin/hooks/`, na unidade 2.2. Os que hoje leem `"$CLAUDE_PROJECT_DIR"/.claude/...` para achar a si mesmos
