@@ -104,3 +104,20 @@ programa.
 contornável de qualquer jeito. O que importa é o que sai da VM: o push-guard e o `checkpoint.sh` conferem os caminhos
 protegidos do que o push publica, e o resto passa pelo PR. Uma alteração nos arquivos do plugin dentro da VM não sai
 dela.
+
+## 2026-11-24: gates do Stop configurados pelo projeto
+
+**Decisão:** o hook de Stop (verify-on-stop) é do plugin e lê os comandos do projeto do `.claude/risk.conf`
+(`verify_solution`, `verify_build`, `verify_lint`, `verify_test`); sem eles, o gate de verificação não roda. O gate de
+aprendizado (commit de código na sessão exige um registro no arquivo de calibração) só vale no projeto que tem
+`docs/review-calibration.md`, que o bootstrap cria.
+
+**Por quê:** os comandos eram lacunas preenchidas no próprio arquivo do hook, que agora é igual em todo projeto. E o
+setup da nuvem instala o plugin no escopo do usuário: os hooks rodam em todo repositório do ambiente, inclusive nos que
+não adotaram o workflow, onde o gate de aprendizado bloquearia o fim de toda sessão com commit e mandaria seguir uma
+skill que o projeto não usa. No projeto que tem o arquivo, o gate é o mesmo (`plugin/tests/test-verify-on-stop.sh`).
+
+**Pendente (2.4):** o resto do comportamento num repositório sem bootstrap. Hoje o iteration-guard age com o limite
+padrão (40 edições), o session-start e o iteration-guard criam `.claude/.session/` e o push-guard pede aprovação para
+todo push fora de `ccr-` e `wip/` (sem `activity_branch`). Decidir se o plugin fica inerte sem `.claude/risk.conf`,
+mantendo só as travas de segurança.

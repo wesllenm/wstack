@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
 # Gates determinísticos do Stop: aprendizado registrado e build, formato e testes passando.
+# Os comandos vêm do .claude/risk.conf do projeto (o hook é do plugin, igual em todo projeto), uma linha cada, vale a
+# última:
+#   verify_solution = <arquivo que existe quando há o que compilar: solution, package.json, Cargo.toml...>
+#   verify_build    = <comando de build>
+#   verify_lint     = <comando de verificação de formatação; vazio ou ausente, não roda>
+#   verify_test     = <comando de testes rápidos e relevantes>
+# Sem verify_solution, verify_build e verify_test, o gate de verificação não roda (como num projeto ainda sem código).
+# O gate de aprendizado só vale no projeto que tem o arquivo de calibração (o bootstrap o cria): o plugin pode estar
+# instalado para todos os repositórios da máquina, e um repositório que não adotou o workflow não fica preso no Stop.
 set -uo pipefail
 input=$(cat)
 
-SOLUTION="<arquivo que existe quando há o que compilar: solution, package.json, Cargo.toml...>"
-BUILD_CMD="<comando de build>"
-LINT_CMD="<comando de verificação de formatação, ou vazio>"
-TEST_CMD="<comando de testes rápidos e relevantes>"
+cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+git rev-parse --is-inside-work-tree > /dev/null 2>&1 || exit 0
+
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .claude/risk.conf 2> /dev/null | tr -d '\r' | tail -1; }
+SOLUTION=$(conf verify_solution)
+BUILD_CMD=$(conf verify_build)
+LINT_CMD=$(conf verify_lint)
+TEST_CMD=$(conf verify_test)
 
 LEARN_FILE="docs/review-calibration.md"
 LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
-
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
-git rev-parse --is-inside-work-tree > /dev/null 2>&1 || exit 0
 
 BLOCKED=".claude/verify-blocked.md"
 STAMP=".claude/.verify-ok"
@@ -31,7 +41,7 @@ emit() {
 
 # Gate 1: aprendizado registrado depois do último commit de código da sessão.
 base_file=".claude/.session/$sid.base"
-if [ -n "$sid" ] && [ -f "$base_file" ]; then
+if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
   base=$(cat "$base_file")
   if git cat-file -e "$base^{commit}" 2> /dev/null && [ "$(git rev-list --count "$base"..HEAD "${CODE[@]}")" -gt 0 ]; then
     learned=0
@@ -64,7 +74,8 @@ fi
 # Gate 2: build, formato e testes no working tree atual, ignorando mudanças só em arquivos de aprendizado.
 [ -z "$(git status --porcelain "${CODE[@]}")" ] && exit 0
 
-# Greenfield: enquanto o arquivo do projeto não existir, não há o que compilar.
+# Sem os comandos no risk.conf, ou enquanto o arquivo do projeto não existir, não há o que verificar.
+[ -n "$SOLUTION" ] && [ -n "$BUILD_CMD" ] && [ -n "$TEST_CMD" ] || exit 0
 [ -f "$SOLUTION" ] || exit 0
 
 fingerprint=$( { git diff HEAD "${CODE[@]}" 2> /dev/null; git ls-files --others --exclude-standard -z "${CODE[@]}" | xargs -0 -r sha1sum; } | sha1sum | cut -d' ' -f1 )
