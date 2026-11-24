@@ -201,3 +201,17 @@ reiniciar. Mudança não commitada não vai para a worktree em nenhum dos casos.
 
 **O que muda:** a citação do arquivo de gotchas da origem sai da skill lead, que passa a dizer o efeito da chave. A 2.4
 confere a chave no modelo do `settings.json`.
+
+## 2026-11-24: complemento da rubrica no projeto (`docs/review-rubric.md`)
+
+**Decisão** (do desenvolvedor, na 2.3): a skill `review-rubric` é do plugin e igual em todo projeto. O que é de um
+repositório (as seções Sempre verificar, Não reportar e Projeto) fica em `docs/review-rubric.md` do projeto, que a skill
+manda ler e somar às seções de mesmo nome. A calibração e a escada de aprendizado da skill lead gravam nesse arquivo.
+Uma entrada de Não reportar do projeto não rebaixa o que a Severidade da skill chama de bloqueante.
+
+**Por quê:** na origem, a rubrica morava no `.claude/` do projeto, e a escada de aprendizado a editava: a seção Projeto
+era toda do produto, e Sempre verificar e Não reportar cresciam com a calibração. No plugin, o projeto não edita skill
+(o plugin muda por PR no wstack), então a parte que muda por projeto precisa de um arquivo do projeto.
+
+**O que muda:** a 2.4 cria o modelo do arquivo no bootstrap. Mudança no texto de skill, agente ou hook do plugin, vinda
+do aprendizado de um projeto, vira proposta no wstack. Sem o arquivo, vale só a rubrica do plugin.

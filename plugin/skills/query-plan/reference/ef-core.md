@@ -6,7 +6,7 @@ Documentação conferida em learn.microsoft.com em 2026-10-23. Revisar ao mudar 
 ## Regras
 
 - Leitura sem alteração usa `AsNoTracking` (ou projeção): tracking custa snapshot e identity resolution. [https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying]
-- Projetar só as colunas necessárias com `Select`; entidade inteira traz colunas grandes (conteúdo de artefato, prompts) e impede index-only scan. [https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying]
+- Projetar só as colunas necessárias com `Select`; entidade inteira traz colunas grandes (conteúdo de documento, prompts) e impede index-only scan. [https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying]
 - Limitar o resultado (`Take`) e paginar por keyset com ordenação única (ex.: data + id), com índice composto na mesma ordem. [https://learn.microsoft.com/en-us/ef/core/querying/pagination]
 - `Include` de duas ou mais coleções no mesmo nível gera explosão cartesiana: usar `AsSplitQuery` (atenção à consistência entre as queries) ou projeção. O EF emite aviso `MultipleCollectionIncludeWarning`; configurar para lançar em teste. [https://learn.microsoft.com/en-us/ef/core/querying/single-split-queries]
 - Lazy loading é proibido por padrão (N+1); carregar relacionados por eager loading ou projeção. [https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying]

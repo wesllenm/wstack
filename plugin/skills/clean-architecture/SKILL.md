@@ -3,7 +3,7 @@ name: clean-architecture
 description: >
   Critérios para quando introduzir camadas, ports, adapters e inversão de
   dependência. Não é a estrutura padrão: o padrão são slices com controller,
-  service e repositório por agregado (skill vertical-slice, ADR 0003); esta
+  service e repositório por agregado (skill vertical-slice); esta
   skill diz quando uma abstração adicional se justifica.
 ---
 
@@ -19,7 +19,7 @@ Ao considerar criar interface, camada, port/adapter ou módulo compartilhado.
 
 ## Padrão
 
-A estrutura padrão é a da skill `vertical-slice` (ADR 0003): slice com controller, service e repositório por agregado, sem camadas genéricas. As portas exigidas por esse desenho (`IUnitOfWork`, `I<Agregado>Repository`, exceções de aplicação) ficam em `Common` e são implementadas em `Infrastructure/Persistence`; não contam como "abstração nova" a justificar pelos critérios abaixo. Esta skill não impõe domínio, aplicação e infraestrutura como camadas obrigatórias, e **não autoriza repositório genérico de CRUD**. [ARQ-01] [ARQ-03]
+A estrutura padrão é a da skill `vertical-slice`: slice com controller, service e repositório por agregado, sem camadas genéricas. As portas exigidas por esse desenho (`IUnitOfWork`, `I<Agregado>Repository`, exceções de aplicação) ficam em `Common` e são implementadas em `Infrastructure/Persistence`; não contam como "abstração nova" a justificar pelos critérios abaixo. Esta skill não impõe domínio, aplicação e infraestrutura como camadas obrigatórias, e **não autoriza repositório genérico de CRUD**. [ARQ-01] [ARQ-03]
 
 ## Quando introduzir uma abstração (port e adapter)
 
@@ -29,7 +29,7 @@ Somente quando pelo menos um critério for verdadeiro: [ARQ-03]
 2. a dependência externa precisa ser trocável por requisito real (dois provedores, ambiente de teste sem acesso ao serviço);
 3. a regra de negócio precisa ser testada sem a infraestrutura e o teste pela fronteira real é inviável ou lento demais.
 
-No SquadOS, o critério 2 é requisito explícito do produto para: fonte de demanda (Jira, Azure Boards, Trello, GitHub Issues, portal), provedor de código (GitHub, Azure DevOps, GitLab, Bitbucket, Forgejo), provedor de modelo (via Microsoft Agent Framework), storage (API S3) e feature flags (OpenFeature). Essas são as portas previstas; outras precisam dos critérios.
+Quando o produto exige provedores trocáveis por requisito (ex.: mais de um provedor de pagamento, storage pela API S3, feature flags via OpenFeature), essas portas ficam registradas em `docs/decisions.md` como previstas; outras precisam dos critérios.
 
 Mesmo então, a interface é definida pelo uso (o que o chamador precisa) e não pela ferramenta (não espelhar a API da biblioteca).
 
@@ -39,7 +39,7 @@ Quando entidades e invariantes são usadas por mais de uma feature (skill `domai
 
 ## Greenfield
 
-Modelo de domínio (`SquadOS.App/Common/Demands`) sem referência a EF Core, Dapr ou ASP.NET; regra NetArchTest garante.
+Modelo de domínio (ex.: `<App>/Common/<Agregado>`) sem referência a EF Core, Dapr ou ASP.NET; regra NetArchTest garante.
 
 ## Brownfield
 
@@ -51,7 +51,7 @@ Não aplicar:
 
 - CRUD simples, protótipo, script, integração pontual;
 - "para o caso de trocar o banco um dia" sem requisito;
-- interface com uma única implementação e nenhum dos critérios acima (exceto as portas do ADR 0003: repositório por agregado e UoW).
+- interface com uma única implementação e nenhum dos critérios acima (exceto as portas do desenho padrão: repositório por agregado e UoW).
 
 ## Testes obrigatórios
 

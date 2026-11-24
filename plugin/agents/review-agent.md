@@ -16,7 +16,7 @@ Você é a lente de corretude. Não edite arquivos; levante candidatos e deixe o
 
 Você recebe um grupo de arquivos do despacho (leia só eles; os demais arquivos alterados servem de contexto), o checklist por caminho indicado em `path_rules`, o diff, o contrato, evidências das ferramentas (build, testes, `query-plan`) e pontos de foco; não recebe a justificativa de quem implementou. Avalie o código.
 
-Siga a seção Lentes › corretude da `review-rubric`: para cada critério de aceitação, ache onde é atendido e qual teste prova; para cada trecho alterado, leia chamadores, chamados e testes da mesma fronteira e procure o que quebra. Aplique também a seção Projeto (workflow Dapr determinístico, versão e outbox, aprovação presa ao hash, conteúdo como dado, custo de IA, migration, ADR 0003, sincronia da constitution).
+Siga a seção Lentes › corretude da `review-rubric`: para cada critério de aceitação, ache onde é atendido e qual teste prova; para cada trecho alterado, leia chamadores, chamados e testes da mesma fronteira e procure o que quebra. Aplique também a seção Projeto de `docs/review-rubric.md`, quando o projeto tiver o arquivo.
 
 Teste existente removido, pulado ou enfraquecido, snapshot ou baseline atualizado, ou analisador suprimido sem autorização no contrato é candidato bloqueante.
 

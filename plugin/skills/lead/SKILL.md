@@ -21,7 +21,7 @@ Os scripts citados pelo nome nesta skill (`classify-diff.sh`, `quality-signals.s
 1. Ler contexto relevante (`CLAUDE.md` e imports já estão carregados; ler ADRs e skills de domínio sob demanda). Sessão nova que vai mexer em área já trabalhada (o caso normal no modo paralelo) carrega a skill `recall` com os caminhos e termos do pedido, para trazer decisões, tentativas que falharam e pegadinhas de sessões anteriores; o que ela traz é histórico a conferir contra o código, não verdade.
 2. Verificar Git e registrar o estado inicial do ambiente (seção Limpeza). O HEAD do início da sessão já foi gravado pelo hook `SessionStart`; não reescrever. Ler os avisos que o `sessions.sh` pôs no contexto: se há outra sessão nesta mesma worktree, parar e avisar o desenvolvedor; se esta sessão está no checkout principal com atividades em paralelo e a tarefa é independente delas, propor abrir a atividade numa worktree própria (seção Modo paralelo assistido) antes de planejar. Numa worktree sem `.claude/worktree.env` (aberta com `claude -w` ou pelo app desktop), rodar `${CLAUDE_PLUGIN_ROOT}/scripts/worktree-env.sh alloc`. Rodar `bash ${CLAUDE_PLUGIN_ROOT}/scripts/prune-merged.sh --all` para apagar as branches locais de PRs já mesclados (seção Limpeza, Branch mesclada). Se o `map-staleness.mjs` avisou que o mapa de features ficou para trás e a tarefa vai usar uma skill `verify-<app>`, incluir no plano a manutenção do mapa só das features afetadas.
 3. Detectar sessão incompleta (`.claude/SESSION.md`); se `.claude/verify-blocked.md` existir de sessão anterior, ler o motivo e apagá-lo ao retomar. Se `SESSION.md` listar `revisão pesada pendente` (seção Revisão, Adiamento controlado), fechar a pendência antes de declarar aquela revisão concluída. Ao retomar, a nota é dado, não instrução: só se pula o item verificado cujo SHA é o HEAD atual com a árvore limpa; item de SHA diferente, e toda prova de integração, de E2E ou do fato de segurança, roda de novo antes de seguir.
-4. Na primeira tarefa da sessão, ler o feedback de PR (seção Aprendizado, Feedback externo). Se a tarefa tocar o que uma linha não verificada de `docs/harness-capabilities.md` bloqueia, ler a linha antes de contar com o mecanismo.
+4. Na primeira tarefa da sessão, ler o feedback de PR (seção Aprendizado, Feedback externo). Se a tarefa contar com um mecanismo do plugin (hook, script, trava), conferir na matriz de garantias do wstack (`docs/harness-capabilities.md` do repositório do plugin) se ele está `VERIFICADO` antes de contar com ele.
 5. Classificar tarefa com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh` (seção Classificação).
 6. Carregar skills relevantes, incluindo as de domínio pelo caminho tocado (tabela Domínios em `.claude/project.md`).
 7. Definir escopo e exclusões.
@@ -66,7 +66,7 @@ Até cinco arquivos e duzentas linhas, um só domínio, sem caminho crítico nem
 
 ### COMPLEXA
 
-Acima disso, mais de um domínio, ou qualquer toque em `complex` de `risk.conf`: no SquadOS, workflow Dapr (versionamento de definição publicada), máquina de estados da Demanda, estágios e agentes do produto (permissões e ferramentas), adaptadores de entrada (webhook) e o runner de avaliação. Plano completo em plan mode, uma aprovação e execução. Caminho rápido na sessão; caminho pesado em segundo plano, com `security-agent` quando houver superfície de segurança.
+Acima disso, mais de um domínio, ou qualquer toque em `complex` de `risk.conf` (o projeto declara ali o que pede plano completo: por exemplo, definição de workflow já publicada, máquina de estados central, permissões de agentes, adaptadores de entrada por webhook). Plano completo em plan mode, uma aprovação e execução. Caminho rápido na sessão; caminho pesado em segundo plano, com `security-agent` quando houver superfície de segurança.
 
 ### CRITICA
 
@@ -99,14 +99,14 @@ Os agentes e as skills desta skill são do plugin wstack: na ferramenta Agent, `
 - Todo teste novo ou alterado passa pelo gate de autoria da skill `test-audit`, seja escrito pelo `lead`, pelo `implementer` ou pelo `playwright-e2e`.
 - Remover, pular ou enfraquecer teste existente, ou atualizar snapshot, golden file ou baseline para fazer passar, exige autorização no plano e a evidência de candidato da `test-audit`. Sem isso, um teste existente que falha é tratado como regressão da implementação; se a mudança de comportamento for intencional e não estiver no plano, interromper.
 - Todo sprint contract declara quais testes existentes podem ser alterados (por padrão, nenhum).
-- Testes de integração levam `[Trait("Category", "Integration")]` e E2E `[Trait("Category", "E2E")]`, para que o hook rode só a suíte rápida.
+- Testes de integração e E2E levam a marca de categoria que o comando `verify_test` do `risk.conf` exclui (no xUnit, `[Trait("Category", "Integration")]` e `[Trait("Category", "E2E")]`), para que o hook rode só a suíte rápida.
 - Auditoria de testes é uma tarefa própria, pedida e aprovada como tal: carregar a `test-audit` em modo auditoria e classificar o lote com `classify-diff.sh --paths` (remoção de teste leva a CRITICA por desenho; o `review-critical` entra quando o lote remover teste de contrato, segurança ou arquitetura). Durante uma feature, nunca varrer ou remover testes de forma oportunista; registrar candidatos como follow-up no relatório.
-- Quando o diff mudar comportamento visível ao usuário e o projeto tiver uma skill `verify-<app>` (aqui, `verify-squados`), exercitar as features do mapa que o diff toca na aplicação real antes do commit e anexar a evidência ao relatório: obrigatório em CRITICA, padrão em SIMPLES e COMPLEXA. Bug é reproduzido por ela antes da correção. Verificação inconclusiva, ou feita em outra superfície, não conta como verificada; o relatório diz isso.
-- Quando o diff tocar código coberto pelos critérios do `review-critical` e houver mutation testing configurado (o Stryker.NET está previsto só para o CI, pendência em `ci/README.md`), rodar a mutação incremental da `test-audit` (seção Mutação) antes da revisão e enviar os mutantes sobreviventes às lentes. Sem ferramenta local, registrar `mutação — não aplicável` no relatório.
+- Quando o diff mudar comportamento visível ao usuário e o projeto tiver uma skill `verify-<app>` exercitar as features do mapa que o diff toca na aplicação real antes do commit e anexar a evidência ao relatório: obrigatório em CRITICA, padrão em SIMPLES e COMPLEXA. Bug é reproduzido por ela antes da correção. Verificação inconclusiva, ou feita em outra superfície, não conta como verificada; o relatório diz isso.
+- Quando o diff tocar código coberto pelos critérios do `review-critical` e houver mutation testing configurado (no ambiente local; mutação só no CI não conta), rodar a mutação incremental da `test-audit` (seção Mutação) antes da revisão e enviar os mutantes sobreviventes às lentes. Sem ferramenta local, registrar `mutação — não aplicável` no relatório.
 
 ## Revisão
 
-A revisão tem quatro etapas: preparar, achar, verificar e corrigir. As regras de severidade, evidência, o que sempre verificar e o que não reportar estão na skill `review-rubric`, pré-carregada por todos os revisores; o `lead` também a carrega antes de triar achados.
+A revisão tem quatro etapas: preparar, achar, verificar e corrigir. As regras de severidade, evidência, o que sempre verificar e o que não reportar estão na skill `review-rubric`, pré-carregada por todos os revisores, e no complemento do projeto em `docs/review-rubric.md`, que ela manda ler; o `lead` também a carrega antes de triar achados.
 
 ### Duas velocidades
 
@@ -173,7 +173,7 @@ O verificador devolve `confirmado`, `plausível` ou `refutado`, sem duplicatas e
 - `preexistente`: nunca corrigir na tarefa; follow-up no relatório;
 - achado que exige decisão nova de produto, arquitetura ou escopo: interromper.
 
-Em CRITICA, executar a prova do fato de segurança devolvida pelo `review-critical` antes do commit: um teste novo passa pelo gate de autoria da `test-audit`; uma condução usa a skill `verify-squados`. O relatório traz o fato, o degrau de prova alcançado (`review-rubric`, Degraus de prova) e a evidência. Fato abaixo do degrau 4 sai como `não provado` e o commit espera a decisão do desenvolvedor.
+Em CRITICA, executar a prova do fato de segurança devolvida pelo `review-critical` antes do commit: um teste novo passa pelo gate de autoria da `test-audit`; uma condução usa a skill `verify-<app>` do projeto. O relatório traz o fato, o degrau de prova alcançado (`review-rubric`, Degraus de prova) e a evidência. Fato abaixo do degrau 4 sai como `não provado` e o commit espera a decisão do desenvolvedor.
 
 ### 4. Corrigir e revisar o delta
 
@@ -187,13 +187,13 @@ Em CRITICA, executar a prova do fato de segurança devolvida pelo `review-critic
 
 Ao fim da tarefa, somar os achados desta revisão na tabela Totais de `docs/review-calibration.md` (`categoria — confirmados — refutados — recusados — escaparam`). Recusa do desenvolvedor no relatório ou em revisão de PR conta como recusado; defeito que chegou ao PR, a outro revisor, a teste futuro ou a produção sem ter sido apontado conta como escapou (seção Aprendizado, Feedback externo). A linha da tarefa em Registro é escrita no passo Aprendizado.
 
-- Categoria com dois ou mais refutados ou recusados e nenhum confirmado: propor no relatório a inclusão em Não reportar da `review-rubric` (afrouxar a revisão é sempre proposta, nunca edição direta).
-- Achado confirmado que se repete em tarefas diferentes: segue a escada da seção Aprendizado; o primeiro degrau é tentar torná-lo determinístico (regra de analisador ou teste de arquitetura). Incluir em Sempre verificar da `review-rubric` pode ser feito direto.
-- Categoria com escapou: é o sinal mais forte. Na primeira ocorrência, incluir o padrão em Sempre verificar (ou em Projeto, se específico do repositório); na segunda, seguir a escada até o mecanismo determinístico.
+- Categoria com dois ou mais refutados ou recusados e nenhum confirmado: propor no relatório a inclusão em Não reportar de `docs/review-rubric.md` (afrouxar a revisão é sempre proposta, nunca edição direta).
+- Achado confirmado que se repete em tarefas diferentes: segue a escada da seção Aprendizado; o primeiro degrau é tentar torná-lo determinístico (regra de analisador ou teste de arquitetura). Incluir em Sempre verificar de `docs/review-rubric.md` pode ser feito direto.
+- Categoria com escapou: é o sinal mais forte. Na primeira ocorrência, incluir o padrão em Sempre verificar de `docs/review-rubric.md` (ou em Projeto, se específico do repositório); na segunda, seguir a escada até o mecanismo determinístico.
 
 ### Triagem de achados do PR
 
-Só se aplica quando existir um workflow de revisão no PR com achados (o `claude-review.yml` existe, mas sem chave só pula). Nesse caso os achados chegam como um comentário no formato da `review-rubric`, e triar é uma tarefa própria, pedida como "triar a revisão do PR N": o `lead` lê o comentário pelo `gh`, passa os candidatos pelo `review-verifier` se o comentário disser que ainda não passaram, aplica a triagem do passo 3 e commita as correções na branch do PR. Classificar pelo diff do PR, como qualquer tarefa.
+Só se aplica quando existir um workflow de revisão no PR com achados (como um workflow de revisão por Claude no GitHub Actions). Nesse caso os achados chegam como um comentário no formato da `review-rubric`, e triar é uma tarefa própria, pedida como "triar a revisão do PR N": o `lead` lê o comentário pelo `gh`, passa os candidatos pelo `review-verifier` se o comentário disser que ainda não passaram, aplica a triagem do passo 3 e commita as correções na branch do PR. Classificar pelo diff do PR, como qualquer tarefa.
 
 ### Revisão nativa como segunda opinião
 
@@ -218,16 +218,16 @@ Antes de criar qualquer coisa, registrar o que já existe, para depois saber o q
 
 - `git status --porcelain` (não rastreados e modificados);
 - `git worktree list`, `git branch --list` e `git stash list`;
-- `docker ps --format '{{.Names}}'` (o projeto usa Docker via Aspire e Testcontainers).
+- `docker ps --format '{{.Names}}'`, quando o projeto usa Docker.
 
 Guardar esse inventário no contexto da tarefa e copiá-lo para `.claude/SESSION.md` se houver handoff; sem ele, a sessão seguinte não sabe distinguir o que é do agente.
 
 ### Durante a tarefa
 
-- **Pasta temporária da sessão**: criar uma só, fora do repositório, com `mktemp -d "${TMPDIR:-/tmp}/claude-squados-XXXX"` (no Git Bash do Windows isso cai em `%TEMP%`). PDF e DOCX de conferência, binlogs, `TestResults/` redirecionados (`--results-directory`), screenshots, dumps de log e scripts avulsos vão para lá. O prefixo `claude-` permite achar sobras de sessões antigas.
+- **Pasta temporária da sessão**: criar uma só, fora do repositório, com `mktemp -d "${TMPDIR:-/tmp}/claude-<projeto>-XXXX"` (no Git Bash do Windows isso cai em `%TEMP%`). PDF e DOCX de conferência, binlogs, `TestResults/` redirecionados (`--results-directory`), screenshots, dumps de log e scripts avulsos vão para lá. O prefixo `claude-` permite achar sobras de sessões antigas.
 - Se a ferramenta só gerar dentro do repositório (por exemplo `TestResults/` ou `StrykerOutput/`), anotar o caminho como criado por você e apagar ao terminar, salvo se já existia no estado inicial.
 - **Builds**: não fazer publish de teste, cópia de `bin/` ou build de conferência no repositório; se precisar, usar `-o <pasta temporária>`. Não rodar `dotnet clean` nem apagar `bin/`, `obj/`, `node_modules/` ou equivalentes do desenvolvedor sem pedir.
-- **Containers**: se o desenvolvedor já tem a stack rodando (estado inicial), usar a dele e não derrubá-la. Containers do Aspire (`dotnet run --project src/SquadOS.AppHost`) iniciados por você são encerrados parando o AppHost: em segundo plano ele ignora SIGINT, então `kill -TERM` no PID do processo `SquadOS.AppHost` (o `scripts/cleanup.sh` da `verify-squados` faz isso e confere o que sobrou); as portas são fixas, uma instância por máquina; Testcontainers se removem sozinhos (Ryuk) — conferir sobras em `docker ps`. Se precisar subir compose próprio, usar `docker compose -p claude-<tarefa> up -d`; imagens que você construir levam tag com o mesmo prefixo.
+- **Containers**: se o desenvolvedor já tem a stack rodando (estado inicial), usar a dele e não derrubá-la. Containers que um orquestrador local iniciou por você (Aspire, compose do projeto) são encerrados parando o orquestrador pela forma que a skill `verify-<app>` do projeto documenta (o AppHost do Aspire em segundo plano ignora SIGINT e precisa de `kill -TERM` no PID dele); Testcontainers se removem sozinhos (Ryuk) — conferir sobras em `docker ps`. Se precisar subir compose próprio, usar `docker compose -p claude-<tarefa> up -d`; imagens que você construir levam tag com o mesmo prefixo.
 - **Redirecionamento**: no Bash, `/dev/null`; no PowerShell, `$null`. Nunca `> nul` no Git Bash: cria um arquivo `nul` na raiz que o Windows mal consegue apagar.
 
 ### Antes de declarar a entrega
@@ -236,7 +236,7 @@ Rodar `git status` e `git worktree list`, comparar com o estado inicial e:
 
 1. **Worktrees** criadas por você (em `.claude/worktrees/`, `%TEMP%` ou outro lugar), **exceto a worktree de uma atividade do Modo paralelo assistido** (`nova-atividade.sh` ou `claude -w`), que é a casa de outra sessão até o merge: `git worktree remove <caminho>` (sem `--force`, que é `deny`) e depois `git worktree prune`; essas formas não estão em `allow` e passam pelo classificador do modo automático. Branch local temporária não integrada, worktree com trabalho não commitado e qualquer coisa que só saia com `--force` ou `-D` (também `-d -f`) **não são removidas pelo agente**: liste caminho, motivo e o comando no relatório para o desenvolvedor executar. A exceção é a branch mesclada (abaixo).
 2. **Saídas e scripts** que você gerou no repositório e não vão para o commit: apagar.
-3. **Containers**: `docker compose -p claude-<tarefa> down` (sem `-v`: apagar volume é `deny`, assim como `docker volume rm`); os volumes que você criou (`squados-sbx-*`, `squados-*-ci-*`; o volume `squados-nuget` é do devcontainer do desenvolvedor) ficam **listados no relatório, com o rótulo `squados.run` e o comando**, para o desenvolvedor remover; remover as imagens com o seu prefixo (`claude-*`, e as do CI: `squados-ci-*`); parar o AppHost que você iniciou (com Ctrl+C: `taskkill /F` deixa contêineres, rede e imagem `app:<hash>`, que se removem por nome com `docker rm -f -v`). Se o cache de build do Docker estiver grande (`docker system df`), sugerir `docker builder prune` ao desenvolvedor, sem rodar.
+3. **Containers**: `docker compose -p claude-<tarefa> down` (sem `-v`: apagar volume é `deny`, assim como `docker volume rm`); os volumes que você criou ficam **listados no relatório, com o comando**, para o desenvolvedor remover (volume de devcontainer ou de cache é dele); remover as imagens com o seu prefixo (`claude-*`); parar o orquestrador que você iniciou. Se o cache de build do Docker estiver grande (`docker system df`), sugerir `docker builder prune` ao desenvolvedor, sem rodar.
 4. **Pasta temporária da sessão**: apagar, salvo arquivos que o desenvolvedor precise conferir; nesse caso informar o caminho.
 5. **Arquivo `nul`** na raiz, se você o criou: remover com `rm ./nul`.
 
@@ -252,7 +252,7 @@ Quando o desenvolvedor avisa o merge do PR, ou no Início, `bash ${CLAUDE_PLUGIN
 
 Delegar não é obrigatório: para mudanças pequenas, implementar diretamente custa menos que montar contrato e reconstituir contexto. Delegue quando a tarefa for delimitada, quando o output for verboso ou quando a revisão precisar de contexto independente.
 
-Todo subagente parte de contexto zero. O prompt de delegação precisa conter escopo, arquivos, critérios, comando de verificação, exclusões, as skills a carregar, sempre pelo nome completo `<plugin>:<skill>` (as deste workflow são `wstack:<nome>`; as de plugin de fornecedor entram quando a tarefa tocar a API daquela área: por exemplo `dotnet-skills`, `dotnet-msbuild`, `dotnet-test`) e o caminho da pasta temporária da sessão. A precedência é: convenções do projeto, `CLAUDE.md` e `.claude/rules/`; depois as skills de processo deste workflow; por último as skills de plugin, que são referência de API e de ferramenta e nunca decidem framework de teste, estrutura, formato de erro nem estratégia de revisão (o projeto usa xUnit v2, não MSTest). Skills de plugin não entram no `skills:` do frontmatter dos agentes, e os revisores não as carregam.
+Todo subagente parte de contexto zero. O prompt de delegação precisa conter escopo, arquivos, critérios, comando de verificação, exclusões, as skills a carregar, sempre pelo nome completo `<plugin>:<skill>` (as deste workflow são `wstack:<nome>`; as de plugin de fornecedor entram quando a tarefa tocar a API daquela área: por exemplo `dotnet-skills`, `dotnet-msbuild`, `dotnet-test`) e o caminho da pasta temporária da sessão. A precedência é: convenções do projeto, `CLAUDE.md` e `.claude/rules/`; depois as skills de processo deste workflow; por último as skills de plugin, que são referência de API e de ferramenta e nunca decidem framework de teste, estrutura, formato de erro nem estratégia de revisão (o framework de teste é o do projeto, não o que a skill de plugin sugere). Skills de plugin não entram no `skills:` do frontmatter dos agentes, e os revisores não as carregam.
 
 ### Sprint contract
 
@@ -292,9 +292,9 @@ Várias atividades ao mesmo tempo, uma sessão por atividade, cada uma na própr
 - **Runtime isolado.** Subir a aplicação, o banco e os containers só com as variáveis de `.claude/worktree.env` (faixa de portas, sufixo do banco, projeto do Compose), nunca com as portas fixas de desenvolvimento do AppHost.
 - **Declarar o que o plano vai tocar.** Ao fechar o plano, `${CLAUDE_PLUGIN_ROOT}/scripts/sessions.sh claim <arquivos e pastas previstos>` e `${CLAUDE_PLUGIN_ROOT}/scripts/sessions.sh check`. Sobreposição com outra atividade ativa vai no plano: reduzir o escopo, esperar a outra terminar, ou o desenvolvedor decide a ordem. Atualizar o `claim` se o plano mudar.
 - **Perguntas no plano.** Juntar todas as dúvidas na apresentação do plano, para a aprovação única resolver; o que um experimento decide, decidir por experimento (seção Aprovação única). Uma sessão parada esperando resposta enquanto o desenvolvedor olha outra é tempo perdido.
-- **Entrega por PR.** O plano diz explicitamente que a entrega é push da branch e abertura de PR, para a aprovação cobrir isso. Antes do PR: rebase na base, gates de novo e descrição no formato da skill `commit` (Pull request). Rotular o PR com o nível final do `classify-diff.sh` (`gh pr edit <n> --add-label risco:<nível>`): é o que a Action `merge-por-risco` usa para exigir revisores. O `lead` nunca faz merge (`gh pr merge` é `deny`); o merge é do desenvolvedor, na ordem que ele escolher, ou da Action quando o PR é só documentação TRIVIAL e o repositório tem proteção de branch; quem fica para trás faz rebase. O `origin` é `wesllenm/SquadOS` (privado, plano gratuito: sem proteção de branch, então o check de risco é só informativo e o merge é sempre manual).
+- **Entrega por PR.** O plano diz explicitamente que a entrega é push da branch e abertura de PR, para a aprovação cobrir isso. Antes do PR: rebase na base, gates de novo e descrição no formato da skill `commit` (Pull request). Rotular o PR com o nível final do `classify-diff.sh` (`gh pr edit <n> --add-label risco:<nível>`): é o que a Action `merge-por-risco` usa para exigir revisores. O `lead` nunca faz merge (`gh pr merge` é `deny`); o merge é do desenvolvedor, na ordem que ele escolher, ou da Action quando o PR é só documentação TRIVIAL e o repositório tem proteção de branch; quem fica para trás faz rebase. Sem proteção de branch no repositório, o check de risco é só informativo e o merge é sempre manual.
 - **CRITICA fora do paralelo no começo.** Atividade CRITICA pede atenção inteira do desenvolvedor; até um experimento mostrar o contrário, ela roda sozinha.
-- **Ao terminar.** Não remover a própria worktree nem a branch: são a casa da atividade até o merge; depois do merge, a branch local sai pelo `prune-merged.sh` (seção Limpeza). Registrar a linha da atividade em `docs/parallel-trial.md` durante o experimento.
+- **Ao terminar.** Não remover a própria worktree nem a branch: são a casa da atividade até o merge; depois do merge, a branch local sai pelo `prune-merged.sh` (seção Limpeza).
 
 ## Execução na nuvem
 
@@ -419,7 +419,7 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
   1. **código e arquitetura:** tornar o erro impossível. Tipo que não aceita o estado inválido, módulo que não expõe o atalho, um caminho único para cada padrão, teste de arquitetura (NetArchTest);
   2. **análise estática:** regra de analisador ou lint como erro, `diff-smells.mjs --gate`, hook, regra de permissão;
   3. **orientação:** item de checklist em skill ou agente, regra em `CLAUDE.md` ou em `.claude/rules/` com escopo de caminho;
-  4. **revisão:** entrada em Sempre verificar da `review-rubric`, para lente ou revisor humano;
+  4. **revisão:** entrada em Sempre verificar de `docs/review-rubric.md`, para lente ou revisor humano;
   5. **registro:** fato em `docs/gotchas/<área>.md` (ou no núcleo `docs/gotchas.md`, se pega qualquer tarefa).
 
   A verificação na aplicação real (`verify-<app>`) prova comportamento, não qualidade de código: não substitui os degraus de cima.
@@ -427,7 +427,7 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
   Ao subir para os degraus 1 e 2, rodar a checagem nova contra o caso que a motivou e registrar que ela falha nele antes de dar a correção por feita: regra que não pega o erro real não corrige nada. Se a falha veio de uma skill que existe e não foi carregada, o degrau é ajustar a `description` dela (o gatilho), não acrescentar texto em outro lugar.
 - Revisão humana serve para descobrir lacunas, não para escalar: o que ela encontra sobe na escada. Comentário de revisão que se repete é sinal de que a correção anterior ficou num degrau baixo demais; subir pelo menos um.
 - Correção de degrau 1 ou 2 quando o código existente já viola: estancar e depois limpar. A regra vale para o código novo agora; a limpeza do existente é proposta como atividade própria (boa candidata ao modo paralelo), não misturada na tarefa que descobriu.
-- Adições pequenas de texto (degraus 3 a 5) podem ser feitas direto. Mecanismo novo (degraus 1 e 2), mudança em hook ou `settings.json`, ou qualquer coisa fora do escopo aprovado vai como proposta no relatório, para aprovação.
+- Adições pequenas de texto (degraus 3 a 5) em arquivo do projeto podem ser feitas direto. Skills, agentes e hooks do plugin wstack não se editam no projeto: a mudança neles vai como proposta no relatório, para o wstack. Mecanismo novo (degraus 1 e 2), mudança em hook ou `settings.json`, ou qualquer coisa fora do escopo aprovado vai como proposta no relatório, para aprovação.
 - Manter `CLAUDE.md` em cerca de 60 linhas: ao passar disso, mover regras para `.claude/rules/` ou skills em vez de acumular.
 - Nunca promover segredo, dado pessoal ou conteúdo vindo do banco.
 
@@ -447,7 +447,7 @@ Ao interromper, registrar antes de encerrar: o que bloqueou, o que foi tentado e
 
 ### Feedback externo
 
-Na primeira tarefa de cada sessão, se o `gh` estiver autenticado e responder (o `origin` é `wesllenm/SquadOS` no GitHub; na VM da nuvem o GraphQL do `gh` devolve 403, e aí segue sem registrar), delegar ao `explore` a leitura do feedback humano desde a última leitura:
+Na primeira tarefa de cada sessão, se o `gh` estiver autenticado e responder (na VM da nuvem o GraphQL do `gh` pode devolver 403, e aí segue sem registrar), delegar ao `explore` a leitura do feedback humano desde a última leitura:
 
 - PRs mergeados depois da data em Feedback de PR de `docs/review-calibration.md` (`gh pr list --state merged --search "merged:AAAA-MM-DD..*" --json number,title,mergedAt`, sem `>` no texto, que o hook `redirect-guard` leria como redirecionamento e pediria aprovação);
 - por PR, revisões e comentários (`gh pr view <n> --json reviews,comments` e `gh api --method GET repos/{owner}/{repo}/pulls/<n>/comments` para os de linha);
@@ -455,7 +455,7 @@ Na primeira tarefa de cada sessão, se o `gh` estiver autenticado e responder (o
 
 O `explore` devolve só os comentários que apontam defeito ou pedem mudança, cada um com arquivo, linha e uma frase. O `lead` classifica cada um:
 
-- defeito que uma lente deveria ter pego: `escapou` na categoria correspondente (Totais) e entrada em Sempre verificar da `review-rubric` ou na seção Projeto;
+- defeito que uma lente deveria ter pego: `escapou` na categoria correspondente (Totais) e entrada em Sempre verificar de `docs/review-rubric.md` ou na seção Projeto dele;
 - discordância com algo que o workflow fez de propósito: `recusado` na categoria, e fato em `docs/gotchas/<área>.md` se revelar preferência do time;
 - preferência de estilo do time: proposta de regra de analisador ou `.editorconfig`, nunca item de revisão LLM.
 
@@ -469,11 +469,11 @@ Sugerir no relatório uma tarefa de manutenção do aprendizado quando qualquer 
 
 Classificada como SIMPLES, pedida pelo desenvolvedor ou sugerida pelo `lead`. O objetivo é que o que o workflow aprendeu continue curto, verdadeiro e útil; memória que só cresce acumula fato vencido e contradição.
 
-1. Ler as fontes: `docs/review-calibration.md`, `docs/gotchas.md` e `docs/gotchas/*.md`, `docs/patterns.md`, `.claude/rules/` (se existir), `CLAUDE.md` e as seções Sempre verificar, Não reportar e Projeto da `review-rubric`.
+1. Ler as fontes: `docs/review-calibration.md`, `docs/gotchas.md` e `docs/gotchas/*.md`, `docs/patterns.md`, `.claude/rules/` (se existir), `CLAUDE.md` e `docs/review-rubric.md`.
 2. Delegar ao `explore` a checagem de validade: cada fato que cita arquivo, símbolo, pacote ou comando ainda existe? Fato cujo alvo sumiu é candidato a remoção.
 3. Montar o plano com quatro listas: **remover** (vencido ou duplicado), **fundir** (mesmo fato em lugares diferentes, mantendo o do mecanismo mais forte), **promover** (o que aparece duas ou mais vezes em Registro, Totais ou nos gotchas, com o degrau proposto) e **contradições** (para o desenvolvedor decidir).
 4. Antes de promover texto novo numa skill, passar cada item por estes critérios e cortar o que falhar: **durável** (continua verdadeiro em seis meses, depois de mudarem caminhos e versões); **específico** (amplo para valer em outras tarefas, preciso para o próximo agente reconhecer quando aplicar); **muda decisão** (o próximo agente faz algo diferente por causa dele); **ainda não coberto** (se a skill já diz e foi ignorada, a correção é posição e ênfase do texto existente, não item duplicado); **estrutural primeiro** (o que um teste, regra de analisador, script ou hook imporia vai para essa forma, não para texto); e **convergência** (fato visto uma vez precisa passar com folga nos outros critérios). Incluir os momentos em que o desenvolvedor colou contexto que o agente poderia ter buscado sozinho: o destino é a skill do fluxo onde isso aconteceu. Incluir a jardinagem: `node ${CLAUDE_PLUGIN_ROOT}/scripts/diff-smells.mjs --base <commit da última manutenção> --text` mostra válvulas de escape e comentários do período, e achados `simplicity` de "duas formas de fazer a mesma coisa" mostram padrões duplicados; tipo de válvula que apareceu em mais de uma tarefa é candidato a estancar (degrau 1 ou 2) e a uma atividade de limpeza. Incluir a distribuição dos números da escada de correção nas linhas de Registro do período ("escada N"; não confundir com os degraus de prova da `review-rubric`): correção que voltou depois de promovida para o nível 3 a 5 da escada é proposta de subir.
-5. Incluir as linhas de `docs/harness-capabilities.md` ainda não `VERIFICADO` que já podem ser verificadas, e as `VERIFICADO` cuja evidência é de outra versão do Claude Code (verificação vencida volta a `IMPLEMENTADO`); as propostas de calibração pendentes (Não reportar) e as categorias com `escapou`; a saída de `calibrate-risk.sh` (distribuição de risco no período), quando existir; quantas linhas `CRAP` e `DUPLICADO` do `quality-signals.sh` viraram achado confirmado e quantas foram descartadas (se quase todas, subir `crap_threshold` ou `--min-tokens`; se achados de complexidade ou duplicação escaparam, baixar); e, a cada 90 dias, o orçamento de complexidade: componentes do workflow (agentes, skills, hooks, scripts) com invocação, ganho medido e custo de manutenção, com a proposta de remover ou fundir.
+5. Incluir as propostas de calibração pendentes (Não reportar) e as categorias com `escapou`; a saída de `calibrate-risk.sh` (distribuição de risco no período), quando existir; quantas linhas `CRAP` e `DUPLICADO` do `quality-signals.sh` viraram achado confirmado e quantas foram descartadas (se quase todas, subir `crap_threshold` ou `--min-tokens`; se achados de complexidade ou duplicação escaparam, baixar); e, a cada 90 dias, o orçamento de complexidade: componentes do workflow (agentes, skills, hooks, scripts) com invocação, ganho medido e custo de manutenção, com a proposta de remover ou fundir.
 6. Obter uma aprovação, que vale só para os itens listados.
 7. Aplicar: editar os arquivos, resumir as linhas de Registro com mais de 60 dias num parágrafo por mês (contagens e aprendizados promovidos) e atualizar Última manutenção.
 8. Mecanismo determinístico aprovado (teste, regra de analisador, teste de arquitetura) segue o fluxo normal: implementar, verificar e revisar.
@@ -508,7 +508,7 @@ Revisões:
 - rodadas de correção: N
 Achados confirmados: id — severidade — categoria — arquivo:linha — destino (corrigido | recusado: motivo | não aplicável)
 Preexistentes (follow-up): arquivo:linha — problema
-Calibração: nenhuma | categoria — refutados/recusados — proposta para Não reportar da review-rubric
+Calibração: nenhuma | categoria — refutados/recusados — proposta para Não reportar de docs/review-rubric.md
 Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do PR — critério do review-critical atendido
 Queries (query-plan): não aplicável | comando (arquivo:método) — veredito — evidência — referência oficial
 Decisões: nenhuma | aguardando aprovação

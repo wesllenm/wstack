@@ -26,7 +26,7 @@ Toda migration, novo índice, mudança de tipo, constraint, dados de referência
 
 ## Greenfield
 
-Schema nasce com: chaves `uuid` (v7 gerado na aplicação, fora de código de workflow), `timestamptz` para datas, coluna de versão para concorrência otimista em Demanda e entidades editáveis [CON-01], nomes em snake_case (convenção Npgsql; tabelas no plural, chave primária `id`, chave estrangeira `<entidade>_id`, datas `*_at`, booleanos `is_`/`has_`, restrições e índices com prefixo `pk_`, `fk_`, `ix_`, `ux_`) [NOM-02], extensão `vector` habilitada por migration.
+Schema nasce com: chaves `uuid` (v7 gerado na aplicação, fora de código de workflow), `timestamptz` para datas, coluna de versão para concorrência otimista em entidades editáveis [CON-01], nomes em snake_case (convenção Npgsql; tabelas no plural, chave primária `id`, chave estrangeira `<entidade>_id`, datas `*_at`, booleanos `is_`/`has_`, restrições e índices com prefixo `pk_`, `fk_`, `ix_`, `ux_`) [NOM-02], extensões do Postgres (ex.: `vector`) habilitadas por migration quando usadas.
 
 ## Brownfield
 
@@ -38,7 +38,7 @@ Migrations já aplicadas no sistema existente permanecem como estão (ver Restri
 - Não aplicar migration produtiva, alteração destrutiva ou mudança de dados reais automaticamente (`dotnet ef database update` fica em `permissions.ask`). [DAT-10]
 - Migration destrutiva (drop de coluna/tabela, mudança de tipo com perda) sempre bloqueia para humano e aciona `review-critical`. [DAT-08]
 - Postgres: `CREATE INDEX` em tabela grande usa `CONCURRENTLY` (exige `migrationBuilder.Sql` fora de transação, `suppressTransaction: true`); `ALTER TABLE ... ADD COLUMN` com default volátil reescreve a tabela; `ALTER COLUMN TYPE` costuma reescrever e travar. Migration com `suppressTransaction` (CONCURRENTLY) se aplica por `IMigrator`, `dotnet ef database update`, bundle ou script NÃO idempotente com `psql -v ON_ERROR_STOP=1`; `migrations script --idempotent` embrulha o comando em `DO $EF$` e o CONCURRENTLY falha (25001), e sem `ON_ERROR_STOP` a migration é registrada sem o índice.
-- Tabelas do state store do Dapr não são gerenciadas pelo EF.
+- Tabelas de outra ferramenta (ex.: state store do Dapr) não são gerenciadas pelo EF.
 
 ## Testes obrigatórios
 

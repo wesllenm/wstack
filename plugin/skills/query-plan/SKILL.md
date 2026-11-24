@@ -23,7 +23,7 @@ Nenhum comando de banco novo ou alterado entra no commit sem o plano de execuç�
 - Mudança de índice, de tipo de coluna ou de mapeamento que possa alterar planos existentes.
 - Nova listagem paginada por cursor (skill `api-design`): o índice precisa casar com a ordenação.
 
-Não se aplica a SQL de migration (DDL); isso é da skill `db-evolution` e do `database-reviewer`. Também não se aplica ao state store do Dapr Workflow (tabelas gerenciadas pelo Dapr).
+Não se aplica a SQL de migration (DDL); isso é da skill `db-evolution` e do `database-reviewer`. Também não se aplica a tabelas gerenciadas por outra ferramenta (ex.: state store do Dapr Workflow).
 
 ## Princípios
 
@@ -54,7 +54,7 @@ Cada regra tem a versão a partir da qual vale e o link da documentação oficia
 No código:
 
 - pacotes (`Npgsql.EntityFrameworkCore.PostgreSQL`, `Pgvector.EntityFrameworkCore`) e versões em `Directory.Packages.props`;
-- imagem do Postgres no AppHost do Aspire (tag da imagem);
+- imagem do Postgres na orquestração local (ex.: AppHost do Aspire, Compose), com a tag;
 - configuração de exemplo (`appsettings.json` sem segredos); nunca ler `.env`.
 
 No banco real (via `database-helper`):
@@ -99,7 +99,7 @@ Antes de interpretar, consultar `pg_class.reltuples` e `pg_stat_user_tables` das
 
 Nunca executar o comando de escrita para obter plano real. Usar os mesmos tipos da aplicação: literal com cast explícito para o tipo do parâmetro (`'...'::uuid`, `'...'::timestamptz`, `'[...]'::vector`).
 
-**Sem MCP (nuvem).** O `.mcp.json` aponta para `localhost:15432`, um Postgres que só existe com o AppHost no ar, então na nuvem o MCP falha com `CONNECTION_CLOSED`. Sem MCP, subir um Postgres descartável (Testcontainers num teste temporário fora do repositório, ou a imagem do AppHost) com as migrations aplicadas, gerar volume sintético coerente com a meta de `.claude/project.md` e rodar por `psql` o `EXPLAIN (ANALYZE, BUFFERS)` em plano personalizado e em plano genérico (`PREPARE` com `SET plan_cache_mode = force_generic_plan`). O veredito vale como plano real, e o relatório diz que veio do banco descartável; contêiner e arquivos temporários saem no fim.
+**Sem MCP (nuvem).** Quando o `.mcp.json` aponta para um Postgres que só existe com o ambiente local no ar, na nuvem o MCP falha com `CONNECTION_CLOSED`. Sem MCP, subir um Postgres descartável (Testcontainers num teste temporário fora do repositório, ou a imagem do ambiente local) com as migrations aplicadas, gerar volume sintético coerente com a meta de `.claude/project.md` e rodar por `psql` o `EXPLAIN (ANALYZE, BUFFERS)` em plano personalizado e em plano genérico (`PREPARE` com `SET plan_cache_mode = force_generic_plan`). O veredito vale como plano real, e o relatório diz que veio do banco descartável; contêiner e arquivos temporários saem no fim.
 
 Planos brutos (JSON) vão para a pasta temporária da sessão. O retorno ao `lead` traz só as métricas: operadores principais, linhas estimadas e reais, linhas removidas por filtro, buffers (shared hit/read), duração e avisos (sort em disco, `Rows Removed by Filter` alto).
 
@@ -137,7 +137,7 @@ Recomendação sem link oficial e sem evidência de plano não entra no relatór
 
 - Ajuste que não muda schema (reescrever a query, projeção, tipo de parâmetro, `AsSplitQuery`, `AsNoTracking`): aplicar dentro do escopo e repetir os passos 2 a 6.
 - Ajuste que muda schema (índice, coluna gerada, estatística estendida): recomendar com o plano atual e a hipótese, e encaminhar para `db-evolution` e `database-reviewer`. Não criar índice fora do plano aprovado.
-- Regra útil que apareceu na documentação e não estava na referência: propor a inclusão em `reference/<motor>.md` como aprendizado (seção Aprendizado da skill `lead`), com versão e link.
+- Regra útil que apareceu na documentação e não estava na referência: registrar em `docs/gotchas/<área>.md` do projeto, com versão e link (seção Aprendizado da skill `lead`); a inclusão em `reference/<motor>.md`, que é do plugin, vai como proposta para o wstack.
 
 ## Veredito por comando
 
@@ -151,7 +151,7 @@ Qualquer **bloqueia** ou **recomendação** de índice aciona o `database-review
 
 ## Greenfield
 
-Aplicar desde a primeira query. Motor, versão alvo de produção e meta de volume ficam em `.claude/project.md` e `.claude/architecture.md`. Popular o banco local com dados sintéticos em volume (seed do AppHost), nunca com cópia de produção. [DAT-07]
+Aplicar desde a primeira query. Motor, versão alvo de produção e meta de volume ficam em `.claude/project.md` e `.claude/architecture.md`. Popular o banco local com dados sintéticos em volume (seed do ambiente local), nunca com cópia de produção. [DAT-07]
 
 ## Brownfield
 

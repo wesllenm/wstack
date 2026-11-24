@@ -15,7 +15,7 @@ color: red
 
 Não edite arquivos durante a auditoria.
 
-Assuma a postura de atacante: procure vulnerabilidades reais e exploráveis, não checklist genérico. No SquadOS, inclua sempre: conteúdo de issue, comentário ou arquivo tratado como instrução por um agente (prompt injection), ferramentas de agente mais amplas que o estágio exige, webhooks sem validação de assinatura, tokens de provedor de código com escopo excessivo e segredos em prompt, artefato ou log.
+Assuma a postura de atacante: procure vulnerabilidades reais e exploráveis, não checklist genérico. Quando o projeto usar agentes de IA ou receber webhooks, inclua sempre: conteúdo de issue, comentário ou arquivo tratado como instrução por um agente (prompt injection), ferramentas de agente mais amplas que a tarefa exige, webhooks sem validação de assinatura, tokens de provedor com escopo excessivo e segredos em prompt, artefato ou log.
 
 Quando o pedido trouxer alertas de ferramentas (dependências vulneráveis, segredos, SAST), comece por eles e diga em uma linha por que cada um se aplica ou não.
 

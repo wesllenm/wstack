@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: >
-  Orienta o portal SvelteKit: componentes, HTML semântico, acessibilidade
+  Orienta o frontend web (ex.: SvelteKit): componentes, HTML semântico, acessibilidade
   WCAG 2.2 AA, formulários, foco, estado, responsividade, SignalR e
   performance, seguindo os padrões e bibliotecas existentes.
 ---
@@ -14,11 +14,11 @@ Interfaces acessíveis, responsivas e consistentes com o resto do produto.
 
 ## Quando aplicar
 
-Qualquer mudança em `src/portal/**`.
+Qualquer mudança no código de frontend do projeto.
 
 ## Acessibilidade
 
-A meta registrada em `.claude/project.md` é **WCAG 2.2 AA**. Toda tela nova ou alterada cumpre a meta. [FE-01]
+A meta fica em `.claude/project.md` (padrão: **WCAG 2.2 AA**). Toda tela nova ou alterada cumpre a meta. [FE-01]
 
 Independentemente da meta, sempre:
 
@@ -32,14 +32,14 @@ Independentemente da meta, sempre:
 
 ## Padrões
 
-- SvelteKit como SPA estática (`adapter-static`), servida pela API .NET; autenticação por BFF com cookie `HttpOnly`, sem token no navegador e com proteção contra CSRF no cookie de sessão. [SEC-10]
-- Svelte 5 com runes (`$state`, `$derived`, `$props`); TypeScript estrito.
+- Autenticação por BFF com cookie `HttpOnly`, sem token no navegador e com proteção contra CSRF no cookie de sessão (ex.: SvelteKit como SPA estática com `adapter-static`, servida pela API .NET). [SEC-10]
+- Com Svelte 5, runes (`$state`, `$derived`, `$props`); TypeScript estrito.
 - Seguir a biblioteca de componentes e o gerenciamento de estado que o projeto já usa; não introduzir novos sem aprovação. [FE-03]
 - Estado no nível mais baixo possível; estado de servidor separado de estado de interface.
-- Tempo real via `@microsoft/signalr`, com reconexão automática e indicação visual de desconexão.
+- Tempo real (ex.: `@microsoft/signalr`) com reconexão automática e indicação visual de desconexão.
 - Formulários com validação no cliente para feedback e sempre revalidados no servidor. [FE-04]
-- Layout responsivo nas larguras suportadas (desktop ≥ 1280px, tablet ≥ 768px).
-- Evitar requisições em cascata e renderizações desnecessárias em listas grandes (fila de aprovações paginada por cursor).
+- Layout responsivo nas larguras suportadas pelo projeto (ex.: desktop ≥ 1280px, tablet ≥ 768px).
+- Evitar requisições em cascata e renderizações desnecessárias em listas grandes (listas longas paginadas por cursor).
 
 ## Greenfield
 
@@ -51,11 +51,11 @@ Seguir os componentes existentes mesmo quando outra abordagem parecer melhor; di
 
 ## Restrições e cuidados
 
-Não renderizar HTML vindo de artefato ou issue sem sanitizar (`{@html}` só com conteúdo sanitizado): conteúdo do negócio é dado não confiável. Download de original ou anexo sai com `Content-Disposition: attachment` e `X-Content-Type-Options: nosniff`. [SEC-09]
+Não renderizar HTML vindo de usuário, documento ou integração (ex.: issue) sem sanitizar (`{@html}` só com conteúdo sanitizado): conteúdo do negócio é dado não confiável. Download de original ou anexo sai com `Content-Disposition: attachment` e `X-Content-Type-Options: nosniff`. [SEC-09]
 
 ## Testes obrigatórios
 
-Comportamento de componentes com lógica (validação, estados, interação) com Vitest + Testing Library; `svelte-check` sem erros; fluxos críticos (aprovação em portão) cobertos por E2E conforme a skill `testing-strategy`, com checagem axe no E2E.
+Comportamento de componentes com lógica (validação, estados, interação) com Vitest + Testing Library; `svelte-check` sem erros; fluxos críticos (ex.: checkout, aprovação) cobertos por E2E conforme a skill `testing-strategy`, com checagem axe no E2E.
 
 ## Exceções e limites
 

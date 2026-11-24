@@ -1,7 +1,7 @@
 ---
 name: event-driven
 description: >
-  Orienta eventos, comandos, mensageria (pub/sub do Dapr sobre RabbitMQ),
+  Orienta eventos, comandos, mensageria (ex.: pub/sub do Dapr sobre RabbitMQ),
   outbox em eventos críticos, consumidores idempotentes, retry, DLQ,
   compatibilidade de payload e sagas quando processamento assíncrono for adequado.
 ---
@@ -18,24 +18,24 @@ Integração assíncrona, publicação ou consumo de mensagens, jobs em fila, fl
 
 ## Quando não aplicar
 
-Não introduzir mensageria para transação simples dentro de um único serviço sem benefício concreto (desacoplamento real, absorção de pico, integração lenta). Fluxo de estágios de uma demanda é **workflow** (skill `dapr-workflow`), não coreografia de eventos.
+Não introduzir mensageria para transação simples dentro de um único serviço sem benefício concreto (desacoplamento real, absorção de pico, integração lenta). Fluxo de longa duração com etapas encadeadas sobre a mesma entidade é **workflow** (motor de workflow durável), não coreografia de eventos.
 
 ## Padrões
 
 ### Evento ou comando
 
-- Evento: fato passado, nome no passado (`DemandCaptured`, `StageCompleted`), publicado sem saber quem consome.
-- Comando: pedido a um destinatário específico (`MirrorStatusToSource`), nome no imperativo.
+- Evento: fato passado, nome no passado (`OrderPlaced`, `PaymentConfirmed`), publicado sem saber quem consome.
+- Comando: pedido a um destinatário específico (`SendInvoice`), nome no imperativo.
 
 ### Mensageria
 
-- Pub/sub do Dapr (`DaprClient.PublishEventAsync`, assinatura declarativa ou programática) com RabbitMQ como componente padrão; trocar de broker é só configuração do componente. Não usar o cliente do RabbitMQ diretamente.
+- Usar a camada de mensageria do projeto. Com Dapr: pub/sub (`DaprClient.PublishEventAsync`, assinatura declarativa ou programática) com o broker como componente (ex.: RabbitMQ); trocar de broker é só configuração do componente, e o código não usa o cliente do broker diretamente.
 - Envelope CloudEvents (padrão do Dapr).
 
 ### Outbox
 
-- Obrigatório quando perder o evento causa dano de negócio: transição de estado da Demanda, aprovação registrada, espelho obrigatório na ferramenta do cliente, efeito de custo (corte de orçamento) e integração cujo desencontro exige reconciliação manual. [EVT-02]
-- Implementação: tabela `Evento` (modelo de dados) gravada na mesma transação da mudança de estado e publicada por um dispatcher; ou o outbox transacional do Dapr quando o state store e o pub/sub forem compatíveis — decisão registrada em `docs/decisions.md` na primeira feature que precisar.
+- Obrigatório quando perder o evento causa dano de negócio: transição de estado de agregado de que outro processo depende, aprovação registrada, sincronização obrigatória com sistema externo, efeito financeiro ou de custo e integração cujo desencontro exige reconciliação manual. [EVT-02]
+- Implementação: tabela de outbox gravada na mesma transação da mudança de estado e publicada por um dispatcher; ou o outbox transacional do Dapr quando o state store e o pub/sub forem compatíveis — decisão registrada em `docs/decisions.md` na primeira feature que precisar.
 - Nos demais eventos, publicar após o commit da transação e registrar falha de publicação em log com correlation id; perda eventual é aceita.
 - Classificar cada evento novo como crítico ou não crítico no plano. [EVT-01]
 
@@ -50,17 +50,17 @@ Não introduzir mensageria para transação simples dentro de um único serviço
 
 - Só mudanças aditivas no payload de um evento publicado. [EVT-05]
 - Quebra de contrato gera novo tipo ou nova versão do evento, com convivência até os consumidores migrarem.
-- Nome do evento no passado, em minúsculas com ponto (`demand.captured`), com a versão no contrato. [NOM-04]
-- Payload carrega id do evento, tipo, versão, data de ocorrência, `DemandId` e correlation id (trace). [EVT-06]
-- Não trafegar dados pessoais nem conteúdo de artefato no payload: referência e hash. [PRV-04]
+- Nome do evento no passado, em minúsculas com ponto (`order.placed`), com a versão no contrato. [NOM-04]
+- Payload carrega id do evento, tipo, versão, data de ocorrência, id do agregado e correlation id (trace). [EVT-06]
+- Não trafegar dados pessoais nem conteúdo de documento ou anexo no payload: referência e hash. [PRV-04]
 
 ### Sagas
 
-Só quando um fluxo atravessa serviços e precisa de compensação. No SquadOS, a saga natural é o próprio Dapr Workflow: cada passo com compensação definida e estado persistido pelo runtime.
+Só quando um fluxo atravessa serviços e precisa de compensação. Com motor de workflow durável (ex.: Dapr Workflow), a saga natural é o próprio workflow: cada passo com compensação definida e estado persistido pelo runtime.
 
 ## Greenfield
 
-Componentes Dapr (pub/sub, state store) declarados no AppHost do Aspire.
+Broker e componentes de mensageria declarados na orquestração local do projeto (ex.: componentes Dapr no AppHost do Aspire).
 
 ## Brownfield
 
@@ -78,7 +78,7 @@ Webhook de entrada não processa síncrono: valida assinatura, grava (idempotent
 
 ## Exceções e limites
 
-Notificações em tempo real do portal (SignalR) são best-effort e não usam outbox.
+Notificações em tempo real do frontend (ex.: SignalR) são best-effort e não usam outbox.
 
 ## Checklist de saída
 

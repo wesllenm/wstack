@@ -14,14 +14,14 @@ APIs previsíveis: todo endpoint responde erros, paginação, idempotência e ve
 
 ## Quando aplicar
 
-Endpoint novo (API do portal, webhooks de entrada), mudança de contrato, novo recurso, integração consumida por terceiros.
+Endpoint novo (API pública ou interna, webhooks de entrada), mudança de contrato, novo recurso, integração consumida por terceiros.
 
 ## Padrões
 
 ### Controllers
 
-- Endpoints HTTP são **controllers** (`[ApiController]`, `<Caso>Controller` no slice), no lugar de Minimal API (ADR 0003). O controller só recebe a requisição (DTO de request), chama a service do caso de uso e devolve o DTO de response/`ActionResult`; sem regra de negócio, sem EF Core, sem repositório, sem `DbContext`, sem `IUnitOfWork`. [ARQ-01]
-- Rota sob `/vN` e autorização por atributo (`[Authorize(Policy = ...)]`) ou convenção do grupo; nada público por omissão. Endpoints de infraestrutura (health, OpenAPI, canal do sidecar) podem continuar como Minimal API até migrarem.
+- Endpoints HTTP são **controllers** (`[ApiController]`, `<Caso>Controller` no slice), no lugar de Minimal API. O controller só recebe a requisição (DTO de request), chama a service do caso de uso e devolve o DTO de response/`ActionResult`; sem regra de negócio, sem EF Core, sem repositório, sem `DbContext`, sem `IUnitOfWork`. [ARQ-01]
+- Rota sob `/vN` e autorização por atributo (`[Authorize(Policy = ...)]`) ou convenção do grupo; nada público por omissão. Endpoints de infraestrutura (health, OpenAPI) podem continuar como Minimal API até migrarem.
 - Validação de entrada de formato no DTO/binding; a regra de negócio e o resultado de domínio vêm da service.
 
 ### Erros
@@ -44,7 +44,7 @@ Endpoint novo (API do portal, webhooks de entrada), mudança de contrato, novo r
 
 ### Idempotência
 
-- Header `Idempotency-Key` obrigatório em operações com efeito externo: chamada a provedor de código (criar branch, abrir PR, comentar), comentário ou transição na ferramenta de demanda, disparo de pipeline, envio de notificação e chamada a integração externa que altera estado. [API-05]
+- Header `Idempotency-Key` obrigatório em operações com efeito externo: chamada a provedor de código (criar branch, abrir PR, comentar), comentário ou transição em ferramenta de issues, disparo de pipeline, envio de notificação e chamada a integração externa que altera estado. [API-05]
 - Webhooks de entrada são idempotentes pelo id de entrega do provedor (ex.: `X-GitHub-Delivery`) ou hash do payload assinado. [SEC-08]
 - O servidor guarda chave + resultado por um período definido; repetição com a mesma chave devolve o resultado original, e repetição com a mesma chave e payload diferente é 422.
 - Demais operações seguem a semântica HTTP normal (PUT e DELETE idempotentes por definição).
@@ -61,7 +61,7 @@ Endpoint novo (API do portal, webhooks de entrada), mudança de contrato, novo r
 
 - Contrato OpenAPI (`Microsoft.AspNetCore.OpenApi`) atualizado na mesma mudança; o diff de OpenAPI é portão de CI. [API-07]
 - Autenticação e autorização definidas por endpoint; nada público por omissão (`RequireAuthorization` no grupo; webhooks com validação de assinatura em vez de usuário). [API-08]
-- Limites de tamanho de payload (inclusive upload de PDF/Markdown) e de taxa definidos para endpoints públicos. [API-09]
+- Limites de tamanho de payload (inclusive upload de arquivo) e de taxa definidos para endpoints públicos. [API-09]
 
 ## Greenfield
 
@@ -69,11 +69,11 @@ Adotar todos os padrões acima desde o primeiro endpoint.
 
 ## Brownfield
 
-Endpoints existentes mantêm seu formato (contrato, rotas e `code`); a migração de Minimal API para controller preserva o contrato público e segue o plano de migração aprovado (ADR 0003). Endpoints novos seguem esta skill, salvo se o projeto já tiver padrão consistente diferente, que então prevalece e é registrado em `docs/decisions.md`. Não migrar formato de erro ou paginação de endpoints existentes sem aprovação.
+Endpoints existentes mantêm seu formato (contrato, rotas e `code`); a migração de Minimal API para controller preserva o contrato público e segue plano de migração aprovado. Endpoints novos seguem esta skill, salvo se o projeto já tiver padrão consistente diferente, que então prevalece e é registrado em `docs/decisions.md`. Não migrar formato de erro ou paginação de endpoints existentes sem aprovação.
 
 ## Restrições e cuidados
 
-O portal consome a API via BFF; tokens não chegam ao navegador. Não expor endpoint só para o portal fora do BFF. [SEC-10]
+Quando o frontend consome a API via BFF, tokens não chegam ao navegador. Não expor endpoint só para o frontend fora do BFF. [SEC-10]
 
 ## Testes obrigatórios
 

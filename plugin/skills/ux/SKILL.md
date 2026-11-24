@@ -3,7 +3,7 @@ name: ux
 description: >
   Orienta jornadas, feedback, confirmação de ações destrutivas, mensagens
   de erro, estados vazios e de carregamento, prevenção e recuperação de
-  erros nas telas afetadas do portal.
+  erros nas telas afetadas do frontend.
 ---
 
 # UX
@@ -14,25 +14,25 @@ O usuário sempre sabe o que está acontecendo, o que fazer em seguida e como se
 
 ## Quando aplicar
 
-Tela nova ou alterada do portal, fluxo de formulário (nova demanda, upload), fila de aprovações, ação destrutiva, mensagem de erro, estado vazio. Só nas jornadas dentro do escopo; não redesenhar o produto.
+Tela nova ou alterada, fluxo de formulário (cadastro, upload), fila de trabalho ou de aprovações, ação destrutiva, mensagem de erro, estado vazio. Só nas jornadas dentro do escopo; não redesenhar o produto.
 
 ## Princípios
 
-- O aprovador decide em minutos: artefato resumido primeiro, detalhe e diff sob demanda.
-- Estado da demanda e do estágio sempre visível e atualizado em tempo real (SignalR), com indicação quando a conexão cair.
+- Quem decide vê o resumo primeiro; detalhe sob demanda.
+- Estado de processo longo sempre visível e atualizado (ex.: tempo real via SignalR), com indicação quando a conexão cair.
 
 ## Padrões
 
-### Ações destrutivas e decisões de portão
+### Ações destrutivas e decisões
 
-Excluir, cancelar demanda, rejeitar em portão, remover vínculo, desativar ou qualquer ação com perda de dados ou efeito irreversível sempre pede confirmação explícita antes de executar: [UX-01]
+Excluir, cancelar pedido, rejeitar, remover vínculo, desativar ou qualquer ação com perda de dados ou efeito irreversível sempre pede confirmação explícita antes de executar: [UX-01]
 
-- o diálogo nomeia o objeto afetado e a consequência ("Cancelar a demanda DEM-1234? Os PRs abertos serão fechados.");
-- o botão de confirmação usa o verbo da ação ("Cancelar demanda"), nunca "OK" ou "Sim";
+- o diálogo nomeia o objeto afetado e a consequência ("Cancelar o pedido 1234? O pagamento será estornado.");
+- o botão de confirmação usa o verbo da ação ("Cancelar pedido"), nunca "OK" ou "Sim";
 - a ação padrão do diálogo (Enter, foco inicial) é cancelar;
 - ação em massa informa a quantidade afetada.
 
-Aprovação em portão não é destrutiva, mas registra autoria: mostrar quem está aprovando e o que exatamente (versão do artefato).
+Aprovação não é destrutiva, mas registra autoria: mostrar quem está aprovando e o que exatamente (versão do item aprovado).
 
 ### Feedback
 
@@ -61,7 +61,7 @@ Seguir os componentes e padrões visuais existentes. Não redesenhar telas fora 
 
 ## Restrições e cuidados
 
-O idioma da interface é definido por sistema; no portal do SquadOS é português brasileiro. [UX-05]
+O idioma da interface é definido por sistema e fica em `.claude/project.md`. [UX-05]
 
 ## Testes obrigatórios
 

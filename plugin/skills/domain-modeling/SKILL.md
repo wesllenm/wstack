@@ -19,9 +19,9 @@ Garantir que o código reflita o modelo mental do especialista de negócio. Regi
 
 ## Princípios
 
-- Linguagem ubíqua first: usar os termos que o especialista usa, não os técnicos (no SquadOS, o vocabulário vem do documento de visão: Demanda, Estágio, Portão, Artefato, Aprovação, Execução de agente)
-- Entidades têm identidade; Value Objects têm apenas valor (ex.: `DemandId`, `RiskLevel`, `TokenUsage`, `ArtifactHash`)
-- Agregados protegem invariantes — nada fora do agregado viola suas regras (a Demanda é o agregado raiz; Artefato e Aprovação são imutáveis depois de gravados) [DOM-01]
+- Linguagem ubíqua first: usar os termos que o especialista usa, não os técnicos
+- Entidades têm identidade; Value Objects têm apenas valor (ex.: `OrderId`, `Money`, `EmailAddress`)
+- Agregados protegem invariantes — nada fora do agregado viola suas regras (ex.: `Order` é a raiz e seus itens só mudam por ela) [DOM-01]
 - Bounded context define o limite onde um modelo é válido
 - Separar o que muda junto do que muda independentemente
 
@@ -39,7 +39,7 @@ Atualizar `docs/glossary.md` com formato: [DOC-03]
 
 ## Greenfield
 
-Termos do documento de visão já estão no glossário; novos termos entram antes do código.
+Os termos centrais do negócio entram no glossário antes do primeiro código; novos termos também.
 
 ## Brownfield
 

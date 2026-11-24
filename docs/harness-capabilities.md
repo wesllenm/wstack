@@ -5,7 +5,7 @@ wstack mostra o caso positivo e o negativo), **IMPLEMENTADO** (existe e roda, se
 **NÃO VERIFICADO** (depende do Claude Code real e não foi medido nesta versão). Os testes estão em `plugin/tests/` e
 rodam no CI (`.github/workflows/ci.yml`); as provas `prove-*.sh` usam o Claude Code real e rodam à mão.
 
-Versão 0.0.4: hooks e scripts. Skills, agentes e o bootstrap entram nas próximas versões.
+Versão 0.0.10: hooks, scripts, skills e agentes. O bootstrap entra na próxima unidade (2.4).
 
 | Mecanismo | Ativação | Garante | Não garante | Estado | Evidência |
 |---|---|---|---|---|---|
@@ -30,6 +30,11 @@ Versão 0.0.4: hooks e scripts. Skills, agentes e o bootstrap entram nas próxim
 | `permission-asks.mjs` | skill lead | conta os pedidos `ask` de hook de uma sessão | formato da transcrição (interno do Claude Code) | VERIFICADO | `test-permission-asks.sh` |
 | ligação dos hooks | `plugin/hooks/hooks.json` | todo arquivo rodado existe; guarda ausente faz todo Bash pedir aprovação | — | VERIFICADO | `test-hook-commands.sh`; `test-plugin-paths.sh` (nada roda de `.claude/` do projeto) |
 | Edit `ask` não vale para terminal | Claude Code nos modos automático e "Accept edits" | (fato do Claude Code que os guardas de Bash cobrem) | — | NÃO VERIFICADO | `prove-write-matrix.sh`, `prove-redirect-guard.sh` (à mão) |
+| nomes dos agentes e skills | `Agent(...)` do agente lead; texto das skills e agentes | `Agent(...)` só com `wstack:<nome>` de agente que existe; `skills:` só com skill que existe; agente sem `memory:`, `mcpServers:`, `hooks:`, `permissionMode:` nem `TodoWrite` | que o modelo escreva o prefixo na chamada (a skill lead e o agente lead mandam) | VERIFICADO | `test-skills-agents.sh`; sonda 3, B e C (`docs/sonda.md`) |
+| caminhos nas skills e agentes | `${CLAUDE_PLUGIN_ROOT}` trocado pelo Claude Code no texto | todo script ou setup citado existe no plugin; a variável não aparece em `reference/*.md`; nada cita `.claude/scripts`, `.claude/hooks`, o documento ou o projeto de origem | — | VERIFICADO | `test-skills-agents.sh`; sondas 2 e 3, D |
+| comandos de script nas skills | skill lead e as que rodam script | o interpretador escrito é um dos que o `script-allow` aceita para o script | os argumentos escritos (o `script-allow` confere na hora) | VERIFICADO | `test-skills-agents.sh` |
+| aprendizado dos revisores | linha `aprendizado:` no retorno; o lead grava em `docs/gotchas/` | — | que o revisor devolva a linha e o lead a grave (orientação) | IMPLEMENTADO | — |
+| complemento da rubrica no projeto | `review-rubric` manda ler `docs/review-rubric.md` | — | que o revisor leia o arquivo (orientação); o modelo do arquivo é da 2.4 | IMPLEMENTADO | — |
 | demais scripts (`review-dispatch`, `check-findings`, `diff-smells`, `quality-*`, `bench-*`, `sessions`, `nova-atividade`, `worktree-env`, `recall`, `map-staleness`, `summarize-runs`, `otlp-sink`, `enviar-nuvem`, `pr-risk-gate`, conversores) | skills e hooks | o que o cabeçalho de cada um descreve | — | IMPLEMENTADO | sem teste no wstack ainda |
 
 ## Riscos aceitos

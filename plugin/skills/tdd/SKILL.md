@@ -13,7 +13,7 @@ Produzir código correto, legível e verificável por ciclos curtos, com testes 
 
 ## Quando aplicar
 
-Feature nova, bug, mudança de comportamento, regra de negócio, transição de estado da Demanda, contrato ou transformação importante (ex.: adaptador convertendo issue no modelo canônico). [TDD-05]
+Feature nova, bug, mudança de comportamento, regra de negócio, transição de estado de agregado, contrato ou transformação importante (ex.: adaptador convertendo payload externo no modelo canônico). [TDD-05]
 
 ## Ciclo
 
@@ -27,13 +27,13 @@ REFACTOR: melhorar estrutura preservando comportamento, com a suíte verde a cad
 - todo teste novo passa pelo gate de autoria da skill `test-audit`; [TST-05]
 - criar regressão antes de corrigir bug quando viável, e confirmar que ela falha pelo motivo esperado antes da correção; [TST-04]
 - em GREEN, fazer o teste passar mudando a implementação, nunca o teste existente; [TDD-03]
-- nome do teste descreve o cenário em linguagem do domínio: `Aprovar_demanda_fora_do_prazo_nao_avanca_estagio`;
+- nome do teste descreve o cenário em linguagem do domínio: `Cancelar_pedido_ja_enviado_nao_estorna_pagamento`;
 - executar verificação após cada mudança relevante;
 - não usar cobertura de linhas como objetivo único; o Stryker nos slices tocados é o termômetro de valor.
 
 ## Bug: depuração guiada por evidência
 
-1. Reproduzir na superfície em que o bug aparece (teste, script ou a skill `verify-squados`) antes de mexer em produção. Se não reproduz, provocar o gatilho, apertar as condições ou instrumentar até reproduzir; perguntar ao desenvolvedor só depois de esgotar isso, dizendo por quê.
+1. Reproduzir na superfície em que o bug aparece (teste, script ou a skill `verify-<app>` do projeto) antes de mexer em produção. Se não reproduz, provocar o gatilho, apertar as condições ou instrumentar até reproduzir; perguntar ao desenvolvedor só depois de esgotar isso, dizendo por quê.
 2. Listar as hipóteses e eliminar, a cada passo, a que corta mais espaço do problema, com evidência de execução (log, instrumentação, estado lido), não com leitura do código. Para regressão, `git bisect` com o teste de reprodução.
 3. Hipótese refutada pela evidência: reverter tudo que ela motivou. Mudança "por via das dúvidas" é hipótese, não correção, e não vai para o commit.
 4. Achar onde o sistema errou primeiro, não onde o erro apareceu. Perguntar se o estado que disparou o sintoma é legítimo: se é, o código que quebrou nele é a causa; se o estado nunca deveria existir, uma verificação no ponto da quebra esconde o bug, e a correção é achar quem produziu o estado. Guard, retry, exceção engolida, valor limitado à força e estado descartado são os jeitos usuais de esconder bug.
@@ -52,7 +52,7 @@ Usar caracterização ou regressão quando viável. Não exigir cobertura total 
 
 ## Restrições e cuidados
 
-- Workflows Dapr: testar a lógica de orquestração com activities substituídas por fakes e o tempo controlado; não depender de `Task.Delay` real.
+- Workflows duráveis (ex.: Dapr Workflow): testar a lógica de orquestração com activities substituídas por fakes e o tempo controlado; não depender de `Task.Delay` real.
 - Não criar seam de produção só para teste (ver `test-audit`).
 - Marcar integração com `[Trait("Category", "Integration")]` para manter o hook rápido.
 
@@ -63,7 +63,7 @@ Usar caracterização ou regressão quando viável. Não exigir cobertura total 
 
 ## Exceções e limites
 
-Spikes, protótipos, documentação, configuração, ajustes visuais, composição simples (DI, wiring do AppHost), infraestrutura sem lógica e correções triviais podem usar fluxo pragmático, com a justificativa no relatório. [TDD-06]
+Spikes, protótipos, documentação, configuração, ajustes visuais, composição simples (DI, wiring do host), infraestrutura sem lógica e correções triviais podem usar fluxo pragmático, com a justificativa no relatório. [TDD-06]
 
 ## Checklist de saída
 

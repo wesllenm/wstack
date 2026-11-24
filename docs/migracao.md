@@ -38,6 +38,34 @@ nuvem em `plugin/cloud/`, testes e provas em `plugin/tests/` (CI em `.github/wor
   `test-verify-on-stop` e `test-plugin-paths`.
 - As provas `prove-*.sh` foram adaptadas, mas não rodaram (custam modelo).
 
+## Estado da 2.3
+
+Feita (versão 0.0.10). Skills em `plugin/skills/` (`/wstack:<nome>`) e agentes em `plugin/agents/`, copiados da origem
+num commit sem mudança e adaptados nos seguintes; conferência estática em `plugin/tests/test-skills-agents.sh`.
+Diferenças em relação às tabelas abaixo:
+- Vieram também os 14 `reference/*.md` das skills `performance`, `query-plan` e `review-rubric` (55 arquivos ao todo).
+  Ficaram fora a `verify-<app>` (2.4) e as quatro skills do produto de origem (`agent-stage-contract`, `dapr-workflow`,
+  `demand-lifecycle`, `source-adapters`), que não são do harness.
+- Os comandos de script usam `${CLAUDE_PLUGIN_ROOT}/scripts/`, com o interpretador que o `script-allow` aceita; a skill
+  lead tem a seção "Scripts do plugin". Os `reference/*.md` são lidos pelo Read, onde a variável não é trocada: citam o
+  script pelo nome.
+- Agentes chamados e listados em `Agent(...)` como `wstack:<nome>`, e skills carregadas como `wstack:<nome>`; `skills:`
+  do frontmatter fica no nome curto (sonda 3, B e C).
+- Sem `memory:` (`docs/decisions.md`, agentes do plugin sem `memory:`): `review-agent`, `review-simplicity` e
+  `review-verifier` devolvem uma linha `aprendizado:`, que o lead grava em `docs/gotchas/`; o verificador não tem Write,
+  então nem podia gravar arquivo. `TodoWrite` virou `TaskCreate`, `TaskUpdate` e `TaskList`.
+- `mcpServers` saiu dos agentes de banco (agente de plugin ignora o campo, pela documentação de subagentes), e o
+  `tools:` passou de `mcp__database`, que não casa ferramenta nenhuma, para `mcp__database__*`. O servidor vem da
+  configuração de MCP do projeto (depois da 0.1.0).
+- A `review-rubric` é do plugin; o que é de cada repositório (Sempre verificar, Não reportar e Projeto) vai para
+  `docs/review-rubric.md` do projeto, modelo da 2.4 (`docs/decisions.md`, complemento da rubrica no projeto). Mudança em
+  skill, agente ou hook do plugin vira proposta no wstack, não edição no projeto.
+- O `worktree.baseRef` virou decisão do wstack; a skill lead não cita mais o arquivo de gotchas da origem.
+- Os nomes e fatos do projeto de origem saíram; as referências de stack ficaram como módulos, com exemplos genéricos.
+- Saíram as peças da sonda 3 (agentes e skills `sonda-*`).
+- Não conferido no Claude Code real: uma sessão com `"agent": "wstack:lead"` (é da 2.4, com o `settings.json` modelo)
+  delegando aos agentes reais.
+
 ## Hooks
 
 Todos para `plugin/hooks/`, na unidade 2.2. Os que hoje leem `"$CLAUDE_PROJECT_DIR"/.claude/...` para achar a si mesmos
@@ -134,7 +162,7 @@ caminho muda.
 ## Agentes
 
 Todos para `plugin/agents/`, na unidade 2.3, com os caminhos de script trocados pelos do plugin. Os `template` vão na
-versão genérica. A conferir na 2.3: o Claude Code pode ignorar campos do frontmatter em agentes de plugin
+versão genérica (feito; ver Estado da 2.3). Conferido na 2.3: o Claude Code pode ignorar campos do frontmatter em agentes de plugin
 (`mcpServers`, `hooks`, `permissionMode`); `database-helper`, `database-reviewer` e `performance-agent` declaram
 `mcpServers: [database]`, que também depende da configuração de MCP do projeto (depois da 0.1.0). Os `skills:` do
 frontmatter citam skills sem o prefixo `wstack:`: conferir se resolvem dentro do plugin.
@@ -205,6 +233,7 @@ Para `plugin/skills/`, na unidade 2.3 (ficam `/wstack:<nome>`), salvo a `verify-
 | `.mcp.json` | seed | depois da 0.1.0 | | só para projeto com banco |
 | `.claude/toolbox/tools.yaml` | seed | depois da 0.1.0 | | idem |
 | `docs/review-calibration.md` | seed | modelo do projeto | 2.4 | o verify-on-stop (2.2) exige este arquivo para o gate de aprendizado |
+| `docs/review-rubric.md` | seed | modelo do projeto | 2.4 | novo na 2.3, sem arquivo de origem: as seções Sempre verificar, Não reportar e Projeto da rubrica do projeto, que a `review-rubric` do plugin manda ler |
 | `docs/harness-capabilities.md` | seed | docs do wstack | 2.2 | a matriz descreve os hooks, que passam a ser do plugin |
 
 ## Ajustes em todos os arquivos (2.2 a 2.4)
