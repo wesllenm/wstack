@@ -170,3 +170,20 @@ próprias travas, inclusive o push-guard. Na nuvem isso já era possível pelo B
 o que muda é que no wstack a alteração sai da VM pelo push, porque `plugin/` é código do repositório e não é caminho
 protegido. A barreira é o PR revisado e a proteção da `main`. Fora da nuvem, o path-guard continua pedindo aprovação
 para comando que cite a pasta do plugin.
+
+## 2026-11-24: agentes do plugin sem `memory:`
+
+**Decisão:** na unidade 2.3, os agentes do harness entram no plugin sem depender do campo `memory:` do frontmatter. O
+que um agente precisar guardar entre sessões vai para arquivo do projeto que ele lê e grava pelas ferramentas
+(`docs/gotchas.md`, `docs/review-calibration.md`), como o harness de origem já faz nas skills.
+
+**Por quê** (`docs/sonda.md`, sonda 3, resultados com a 0.0.7 e a 0.0.9): na nuvem, `memory: project` não deu pasta de
+memória nem ao agente de projeto, mesmo com Read, Write e Edit declarados. Não se sabe se vale em agente de plugin, e
+o ambiente em que o wstack é desenvolvido e testado não mostra a memória funcionando em agente nenhum.
+
+**O que muda:**
+- Os nomes que a sonda 3 decidiu valem para a 2.3: agente do plugin é chamado e listado em `Agent(...)` só como
+  `wstack:<nome>`; `skills:` pré-carrega skill do plugin pelo nome curto ou com prefixo; `${CLAUDE_PLUGIN_ROOT}` no
+  corpo do agente vira o caminho do plugin.
+- **Pendente:** rodar o passo E numa sessão local. Se a memória valer em agente de plugin, um agente pode passar a usá-la
+  numa mudança própria, com decisão nova.

@@ -312,3 +312,25 @@ cache só em `0.0.7`. O `session-start.sh` tira a versão do `plugin.json` da pa
 `/home/user/wstack/plugin`: o merge chegou sozinho. Na mesma sessão, Edit em `plugin/hooks/write-guard.mjs` (e o Edit
 que o desfez) foi aceito, pela exceção do plugin dentro do projeto. Edição pelo shell não serve de prova: o
 write-guard só vê as ferramentas de escrita.
+
+## Resultado da sonda 3 com a 0.0.9 (2026-11-24)
+
+Rodada só para o passo E: `sonda-memoria` e `sonda-projeto` passaram a declarar TaskList, Read, Write e Edit, e
+gravam `sonda.md` com Write se o prompt citar uma pasta de memória. Rodada na sessão que abriu na 0.0.8 e foi retomada
+depois do merge da 0.0.9 (`1bf755e`): o hook da retomada deu `wstack 0.0.9 carregado.`, e os dois agentes já
+responderam com as ferramentas novas, então as definições da 0.0.9 valeram. Cache e registros iguais aos da 0.0.7
+(`0.0.7`, `178e14d`, marketplace `directory` em `/home/user/wstack`). Linha da skill:
+
+`sonda-agentes: versão=0.0.9 cache=0.0.7 principal=PRINCIPAL-ATIVO-Vm52 calibração-projeto=ok chamada-curta=erro chamada-prefixo=ok folha-a=<curto erro, prefixo ok> folha-b=<curto erro, prefixo ok> controle=falhou pre-curto=abacaxi-7q pre-prefixo=abacaxi-7q variável-no-agente=trocada memória-projeto=não gravou memória-plugin=não gravou`
+
+Os dois agentes de memória deram as mesmas quatro linhas, sem usar ferramenta: `FERRAMENTAS: TaskList, Read, Write,
+Edit`, `MEMORIA: sim`, `LINHA: NENHUMA`, `GRAVOU: não`. Não existe `.claude/agent-memory` nem `~/.claude/agent-memory`,
+e o grep por `MARCA-` não achou nada.
+
+Leitura:
+- **B, C e D repetem a rodada da 0.0.7.**
+- **E sem decisão sobre o plugin, agora pelo controle.** Com as ferramentas de escrita garantidas, nenhum dos dois
+  recebeu pasta de memória no prompt, nem o agente de projeto. Então `memory: project` não chegou a agente nenhum nesta
+  sessão na nuvem, e o resultado não separa agente de plugin de agente de projeto. Hipótese não conferida: a sessão na
+  nuvem usa a memória hospedada do Claude Code (o servidor MCP `memory`) e não monta a memória de agente. Só uma
+  sessão local decide; a 2.3 não espera por ela (`docs/decisions.md`, agentes do plugin sem `memory:`).
