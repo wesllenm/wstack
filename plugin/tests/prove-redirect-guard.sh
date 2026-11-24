@@ -12,7 +12,7 @@
 set -uo pipefail
 
 model=${1:-haiku}
-top=$(git rev-parse --show-toplevel 2> /dev/null)
+hooks=$(cd "$(dirname "$0")/../hooks" && pwd -P) # os hooks do plugin, copiados para o projeto de teste
 command -v claude > /dev/null || { echo "claude ausente" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente" >&2; exit 2; }
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-redir-XXXX")
@@ -31,7 +31,7 @@ mkproject() { # mkproject <pasta> <sim: redirect-guard e regras | nao: nada | as
     jq -n --argjson ask "$ask" '{permissions:{ask:$ask,allow:["Read","Edit","Write","Bash(git status:*)"]}}' > "$p/.claude/settings.json"
     return
   fi
-  cp "$top/.claude/hooks/redirect-guard.sh" "$top/.claude/hooks/redirect-guard.mjs" "$top/.claude/hooks/closed-forms.mjs" "$p/.claude/hooks/"
+  cp "$hooks/redirect-guard.sh" "$hooks/redirect-guard.mjs" "$hooks/closed-forms.mjs" "$p/.claude/hooks/"
   jq -n '{permissions:{deny:["Edit(./.git/**)","Edit(./.gitignore)","Edit(./**/.gitignore)"],ask:["Edit(./.claude/settings.json)","Edit(./.claude/hooks/**)"],allow:["Read","Edit","Write","Bash(git status:*)"]},
     hooks:{PreToolUse:[{matcher:"Bash",hooks:[{type:"command",command:"bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/redirect-guard.sh",timeout:10}]}]}}' > "$p/.claude/settings.json"
 }
