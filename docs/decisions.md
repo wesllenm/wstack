@@ -126,3 +126,26 @@ skill que o projeto não usa. No projeto que tem o arquivo, o gate é o mesmo (`
 padrão (40 edições), o session-start e o iteration-guard criam `.claude/.session/` e o push-guard pede aprovação para
 todo push fora de `ccr-` e `wip/` (sem `activity_branch`). Decidir se o plugin fica inerte sem `.claude/risk.conf`,
 mantendo só as travas de segurança.
+
+## 2026-11-24: no ambiente do wstack, o plugin vem do clone
+
+Muda a decisão de 2026-11-24 "plugin atualizado ao iniciar a sessão na nuvem".
+
+**Decisão:** o setup script do ambiente `wstack` instala o plugin de um marketplace local, a pasta do clone
+(`claude plugin marketplace add /home/user/wstack` e `claude plugin install wstack@wstack`), sem `autoUpdate` e sem
+atualização forçada.
+
+**Por quê** (`docs/sonda.md`, sonda 3, fato 0 e resultado com a 0.0.7):
+- O `autoUpdate` não atualizou o plugin na partida, e o setup script só roda quando o ambiente remonta o container
+  (troca do script ou dos hosts, ou cache vencido, cerca de 7 dias). Cada versão nova exigia mexer no script.
+- Marketplace local é carregado da própria pasta: na sessão com o script novo, `${CLAUDE_PLUGIN_ROOT}` virou
+  `/home/user/wstack/plugin`, embora o `installed_plugins.json` registre a pasta de cache. Cada sessão clona o
+  repositório de novo, então carrega o plugin da branch em que abriu.
+
+**O que muda:**
+- Falta ver acontecer: a primeira sessão depois do próximo merge tem de subir com a versão nova sem troca no script.
+- Vale só para o ambiente do próprio wstack, cujo clone é o plugin. O ambiente de outro projeto continua instalando do
+  GitHub e fica na versão do dia da montagem; como ele se atualiza fica pendente para a 2.4.
+- O write-guard recusa gravação na pasta do plugin, e agora essa pasta é `plugin/` do clone: nas sessões deste
+  ambiente, Edit e Write em `plugin/` passam a ser recusados (e o path-guard pede aprovação para comando que a cite). A
+  sessão que editar o plugin precisa de outro caminho; decidir antes da próxima mudança no plugin.

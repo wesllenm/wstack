@@ -14,8 +14,11 @@ o erro da ferramenta, se vier, é o dado. Em toda chamada de subagente, relate t
 
 1. Copie a linha `wstack <versão> carregado.` do início da sessão (mensagem do hook `SessionStart`). Se não houver, diga.
 2. Rode `ls ~/.claude/plugins/cache/wstack/wstack/` e
-   `jq '.plugins["wstack@wstack"]' ~/.claude/plugins/installed_plugins.json` e relate as saídas (as versões no cache e
-   as datas de instalação e de atualização dizem se o plugin foi instalado agora ou atualizado na partida).
+   `jq '.plugins["wstack@wstack"]' ~/.claude/plugins/installed_plugins.json` e
+   `jq '.wstack' ~/.claude/plugins/known_marketplaces.json` e relate as saídas (as versões no cache e as datas de
+   instalação e de atualização dizem se o plugin foi instalado agora ou atualizado na partida; a origem do marketplace
+   diz de onde ele vem). Com marketplace de origem `directory`, o `installPath` aponta para o cache mesmo quando o plugin
+   é carregado da pasta: quem diz a pasta carregada é a segunda linha das folhas (passo D).
 
 ## A. Agente da sessão
 
