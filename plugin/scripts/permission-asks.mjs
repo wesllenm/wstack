@@ -1,6 +1,6 @@
 // Conta os pedidos de permissão (decisão `ask` de hook PreToolUse) de uma sessão do Claude Code a partir da transcrição
 // JSONL, agrupados por hook e motivo, com o comando de cada um. Sem dependências.
-//   node .claude/scripts/permission-asks.mjs <transcrição.jsonl> [<pasta de subagentes>]
+//   node <pasta do plugin>/scripts/permission-asks.mjs <transcrição.jsonl> [<pasta de subagentes>]
 // A transcrição fica em ~/.claude/projects/<projeto>/<sessão>.jsonl e os subagentes em <sessão>/subagents/*.jsonl.
 // Formato medido (2.1.330): o ask é um anexo `hook_success` de `hookEvent: PreToolUse` cujo `stdout` é o JSON do hook
 // (`hookSpecificOutput.permissionDecision: "ask"`), e `toolUseID` aponta para o `tool_use` com o comando. A aprovação

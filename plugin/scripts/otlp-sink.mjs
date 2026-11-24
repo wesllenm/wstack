@@ -1,5 +1,5 @@
 // Receptor OTLP local e mínimo para a telemetria nativa do Claude Code. Sem dependências.
-//   node .claude/scripts/otlp-sink.mjs [--port 4318] [--dir .claude/telemetry/otel] [--retention-days 30]
+//   node <pasta do plugin>/scripts/otlp-sink.mjs [--port 4318] [--dir .claude/telemetry/otel] [--retention-days 30]
 // Escuta só em 127.0.0.1, aceita OTLP/HTTP com JSON (OTEL_EXPORTER_OTLP_PROTOCOL=http/json), grava um JSONL por dia
 // e guarda só os atributos da lista abaixo: e-mail, IDs de conta e organização, prompts, parâmetros de ferramenta e
 // mensagens de erro (podem trazer stderr com segredo) nunca chegam ao disco, mesmo se a plataforma os enviar. Recusa

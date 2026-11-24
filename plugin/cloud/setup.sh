@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Setup do ambiente de nuvem. Colar no campo Setup script do ambiente em claude.ai/code (esta é a versão de
-# referência, versionada em .claude/cloud/setup.sh) e rodar na própria sessão quando o retrato do cloud-services.sh
+# referência, versionada no plugin wstack em cloud/setup.sh) e rodar na própria sessão quando o retrato do cloud-services.sh
 # acusar falta. Detecta as stacks pelos arquivos rastreados do repositório e provisiona cada uma por uma cadeia de
 # rotas: o instalador oficial; se o proxy de saída o recusar (403 é política: não insistir), a imagem oficial no
 # registro, copiada com o Docker (o Engine confere o digest de cada camada); se nada servir, aviso, nunca silêncio.

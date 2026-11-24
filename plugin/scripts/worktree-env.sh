@@ -40,7 +40,7 @@ write_env() {
   local slot=$1 name; name=$(basename "$top")
   mkdir -p "$top/.claude"
   cat > "$top/.claude/worktree.env" <<EOF
-# gerado por .claude/scripts/worktree-env.sh; não versionar
+# gerado pelo worktree-env.sh do plugin wstack; não versionar
 WORKTREE_SLOT=$slot
 WORKTREE_NAME=$name
 PORT_BASE=$((base + slot * step))

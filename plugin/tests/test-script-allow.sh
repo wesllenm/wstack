@@ -31,7 +31,7 @@ mkdir -p "$proj/src" "$work/fora"
 
 verdict() {
   jq -cn --arg c "$1" --arg d "${VCWD:-$proj}" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
-    env ${NOPROJ:+-u CLAUDE_PROJECT_DIR} ${NOPROJ:-CLAUDE_PROJECT_DIR=$proj} bash "$hook" 2> /dev/null |
+    env ${NOPROJ:+-u CLAUDE_PROJECT_DIR} ${NOPROJ:-CLAUDE_PROJECT_DIR=$proj} ${PROOT:+CLAUDE_PLUGIN_ROOT=$PROOT} bash "$hook" 2> /dev/null |
     jq -r '.hookSpecificOutput.permissionDecision // empty' 2> /dev/null
 }
 expect() { # expect <allow|nada> <comando>
@@ -88,6 +88,16 @@ VCWD=$work/fora expect nada "bash $plug/scripts/classify-diff.sh"
 NOPROJ=1 expect nada "bash $plug/scripts/classify-diff.sh"
 nested=$proj/aninhado; git init -q "$nested"
 VCWD=$nested expect nada "bash $plug/scripts/classify-diff.sh"
+# a pasta do plugin como o Claude Code a informa (CLAUDE_PLUGIN_ROOT, aqui um link simbólico para a real): o caminho que
+# ele escreve no texto das skills também vale; uma CLAUDE_PLUGIN_ROOT que não é esta pasta de plugin não vale
+ln -s "$work/home" "$work/homelink"
+plugl=$work/homelink/.claude/plugins/cache/wstack/wstack/0.0.0
+PROOT=$plugl expect allow "bash $plugl/scripts/classify-diff.sh --paths src/a.cs"
+PROOT=$plugl expect allow "bash $plugl/tests/test-path-guard.sh"
+expect nada "bash $plugl/scripts/classify-diff.sh"
+outro=$work/outro-plugin; mkdir -p "$outro/scripts" && cp "$plug/scripts/classify-diff.sh" "$outro/scripts/"
+PROOT=$outro expect nada "bash $outro/scripts/classify-diff.sh"
+
 # payload ilegível ou sem comando: nada
 got=$(printf 'x' | CLAUDE_PROJECT_DIR=$proj bash "$hook" 2> /dev/null)
 [ -z "$got" ] || { echo "FALHOU: payload ilegível aprovou: $got"; fails=$((fails + 1)); }

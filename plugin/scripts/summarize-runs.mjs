@@ -1,6 +1,6 @@
 // Resume a telemetria do workflow: custo, tokens e requisições da telemetria nativa do Claude Code (otlp-sink.mjs),
 // eventos de gate dos hooks e as linhas de Registro de docs/review-calibration.md. Sem dependências.
-//   node .claude/scripts/summarize-runs.mjs [--since AAAA-MM-DD] [--json]
+//   node <pasta do plugin>/scripts/summarize-runs.mjs [--since AAAA-MM-DD] [--json]
 // Custo é a estimativa da própria plataforma, não a fatura. Campo sem fonte aparece como null.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";

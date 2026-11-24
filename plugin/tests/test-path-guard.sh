@@ -32,7 +32,7 @@ verdict() {
   local -a remote=(-u CLAUDE_CODE_REMOTE)
   [ -n "${REMOTE:-}" ] && remote=("CLAUDE_CODE_REMOTE=$REMOTE")
   jq -cn --arg c "$1" --arg d "${VCWD:-$proj}" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
-    env "${remote[@]}" CLAUDE_PROJECT_DIR=$proj bash "$hook" 2> /dev/null | jq -r '.hookSpecificOutput.permissionDecision // empty' 2> /dev/null
+    env "${remote[@]}" CLAUDE_PROJECT_DIR=$proj ${PROOT:+CLAUDE_PLUGIN_ROOT=$PROOT} bash "$hook" 2> /dev/null | jq -r '.hookSpecificOutput.permissionDecision // empty' 2> /dev/null
 }
 expect() { # expect <livre|ask> <comando>
   local got; got=$(verdict "$2"); got=${got:-livre}
@@ -112,6 +112,24 @@ for c in "true; bash $plug/scripts/classify-diff.sh" "true && bash $plug/scripts
 done
 VCWD=$proj/src expect ask "bash $plug/scripts/checkpoint.sh a 1 b"
 VCWD=$work/fora expect ask "bash $plug/scripts/checkpoint.sh a 1 b"
+
+# o plugin fora de .claude/plugins (CLAUDE_CONFIG_DIR em outra pasta): a pasta dele é trava pelo caminho, não pelo nome
+plug2=$work/cfgdir/plugins/cache/wstack/wstack/0.0.0
+mkdir -p "$plug2/scripts" && cp -r "$src" "$plug2/hooks"
+for c in "cp /tmp/x $plug2/hooks/push-guard.mjs" "sed -i s/a/b/ $plug2/hooks/push-guard.mjs" \
+  "bash $plug2/scripts/classify-diff.sh; cp x $plug2/hooks/path-guard.mjs" "bash $plug2/scripts/checkpoint.sh $plug2/hooks/x 1 b"; do
+  hook=$plug2/hooks/path-guard.sh expect ask "$c"
+done
+hook=$plug2/hooks/path-guard.sh VCWD=$plug2/hooks expect ask 'cp a b'
+hook=$plug2/hooks/path-guard.sh expect livre "bash $plug2/scripts/classify-diff.sh"
+hook=$plug2/hooks/path-guard.sh expect livre "cp /tmp/x ${plug2}x/hooks/a.mjs"
+# o plugin chamado pela pasta que o Claude Code informa (CLAUDE_PLUGIN_ROOT), aqui um link simbólico para a real
+ln -s "$work/cfgdir" "$work/cfglink"
+plugl=$work/cfglink/plugins/cache/wstack/wstack/0.0.0
+hook=$plug2/hooks/path-guard.sh PROOT=$plugl expect livre "bash $plugl/scripts/classify-diff.sh"
+hook=$plug2/hooks/path-guard.sh PROOT=$plugl expect ask "cp /tmp/x $plugl/hooks/push-guard.mjs"
+# CLAUDE_PLUGIN_ROOT que não é esta pasta de plugin não libera nada
+hook=$plug2/hooks/path-guard.sh PROOT=$work/fora expect ask "bash $work/fora/x.sh; cp x $plug2/hooks/a"
 
 # segredos: o comando mostraria ou publicaria o arquivo por cima do deny de Read, também pelas formas livres do git
 for c in 'shellcheck -s bash .env' 'bash -n .claude/scripts/../../.env' 'gh pr edit 3 --body-file .env.local' 'cat certs/api.pfx' \

@@ -12,8 +12,8 @@
 // hooks (path-guard, redirect-guard, push-guard) continuam conferindo o mesmo comando, e o pedido deles vale sobre esta
 // aprovação.
 import { existsSync, realpathSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { foreignRepo, git } from './git-repo.mjs';
+import { pluginRoots } from './plugin-root.mjs';
 
 // Scripts que o harness liberava, com os interpretadores aceitos ('' = execução direta). O que envia trabalho para a
 // nuvem (enviar-nuvem.sh) pede aprovação de propósito e fica fora; nova-atividade, recall e permission-asks nunca foram
@@ -36,10 +36,8 @@ const SCRIPTS = {
   'pr-risk-gate.mjs': ['node'],
 };
 
-const here = fileURLToPath(new URL('..', import.meta.url)).replace(/\\/g, '/').replace(/\/$/, '');
-const ROOTS = [...new Set([here, realpathSync.native(here).replace(/\\/g, '/')])];
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const ROOT = `(${ROOTS.map(escape).join('|')})`;
+const ROOT = `(${pluginRoots().map(escape).join('|')})`;
 const ARG = `(?:[A-Za-z0-9_@%+=:,./-]+|'[^'\\n\\r]*'|"[^"$\`\\\\!\\n\\r]*")`;
 const FREE = new RegExp(`^(?:(bash|node) )?${ROOT}/scripts/([A-Za-z0-9_-]+\\.(?:sh|mjs))((?: +${ARG})*) *$`);
 const TEST = new RegExp(`^bash ${ROOT}/tests/(test-[a-z0-9-]+\\.sh)$`);

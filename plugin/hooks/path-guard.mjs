@@ -27,10 +27,10 @@
 // inteira sem citar a trava (git checkout <ref> -- ., extração de arquivo compactado na raiz).
 import { realpathSync } from 'node:fs';
 import { relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { isCommitHeredoc } from './closed-forms.mjs';
 import { allowed as gitForm } from './git-read-allow.mjs';
 import { foreignRepo, git } from './git-repo.mjs';
+import { pluginRoots } from './plugin-root.mjs';
 import { confValues } from './risk-conf.mjs';
 
 // allow_module = <nome> no risk.conf: ./<nome>-allow.mjs exporta allowed(cmd, cwd), a forma fechada que fica livre. Nome fora
@@ -54,7 +54,12 @@ const END = '(?![A-Za-z0-9_-])';
 // (cp /dev/null .cl""aude/hooks/x, tee, sed -i), então lá a citação de caminho do harness é livre e o que protege é o
 // que sai da VM (push-guard e checkpoint.sh, protected-paths.mjs). Ficam o .git (config e hooks: core.hooksPath
 // executaria código no push com a credencial da VM) e o ~/.claude.json (config do usuário, fora do repositório).
+// A pasta do plugin, como o Claude Code a escreve no texto das skills e pelo caminho real (plugin-root.mjs): trava pelo
+// caminho, também fora de ~/.claude/plugins (CLAUDE_CONFIG_DIR em outra pasta, ~/.claude atrás de um link).
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ROOTS_RE = `(?:${pluginRoots().map(escape).join('|')})`;
 const GUARD = [
+  ['pasta do plugin wstack', new RegExp(`${ROOTS_RE}(?=$|[/\\s;&|)'"\`])`)],
   // os marcadores .verify-ok e .session/checkpoint-ok-* fazem o Stop e o checkpoint pularem build e testes
   ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|\.session\/checkpoint-ok)/i],
   ['pasta .claude', /\.claude\/?(?=$|[\s;&|)'"`])/i],
@@ -81,11 +86,8 @@ const SECRET = [
   ['.claude/.credentials', /\.claude\/\.credentials/i],
   ['.nuget/NuGet', /\.nuget\/NuGet/i],
 ];
-// A pasta do plugin, como o Claude Code a escreve no texto das skills e pelo caminho real (sem link simbólico).
-const PLUGIN_ROOTS = [...new Set([fileURLToPath(new URL('..', import.meta.url)), realpathSync.native(fileURLToPath(new URL('..', import.meta.url)))]
-  .map((p) => p.replace(/\\/g, '/').replace(/\/$/, '')))];
-const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const SCRIPT = new RegExp(`^(?:bash(?: -n)? |node )?(?:${PLUGIN_ROOTS.map(escape).join('|')})/(?:scripts|hooks|cloud)/[A-Za-z0-9._-]+(?=\\s|$)`);
+// O script do plugin no começo do comando, pela pasta do plugin (ROOTS_RE, acima)
+const SCRIPT =new RegExp(`^(?:bash(?: -n)? |node )?${ROOTS_RE}/(?:scripts|hooks|cloud)/[A-Za-z0-9._-]+(?=\\s|$)`);
 // Programa na posição de comando: começo, depois de ; & | ( { crase $( aspas, quebra de linha, palavra-chave do bash
 // (then, do, else, elif, !), atribuição e prefixo que roda o comando seguinte (env, xargs, nice, timeout 10...), com ou
 // sem caminho antes do nome (/usr/bin/gh). "grep gh x" não conta.

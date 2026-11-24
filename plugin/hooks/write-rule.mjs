@@ -57,7 +57,7 @@ function gitConfigTargets(cwd) {
   return configTargets;
 }
 
-const inside = (p, dir) => {
+export const inside = (p, dir) => {
   const [a, b] = win ? [p.toLowerCase(), dir.toLowerCase()] : [p, dir];
   return a === b || a.startsWith(`${b.replace(/\/$/, '')}/`);
 };
@@ -65,7 +65,7 @@ const inside = (p, dir) => {
 // O caminho como o sistema o resolve, componente a componente: cada symlink é seguido (também o pendente, cujo alvo
 // ainda não existe e seria criado pelo Write) e o .. sobe a partir da pasta real, não do texto (lnk/.. é o pai do
 // alvo do link). Devolve o caminho físico.
-function physical(start) {
+export function physical(start) {
   let parts = start.split(/[\\/]+/);
   let cur = parse(start).root || '/';
   parts = parts.slice(1);

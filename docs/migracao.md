@@ -27,7 +27,12 @@ nuvem em `plugin/cloud/`, testes e provas em `plugin/tests/` (CI em `.github/wor
 - O `cloud/setup.sh` ainda não instala o plugin: a instalação depende da versão fixada pelo projeto, que é da 2.4.
 - As chaves do `verify-on-stop` ficaram `verify_solution`, `verify_build`, `verify_lint` e `verify_test`.
 - Até a 2.4 criar os modelos, os testes usam fixtures em `plugin/tests/fixtures/` no lugar deles (`risk.conf`,
-  `settings.json` com as regras de Edit, `hosts.conf`).
+  `settings.json` com as regras de Edit, `hosts.conf`). Dois casos ficam fracos até a troca: "regra de .gitignore no
+  allow" (`test-hook-commands.sh`) passa trivialmente, porque a fixture não tem `allow`; e a classificação de
+  `.claude/cloud/` como CRITICA (`test-cloud-setup.sh`) usa uma fixture que já declara esse `critical`. A 2.4 troca as
+  fixtures pelos modelos.
+- O write-guard recusa a pasta do plugin carregado. Rodar o plugin direto do checkout do wstack (em vez do cache)
+  recusaria editar o próprio código-fonte nessa sessão.
 - Novo, sem arquivo de origem: `script-allow` (hook aprovador) e os testes `test-risk-conf`, `test-script-allow`,
   `test-verify-on-stop` e `test-plugin-paths`.
 - As provas `prove-*.sh` foram adaptadas, mas não rodaram (custam modelo).

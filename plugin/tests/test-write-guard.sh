@@ -112,6 +112,22 @@ PROJECT=$work/sep expect ok Write "$work/sep/a.txt" "$work/sep"
 printf 'não é json' | CLAUDE_PROJECT_DIR=$repo bash "$guard" > /dev/null 2>&1
 [ $? = 2 ] || { echo "FALHOU: payload ilegível não foi recusado"; fails=$((fails + 1)); }
 
+# a pasta do plugin instalado (hooks e scripts que os hooks e o aprovador rodam): a ferramenta de escrita não grava lá,
+# também por link simbólico, arquivo novo, caminho relativo ou pela pasta que o Claude Code informa (CLAUDE_PLUGIN_ROOT)
+plug=$work/cfg/plugins/cache/wstack/wstack/0.0.0
+mkdir -p "$plug/scripts" && cp -r "$(dirname "$guard")" "$plug/hooks" && printf 'x\n' > "$plug/scripts/classify-diff.sh"
+ln -s "$work/cfg" "$work/cfglink"
+orig_guard=$guard; guard=$plug/hooks/write-guard.sh
+expect deny Write "$plug/hooks/push-guard.mjs"
+expect deny Edit "$plug/scripts/classify-diff.sh"
+expect deny Write "$plug/scripts/novo.sh"
+expect deny Write "$plug/.claude-plugin/plugin.json"
+expect deny Write "$work/cfglink/plugins/cache/wstack/wstack/0.0.0/hooks/path-guard.mjs"
+expect deny Write hooks/path-guard.mjs "$plug"
+expect ok Write "${plug}x/hooks/a.mjs"
+expect ok Write "$work/cfg/plugins/cache/wstack/wstack/0.0.1/a.txt"
+guard=$orig_guard
+
 if [ "$fails" -eq 0 ]; then echo "test-write-guard: todos os casos passaram"; exit 0; fi
 echo "test-write-guard: $fails falha(s)"
 exit 1

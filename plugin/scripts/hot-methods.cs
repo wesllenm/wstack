@@ -1,6 +1,6 @@
 // Resume traces de CPU no formato speedscope (gerados pelo EventPipeProfiler do BenchmarkDotNet ou por
 // "dotnet-trace convert --format speedscope") nos métodos que mais consomem tempo. App de arquivo único do .NET 10:
-//   dotnet run .claude/scripts/hot-methods.cs -- <pasta-ou-arquivo> [top]
+//   dotnet run "$BENCH_SCRIPTS/hot-methods.cs" -- <pasta-ou-arquivo> [top]
 // Exclusivo: tempo com o método no topo da pilha (onde o trabalho acontece).
 // Inclusivo: tempo com o método em qualquer ponto da pilha (o que ele custa contando o que chama).
 using System.Text.Json;

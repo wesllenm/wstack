@@ -5,7 +5,7 @@
 // Usado pelo push-guard.mjs (import) e pelo checkpoint.sh (linha de comando).
 // De onde vem cada valor: o núcleo (harness, .github, arquivos que o git executa, .mcp.json) está fixo aqui; os caminhos que
 // cada projeto acrescenta (protected = <glob>, ex.: ci/*, .devcontainer/*) e a branch padrão (default_branch, a base do
-// merge-base; sem ela, main) vêm do .claude/risk.conf do projeto dos hooks (risk-conf.mjs). A configuração só ACRESCENTA ao núcleo.
+// merge-base; sem ela, main) vêm do .claude/risk.conf do projeto (risk-conf.mjs). A configuração só ACRESCENTA ao núcleo.
 // Linha de comando: node protected-paths.mjs <ref> [<pasta>]
 //   código 0  nada protegido muda entre o merge-base com origin/<branch padrão> e a ref; imprime OK
 //   código 1  muda; imprime um arquivo por linha

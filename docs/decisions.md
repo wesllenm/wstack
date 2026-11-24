@@ -102,8 +102,13 @@ programa.
 
 **Por quê:** a VM da nuvem é descartável e ninguém está olhando para aprovar a cada pedido; a trava por texto é
 contornável de qualquer jeito. O que importa é o que sai da VM: o push-guard e o `checkpoint.sh` conferem os caminhos
-protegidos do que o push publica, e o resto passa pelo PR. Uma alteração nos arquivos do plugin dentro da VM não sai
-dela.
+protegidos do que o push publica, e o resto passa pelo PR.
+
+**Risco aceito:** dentro da VM, o agente pode alterar os arquivos do plugin, inclusive o push-guard e o
+protected-paths, e com isso desligar essa conferência para os pushes seguintes da mesma sessão. A alteração não sai da
+VM (o plugin não é publicado pelo push), mas o que o push leva passa a depender só do lado do GitHub: o PR revisado e a
+proteção da branch padrão. Fora da nuvem, a pasta do plugin pede aprovação (path-guard) e a ferramenta de escrita não
+grava nela (write-guard).
 
 ## 2026-11-24: gates do Stop configurados pelo projeto
 
