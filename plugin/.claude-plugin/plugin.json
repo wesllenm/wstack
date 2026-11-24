@@ -1,7 +1,7 @@
 {
   "name": "wstack",
-  "version": "0.0.4",
-  "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação. Versão 0.0.4: hooks e scripts do harness, sem skills e agentes ainda.",
+  "version": "0.0.5",
+  "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação. Versão 0.0.5: hooks e scripts do harness e a sonda de agentes; skills e agentes do harness ainda não.",
   "author": {
     "name": "wesllenm"
   }

@@ -125,3 +125,36 @@ Leitura:
 A regra de decisão não previa um passo B sem valor (o controle rodou), então ela não decide sozinha. Com a e c
 certos, o 5 aprovado por hook e nenhuma regra mensurável, o desenvolvedor escolheu "A com hook aprovador"
 (`docs/decisions.md`, scripts no plugin, aprovados por hook).
+
+# Sonda 3: agentes de plugin
+
+Os agentes do harness pré-carregam skills (`skills:`), o lead delega a uma lista fechada de agentes
+(`Agent(implementer, ...)`) e é o agente da sessão (`"agent"` no `settings.json`). A documentação do Claude Code diz que
+um agente de plugin se chama `wstack:<nome>` e que `hooks`, `mcpServers`, `permissionMode` e `initialPrompt` são
+ignorados nele, mas não diz como `skills:` e `Agent(...)` citam nomes do plugin, se `"agent"` aceita agente de plugin, se
+`memory: project` vale nele, e se contradiz sobre `${CLAUDE_PLUGIN_ROOT}` no corpo do agente. A sonda mede isso numa
+sessão real; o resultado decide como a 2.3 escreve os agentes e a 2.4, o `settings.json` modelo.
+
+| Fato | Como a sonda prova | Peças |
+|---|---|---|
+| 0. O plugin se atualiza ao iniciar (autoUpdate) | a versão na mensagem do `SessionStart` é 0.0.5 (o container guardado tem uma anterior) | `session-start.sh` |
+| A. `"agent": "wstack:sonda-principal"` no `settings.json` do projeto liga o agente do plugin | o prompt da sessão tem a marca `PRINCIPAL-ATIVO-7Q` | `agents/sonda-principal.md`, `.claude/settings.json` |
+| B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | `sonda-folha-a` está listada pelo nome curto e `sonda-folha-b` com prefixo; cada uma é chamada pelos dois nomes | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md` |
+| C. `skills:` pré-carrega skill do plugin pelo nome curto e/ou com prefixo | o subagente responde a marca `abacaxi-7q` da skill, ou `NENHUM` | `agents/sonda-pre-curto.md`, `agents/sonda-pre-prefixo.md`, `skills/sonda-alvo` |
+| D. `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente | os subagentes devolvem o texto como o veem: caminho absoluto ou `${...}` | os mesmos agentes |
+| E. `memory: project` vale em agente de plugin | o subagente diz se o prompt dele traz instruções de memória e a pasta | `agents/sonda-memoria.md` |
+
+Leitura para a 2.3: os agentes usam, em `skills:` e `Agent(...)`, a forma de nome que funcionou (as duas, se as duas
+funcionaram, fica a com prefixo, que é a documentada); `${CLAUDE_PLUGIN_ROOT}` só entra no corpo de agente se D der
+"trocada"; `memory: project` fica no `review-agent` só se E der "sim". Se A der "não", a 2.4 não liga o lead pelo
+`settings.json` e o desenvolvedor chama `/agents` ou a skill `lead`.
+
+Roteiro, depois do merge na main:
+
+1. Abrir uma sessão NOVA no ambiente `wstack`, em qualquer modo de permissão (a sonda não depende de pedido de
+   aprovação). Enquanto a sonda estiver na main, toda sessão nova deste repositório começa como o agente
+   `sonda-principal`, que só lê, roda Bash e as skills e delega aos agentes da sonda: não usar essas sessões para outro
+   trabalho. A peça sai no PR seguinte.
+2. Pedir "rode a sonda de agentes do wstack (skill wstack:sonda-agentes)". Se a skill não existir, a sessão não
+   atualizou o plugin: trazer a versão da mensagem do `SessionStart`.
+3. Trazer a tabela e a linha final `sonda-agentes: ...`.
