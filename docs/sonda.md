@@ -93,3 +93,31 @@ Roteiro, depois do merge na main:
    ao agente o que fazer diferente; se ele parar depois de uma negação, responder "continue a sonda". No passo C,
    aprovar só desta vez se aparecer pedido (não deve aparecer: o hook nega sozinho).
 3. Trazer a tabela e a linha final `sonda-caminhos: a=... b=... c=...`.
+
+## Resultado da sonda 2 (2026-11-24)
+
+Primeira tentativa sem valor: a sessão restaurou o container guardado pelo ambiente antes da 0.0.3 ("Restored saved
+setup"; o setup script não rodou), carregou o plugin 0.0.1, que não tem a skill, e estava no modo automático. A
+correção do setup script está em `docs/decisions.md` (plugin atualizado ao iniciar a sessão na nuvem).
+
+Segunda tentativa: container novo, plugin 0.0.3, modo "Accept edits". Linha da skill:
+`sonda-caminhos: a=variável trocada no texto b=1,2,3,4,5 (controle 4 rodou: passo B não vale); não se aplica: 1 c=ok`.
+O registro da sessão diz quem liberou cada comando (`permission_decision` no resultado de cada ferramenta):
+
+| Passo | Veio | `permission_decision` |
+|---|---|---|
+| A | o texto da skill chegou com `/root/.claude/plugins/cache/wstack/wstack/0.0.3` no lugar de `${CLAUDE_PLUGIN_ROOT}`, em todas as ocorrências (até na frase que explicava a variável); o script imprimiu `rodou de /root/.claude/plugins/cache/wstack/wstack/0.0.3; CLAUDE_PLUGIN_ROOT no Bash: ausente` | `accept`, `rule`, `config` |
+| B, números 4, 1, 2, 3 | rodaram | `accept`, `rule`, `config` em todos, inclusive no controle 4, que não tem regra no projeto |
+| B, número 5 | rodou | `accept`, `hook`, `hook` |
+| C | negado com `wstack-sonda-node: hook Node rodou; módulo da mesma pasta: ok; módulo de outra pasta: ok` | `reject`, `hook`, `hook` |
+
+Leitura:
+- **a ok:** a variável é trocada no texto da skill ao carregar; o Bash não a tem.
+- **b não mensurável na nuvem:** uma regra de configuração que não é do projeto libera todo Bash (o controle saiu
+  igual às regras testadas), e o registro não diz qual regra casou. As configurações da plataforma não são legíveis
+  pela sessão.
+- **aprovação por hook ok:** o 5 foi liberado pelo hook, não por regra.
+- **c ok:** o hook Node do plugin importou um módulo da mesma pasta e um de `lib/`.
+
+Pela regra de decisão, o resultado cai em "A com hook aprovador", e o desenvolvedor escolheu essa opção
+(`docs/decisions.md`, scripts no plugin, aprovados por hook).
