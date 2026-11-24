@@ -26,11 +26,14 @@ o erro da ferramenta, se vier, é o dado. Em toda chamada de subagente, relate t
 ## B. Delegação
 
 O agente da sonda só pode delegar a uma lista fechada: `sonda-folha-a` e `sonda-folha-b` estão nela com o prefixo
-`wstack:`, e `sonda-memoria` com os dois (a rodada anterior mostrou que entrada só pelo nome curto some da lista). Chame, um por vez, nesta ordem, com o pedido "responda conforme as suas
-instruções":
+`wstack:`, e `sonda-memoria` com os dois (as rodadas anteriores mostraram que entrada só pelo nome curto some da lista).
+Fora do plugin, `sonda-projeto` é um agente do projeto (`.claude/agents/`), cujo nome não tem prefixo, listado pelo nome
+curto. Chame, um por vez, nesta ordem, com o pedido "responda conforme as suas instruções":
 
-1. `sonda-memoria` e depois `wstack:sonda-memoria` (calibração: listado nas duas formas, então só a forma do nome na
-   chamada pode falhar)
+1. Calibração. `sonda-projeto`: se responder, a lista aceita entrada pelo nome curto e a chamada acha o agente pelo
+   nome exato, então o erro do nome curto nos agentes do plugin vem do nome deles (`wstack:<nome>`), não da lista nem
+   da forma da chamada; se der erro, a lista não aceita nome curto de nenhum agente. Depois, `sonda-memoria` e
+   `wstack:sonda-memoria`.
 2. `sonda-folha-a`
 3. `wstack:sonda-folha-a`
 4. `sonda-folha-b`
@@ -58,12 +61,21 @@ se veio o texto com cifrão e chaves, não trocou.
 
 ## E. Memória
 
-Da resposta de `sonda-memoria` (passo B.1), relate as três linhas. O agente foi declarado só com a ferramenta TaskList;
-se ele tem Read, Write ou Edit, foi a memória que as acrescentou. Depois rode `ls -la .claude/agent-memory 2>&1 | head`
-e relate a saída.
+Das respostas de `sonda-projeto` (agente do projeto, o controle) e de `wstack:sonda-memoria` (agente do plugin), ambas
+do passo B.1, relate as quatro linhas e quantas ferramentas cada um usou. Os dois foram declarados só com a ferramenta
+TaskList e com `memory: project`; se um deles tem Read, Write ou Edit, foi a memória que as acrescentou. As linhas
+`MEMORIA` e `LINHA` são o que o próprio agente diz e não bastam: a prova é o arquivo gravado. Rode
+`ls -laR .claude/agent-memory ~/.claude/agent-memory 2>&1 | head -40` e
+`grep -rn 'MARCA-' .claude/agent-memory ~/.claude/agent-memory 2>&1 | head` e relate as saídas.
+
+Leitura: `MARCA-PROJETO` gravada e `MARCA-PLUGIN` não, a memória vale em agente de projeto e é ignorada em agente de
+plugin; as duas gravadas, vale nos dois; nenhuma, a memória não acrescenta ferramentas a agente com `tools:` restrito
+(e E não decide sobre o plugin). Se `sonda-projeto` deu erro em B.1, diga que falta o controle.
+
+Os arquivos gravados são estado da sonda: não faça commit deles.
 
 ## Resultado
 
 Termine com uma tabela (passo, o que veio) e com uma linha:
 
-`sonda-agentes: versão=<x> cache=<versões> principal=<linha PRINCIPAL-ATIVO ou NENHUMA> chamada-curta=<ok|erro> chamada-prefixo=<ok|erro> folha-a=<curto ok/erro, prefixo ok/erro> folha-b=<curto ok/erro, prefixo ok/erro> controle=<falhou|passou> pre-curto=<abacaxi-7q|NENHUM|erro> pre-prefixo=<abacaxi-7q|NENHUM|erro> variável-no-agente=<trocada|não> memória=<ferramentas a mais: sim|não>`
+`sonda-agentes: versão=<x> cache=<versões> principal=<linha PRINCIPAL-ATIVO ou NENHUMA> calibração-projeto=<ok|erro> chamada-curta=<ok|erro> chamada-prefixo=<ok|erro> folha-a=<curto ok/erro, prefixo ok/erro> folha-b=<curto ok/erro, prefixo ok/erro> controle=<falhou|passou> pre-curto=<abacaxi-7q|NENHUM|erro> pre-prefixo=<abacaxi-7q|NENHUM|erro> variável-no-agente=<trocada|não> memória-projeto=<gravou|não gravou|erro> memória-plugin=<gravou|não gravou|erro>`

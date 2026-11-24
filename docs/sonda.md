@@ -139,10 +139,10 @@ sessão real; o resultado decide como a 2.3 escreve os agentes e a 2.4, o `setti
 |---|---|---|
 | 0. O plugin se atualiza ao iniciar (autoUpdate) | 0.0.5 na mensagem do `SessionStart` não basta (um container novo instala da main): vale só com o container restaurado do guardado ("Restored saved setup" no registro da sessão, que o wstack confere) ou com 0.0.4 e 0.0.5 juntas no cache e a data de atualização em `installed_plugins.json` | `session-start.sh` |
 | A. `"agent": "wstack:sonda-principal"` no `settings.json` do projeto liga o agente do plugin | o prompt da sessão tem a linha `PRINCIPAL-ATIVO-<sufixo>` (o sufixo só existe no prompt do agente, não na skill) e o controle de B falha | `agents/sonda-principal.md`, `.claude/settings.json` |
-| B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | calibração: `sonda-memoria`, listada nas duas formas, chamada pelos dois nomes (só a forma da chamada pode falhar); `sonda-folha-a` listada pelo nome curto e `sonda-folha-b` com prefixo, cada uma chamada pelos dois nomes; controle: `general-purpose`, fora da lista, tem de falhar. Sem A, B não mede a lista | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md`, `agents/sonda-memoria.md` |
+| B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | calibração (desde a 0.0.7): `sonda-projeto`, agente do projeto listado pelo nome curto, tem de responder; `sonda-memoria`, listada nas duas formas, chamada pelos dois nomes; `sonda-folha-a` listada pelo nome curto e `sonda-folha-b` com prefixo, cada uma chamada pelos dois nomes; controle: `general-purpose`, fora da lista, tem de falhar. Sem A, B não mede a lista | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md`, `agents/sonda-memoria.md` |
 | C. `skills:` pré-carrega skill do plugin pelo nome curto e/ou com prefixo | o subagente, sem ferramenta de leitura, responde a marca `abacaxi-7q` da skill, ou `NENHUM`; o número de ferramentas usadas vem junto | `agents/sonda-pre-curto.md`, `agents/sonda-pre-prefixo.md`, `skills/sonda-alvo` |
 | D. `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente | os subagentes devolvem o texto como o veem: caminho absoluto ou `${...}` | os mesmos agentes |
-| E. `memory: project` vale em agente de plugin | declarado só com TaskList (era TodoWrite até a 0.0.5), o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
+| E. `memory: project` vale em agente de plugin | declarado só com TaskList (era TodoWrite até a 0.0.5), o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta; desde a 0.0.7, a prova é o arquivo que ele grava na pasta de memória, com `sonda-projeto` (agente do projeto) de controle | `agents/sonda-memoria.md`, `.claude/agents/sonda-projeto.md` |
 
 Leitura para a 2.3: os agentes usam, em `skills:` e `Agent(...)`, a forma de nome que funcionou (as duas, se as duas
 funcionaram, fica a com prefixo, que é a documentada); `${CLAUDE_PLUGIN_ROOT}` só entra no corpo de agente se D der
@@ -243,3 +243,32 @@ linha final `sonda-agentes: ...` de uma sessão nova com `wstack 0.0.6 carregado
 nova se remontar o container (o `autoUpdate` não atualiza na partida, fato 0). Na rodada anterior, a remontagem
 veio da troca do setup script. Se a sessão subir com 0.0.5, atualizar o plugin nela não serve: o `"agent"` e os agentes
 são lidos na partida.
+
+## Resultado da sonda 3 com a 0.0.6 (2026-11-24)
+
+Sessão nova: `wstack 0.0.6 carregado.`, cache só com `0.0.6`, registros user e project em `1414791`, com `installedAt`
+igual a `lastUpdated` (instalados na montagem do container, não atualizados). Linha da skill:
+
+`sonda-agentes: versão=0.0.6 cache=0.0.6 principal=PRINCIPAL-ATIVO-Rt27 chamada-curta=erro chamada-prefixo=ok folha-a=curto erro, prefixo ok folha-b=curto erro, prefixo ok controle=falhou pre-curto=abacaxi-7q pre-prefixo=abacaxi-7q variável-no-agente=trocada memória=ferramentas a mais: não`
+
+Leitura:
+- **A ok** de novo, e o controle `general-purpose` falhou (`not found`): a lista foi aplicada.
+- **B: só `wstack:<nome>` acha agente do plugin.** Todo nome curto deu `Agent type '<nome>' not found`, com a lista de
+  agentes disponíveis só na forma com prefixo. A calibração não decidiu: `sonda-memoria` só apareceu com prefixo, então
+  não separa a forma da chamada da forma da lista.
+- **C: `skills:` pré-carrega skill do plugin pelos dois nomes.** As duas folhas responderam `abacaxi-7q`, sem usar
+  ferramentas.
+- **D: `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente** (`/root/.claude/plugins/cache/wstack/wstack/0.0.6/hooks`).
+- **E fraco.** O `wstack:sonda-memoria` respondeu `FERRAMENTAS: TaskList / MEMORIA: sim / LINHA: NENHUMA`, e
+  `.claude/agent-memory` não existia. Sem Read, Write e Edit e sem a linha da pasta, o mais provável é que a memória seja
+  ignorada em agente de plugin, mas o "sim" é a palavra do agente e falta um controle em que a memória certamente valha.
+
+Mudança feita (0.0.7):
+- **Calibração com agente de projeto.** `.claude/agents/sonda-projeto.md`, cujo nome não tem prefixo, entra no
+  `Agent(...)` do `sonda-principal` pelo nome curto. Se responder, a lista aceita nome curto e a chamada acha o agente
+  pelo nome exato: o erro do nome curto nos agentes do plugin vem do nome deles.
+- **Memória provada por gravação.** `sonda-memoria` e `sonda-projeto` têm `memory: project` e só TaskList; os dois
+  gravam `sonda.md` na pasta de memória se tiverem Write (`MARCA-PLUGIN` e `MARCA-PROJETO`), e a skill procura as
+  marcas em `.claude/agent-memory` e `~/.claude/agent-memory`. O agente de projeto é o controle.
+- Sufixo novo na linha `PRINCIPAL-ATIVO-`. Roteiro igual; trazer a linha final de uma sessão nova com
+  `wstack 0.0.7 carregado.`. O `.claude/agents/sonda-projeto.md` sai junto com o `"agent"`.
