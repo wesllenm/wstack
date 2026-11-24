@@ -160,3 +160,42 @@ Roteiro, depois do merge na main:
 3. Trazer a tabela e a linha final `sonda-agentes: ...`.
 4. Se A der NENHUMA com a versão 0.0.5, repetir numa segunda sessão nova: o plugin pode ter sido atualizado durante a
    partida, depois de o Claude Code resolver o `"agent"`.
+
+## Resultado da sonda 3, fato 0 (2026-11-24)
+
+**Fato 0 falhou: o `autoUpdate` não atualizou o plugin ao iniciar a sessão na nuvem.** Os fatos A a E não foram
+medidos: a skill `wstack:sonda-agentes` não existia (`Unknown skill`) e nenhum agente `sonda-*` estava disponível.
+
+Duas sessões novas no ambiente `wstack`, abertas depois do merge da sonda 3 (`a576405`, 19:10 UTC), deram o mesmo:
+
+- `wstack 0.0.3 carregado.` no `SessionStart`.
+- Cache só com `0.0.3`; em `installed_plugins.json`, os registros de escopo user e project no commit `473e458` (sonda 2),
+  com `installedAt` igual a `lastUpdated`: 17:42 UTC, o mesmo instante nas duas sessões. Os registros vieram do
+  container guardado pelo ambiente, não de uma instalação na partida, e nada os atualizou depois.
+- A cópia do marketplace (`~/.claude/plugins/marketplaces/wstack`) também em `473e458`, com
+  `extraKnownMarketplaces.wstack.autoUpdate: true` nas configurações do usuário. O commit `ec5a2f8` (0.0.4) também não
+  chegou.
+- A linha `PRINCIPAL-ATIVO-` não apareceu, como esperado com a 0.0.3 (o `"agent"` cita um agente que ela não tem).
+
+A atualização à mão funciona: na sessão, `claude plugin marketplace update wstack` levou o marketplace a `a576405`, e
+`claude plugin update wstack@wstack` (escopo project, padrão) e `claude plugin update wstack@wstack --scope user`
+levaram os dois registros à 0.0.5 ("Restart to apply changes"). Mas isso vale só para aquele container: uma sessão
+retomada ou nova parte do container guardado.
+
+Mudança feita: o setup script do ambiente `wstack` passou a rodar, depois do `install` e do `autoUpdate`, as três
+atualizações (cada uma com `|| echo` de aviso, para não impedir a sessão de subir):
+
+```bash
+claude plugin marketplace update wstack
+claude plugin update wstack@wstack --scope user
+claude plugin update wstack@wstack --scope project
+```
+
+Não provado: se trocar o script força o ambiente a remontar o container guardado (o esperado), e se o `--scope
+project` acha o projeto, já que o script roda da pasta acima do repositório (o escopo user basta para carregar o
+plugin). Mesmo que funcione, o script só roda quando o container é montado do zero: o plugin continua na versão do
+dia da montagem até o ambiente remontar. A decisão "plugin atualizado ao iniciar a sessão na nuvem"
+(`docs/decisions.md`) supunha o `autoUpdate` e precisa ser revista.
+
+Próximo passo: abrir uma sessão nova no ambiente `wstack`. Com `wstack 0.0.5 carregado.`, rodar a sonda de agentes
+(fatos A a E); com 0.0.3, o container guardado não foi remontado.
