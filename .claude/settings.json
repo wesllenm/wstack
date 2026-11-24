@@ -2,12 +2,5 @@
   "extraKnownMarketplaces": {
     "wstack": { "source": { "source": "github", "repo": "wesllenm/wstack" } }
   },
-  "enabledPlugins": { "wstack@wstack": true },
-  "permissions": {
-    "allow": [
-      "Bash(bash ${CLAUDE_PLUGIN_ROOT}/scripts/sonda-allow.sh 1)",
-      "Bash(bash /root/.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 2)",
-      "Bash(bash */.claude/plugins/cache/wstack/wstack/*/scripts/sonda-allow.sh 3)"
-    ]
-  }
+  "enabledPlugins": { "wstack@wstack": true }
 }
