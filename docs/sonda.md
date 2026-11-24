@@ -142,7 +142,7 @@ sessão real; o resultado decide como a 2.3 escreve os agentes e a 2.4, o `setti
 | B. `Agent(...)` na lista de ferramentas aceita nome curto e/ou com prefixo | calibração: `sonda-memoria`, listada nas duas formas, chamada pelos dois nomes (só a forma da chamada pode falhar); `sonda-folha-a` listada pelo nome curto e `sonda-folha-b` com prefixo, cada uma chamada pelos dois nomes; controle: `general-purpose`, fora da lista, tem de falhar. Sem A, B não mede a lista | `agents/sonda-folha-a.md`, `agents/sonda-folha-b.md`, `agents/sonda-memoria.md` |
 | C. `skills:` pré-carrega skill do plugin pelo nome curto e/ou com prefixo | o subagente, sem ferramenta de leitura, responde a marca `abacaxi-7q` da skill, ou `NENHUM`; o número de ferramentas usadas vem junto | `agents/sonda-pre-curto.md`, `agents/sonda-pre-prefixo.md`, `skills/sonda-alvo` |
 | D. `${CLAUDE_PLUGIN_ROOT}` é trocado no corpo do agente | os subagentes devolvem o texto como o veem: caminho absoluto ou `${...}` | os mesmos agentes |
-| E. `memory: project` vale em agente de plugin | declarado só com TodoWrite, o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
+| E. `memory: project` vale em agente de plugin | declarado só com TaskList (era TodoWrite até a 0.0.5), o subagente lista as ferramentas que tem (a memória acrescenta Read, Write e Edit) e a linha do prompt que cita a pasta | `agents/sonda-memoria.md` |
 
 Leitura para a 2.3: os agentes usam, em `skills:` e `Agent(...)`, a forma de nome que funcionou (as duas, se as duas
 funcionaram, fica a com prefixo, que é a documentada); `${CLAUDE_PLUGIN_ROOT}` só entra no corpo de agente se D der
@@ -235,3 +235,11 @@ Leitura:
 Para a 2.3, já decidido pelos dados: os agentes do harness citam agentes do plugin, em `Agent(...)` e na chamada,
 sempre como `wstack:<nome>`. Para medir C, D e E, a sonda precisa de outra rodada com os agentes da sonda declarando,
 no lugar de `TodoWrite`, uma ferramenta que exista e não leia arquivos.
+
+Mudança feita (0.0.6): os cinco agentes chamados pela sonda declaram `tools: TaskList`; o `sonda-principal` troca
+`TodoWrite` por `TaskList`, lista `wstack:sonda-folha-a` com o prefixo (para a folha A rodar e dar dado de D) e tem
+um sufixo novo na linha `PRINCIPAL-ATIVO-` (o anterior está registrado acima). Roteiro igual ao da sonda 3; trazer a
+linha final `sonda-agentes: ...` de uma sessão nova com `wstack 0.0.6 carregado.`. O ambiente só instala a versão
+nova se remontar o container (o `autoUpdate` não atualiza na partida, fato 0). Na rodada anterior, a remontagem
+veio da troca do setup script. Se a sessão subir com 0.0.5, atualizar o plugin nela não serve: o `"agent"` e os agentes
+são lidos na partida.

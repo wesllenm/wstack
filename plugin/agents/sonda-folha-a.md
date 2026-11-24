@@ -2,7 +2,7 @@
 name: sonda-folha-a
 description: Sonda 3 do wstack. Folha de delegação listada pelo nome curto; não usar em outro trabalho.
 model: haiku
-tools: TodoWrite
+tools: TaskList
 ---
 
 Responda só com duas linhas, sem mais nada:
