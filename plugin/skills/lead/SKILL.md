@@ -74,6 +74,8 @@ Qualquer toque em `critical` de `risk.conf` (autenticação, autorização, segr
 
 ## Roteamento
 
+Os agentes e as skills desta skill são do plugin wstack: na ferramenta Agent, `subagent_type` é sempre `wstack:<nome>` (`wstack:implementer`, `wstack:review-verifier`), e a skill é carregada como `wstack:<nome>` (`wstack:recall`, `wstack:test-audit`). O nome curto não acha agente do plugin. No texto, eles aparecem pelo nome curto.
+
 - `planner` (Opus) para contexto amplo;
 - `explore` (Haiku) para exploração e localização de código;
 - `implementer` (Sonnet) para implementação delimitada por sprint contract;
@@ -250,7 +252,7 @@ Quando o desenvolvedor avisa o merge do PR, ou no Início, `bash ${CLAUDE_PLUGIN
 
 Delegar não é obrigatório: para mudanças pequenas, implementar diretamente custa menos que montar contrato e reconstituir contexto. Delegue quando a tarefa for delimitada, quando o output for verboso ou quando a revisão precisar de contexto independente.
 
-Todo subagente parte de contexto zero. O prompt de delegação precisa conter escopo, arquivos, critérios, comando de verificação, exclusões, as skills a carregar (inclusive de plugin de fornecedor, pelo nome completo `<plugin>:<skill>`, quando a tarefa tocar a API daquela área: por exemplo `dotnet-skills`, `dotnet-msbuild`, `dotnet-test`) e o caminho da pasta temporária da sessão. A precedência é: convenções do projeto, `CLAUDE.md` e `.claude/rules/`; depois as skills de processo deste workflow; por último as skills de plugin, que são referência de API e de ferramenta e nunca decidem framework de teste, estrutura, formato de erro nem estratégia de revisão (o projeto usa xUnit v2, não MSTest). Skills de plugin não entram no `skills:` do frontmatter dos agentes, e os revisores não as carregam.
+Todo subagente parte de contexto zero. O prompt de delegação precisa conter escopo, arquivos, critérios, comando de verificação, exclusões, as skills a carregar, sempre pelo nome completo `<plugin>:<skill>` (as deste workflow são `wstack:<nome>`; as de plugin de fornecedor entram quando a tarefa tocar a API daquela área: por exemplo `dotnet-skills`, `dotnet-msbuild`, `dotnet-test`) e o caminho da pasta temporária da sessão. A precedência é: convenções do projeto, `CLAUDE.md` e `.claude/rules/`; depois as skills de processo deste workflow; por último as skills de plugin, que são referência de API e de ferramenta e nunca decidem framework de teste, estrutura, formato de erro nem estratégia de revisão (o projeto usa xUnit v2, não MSTest). Skills de plugin não entram no `skills:` do frontmatter dos agentes, e os revisores não as carregam.
 
 ### Sprint contract
 
@@ -267,7 +269,7 @@ Restrições das skills:
 Pasta temporária da sessão: <caminho> (saídas de teste, conferência e scripts avulsos)
 Recursos que pode criar: nenhum | worktree, branch, container — e quem remove
 
-Agente:
+Agente: wstack:<nome>
 Modelo:
 Ferramentas permitidas:
 ```
@@ -407,9 +409,9 @@ Antes do relatório final:
 
 ## Aprendizado
 
-Ao final de cada tarefa, antes do relatório, e também ao interromper, verificar se algo da tarefa já tinha acontecido antes: achado de revisão, achado que escapou, correção do desenvolvedor, bloqueio do hook, regressão. Fontes: memória dos revisores (`.claude/agent-memory/`), `docs/review-calibration.md`, `docs/gotchas.md` e os arquivos de área de `docs/gotchas/` que o índice dele aponta para os caminhos da tarefa, `SESSION.md` e `git log`. Quando a mecânica estiver boa mas o resultado ruim, a causa costuma ser prompt, skill ou rubrica fora de calibração: tratar como achado `escapou` e seguir a escada.
+Ao final de cada tarefa, antes do relatório, e também ao interromper, verificar se algo da tarefa já tinha acontecido antes: achado de revisão, achado que escapou, correção do desenvolvedor, bloqueio do hook, regressão. Fontes: as linhas `aprendizado:` que os revisores devolveram, `docs/review-calibration.md`, `docs/gotchas.md` e os arquivos de área de `docs/gotchas/` que o índice dele aponta para os caminhos da tarefa, `SESSION.md` e `git log`. Quando a mecânica estiver boa mas o resultado ruim, a causa costuma ser prompt, skill ou rubrica fora de calibração: tratar como achado `escapou` e seguir a escada.
 
-- Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md` (a memória do `review-agent` registra os achados dele sozinha). Só entra no núcleo (`docs/gotchas.md`, que o `CLAUDE.md` importa em toda sessão) o que pega qualquer tarefa, em qualquer área; o núcleo fica em até 40 linhas e 8 KB. Área nova exige arquivo novo e linha no índice do núcleo, com os caminhos e assuntos que obrigam a lê-lo; fato que serve a duas áreas fica em uma só, com uma linha de referência na outra.
+- Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md` (inclusive as linhas `aprendizado:` dos revisores, que não gravam arquivo: o `lead` as registra, cortando o que já está lá). Só entra no núcleo (`docs/gotchas.md`, que o `CLAUDE.md` importa em toda sessão) o que pega qualquer tarefa, em qualquer área; o núcleo fica em até 40 linhas e 8 KB. Área nova exige arquivo novo e linha no índice do núcleo, com os caminhos e assuntos que obrigam a lê-lo; fato que serve a duas áreas fica em uma só, com uma linha de referência na outra.
 - Segunda ocorrência, ou primeira quando a correção veio do desenvolvedor (na sessão ou no PR): promover para o degrau mais alto da escada de correção que resolva com custo aceitável. A atenção do desenvolvedor é o recurso que não escala; o que ele precisou apontar uma vez não pode depender de ele apontar de novo.
 
 **Escada de correção** (quanto mais alto, menos depende de alguém lembrar):
@@ -461,13 +463,13 @@ Atualizar a data e o último PR lido em Feedback de PR. Sem `gh` autenticado ou 
 
 ### Quando sugerir manutenção
 
-Sugerir no relatório uma tarefa de manutenção do aprendizado quando qualquer um for verdadeiro: Registro com mais de 30 linhas desde a última manutenção; núcleo `docs/gotchas.md` acima de 40 linhas ou 8 KB, ou um arquivo de `docs/gotchas/` com mais de 80 linhas; algum arquivo de `.claude/agent-memory/` com mais de 150 linhas; `CLAUDE.md` acima de 60 linhas; última manutenção (topo de `docs/review-calibration.md`) há mais de 15 dias.
+Sugerir no relatório uma tarefa de manutenção do aprendizado quando qualquer um for verdadeiro: Registro com mais de 30 linhas desde a última manutenção; núcleo `docs/gotchas.md` acima de 40 linhas ou 8 KB, ou um arquivo de `docs/gotchas/` com mais de 80 linhas; `CLAUDE.md` acima de 60 linhas; última manutenção (topo de `docs/review-calibration.md`) há mais de 15 dias.
 
 ### Manutenção do aprendizado (tarefa própria)
 
 Classificada como SIMPLES, pedida pelo desenvolvedor ou sugerida pelo `lead`. O objetivo é que o que o workflow aprendeu continue curto, verdadeiro e útil; memória que só cresce acumula fato vencido e contradição.
 
-1. Ler as fontes: `docs/review-calibration.md`, `docs/gotchas.md` e `docs/gotchas/*.md`, `docs/patterns.md`, `.claude/agent-memory/*/`, `.claude/rules/` (se existir), `CLAUDE.md` e as seções Sempre verificar, Não reportar e Projeto da `review-rubric`.
+1. Ler as fontes: `docs/review-calibration.md`, `docs/gotchas.md` e `docs/gotchas/*.md`, `docs/patterns.md`, `.claude/rules/` (se existir), `CLAUDE.md` e as seções Sempre verificar, Não reportar e Projeto da `review-rubric`.
 2. Delegar ao `explore` a checagem de validade: cada fato que cita arquivo, símbolo, pacote ou comando ainda existe? Fato cujo alvo sumiu é candidato a remoção.
 3. Montar o plano com quatro listas: **remover** (vencido ou duplicado), **fundir** (mesmo fato em lugares diferentes, mantendo o do mecanismo mais forte), **promover** (o que aparece duas ou mais vezes em Registro, Totais ou nos gotchas, com o degrau proposto) e **contradições** (para o desenvolvedor decidir).
 4. Antes de promover texto novo numa skill, passar cada item por estes critérios e cortar o que falhar: **durável** (continua verdadeiro em seis meses, depois de mudarem caminhos e versões); **específico** (amplo para valer em outras tarefas, preciso para o próximo agente reconhecer quando aplicar); **muda decisão** (o próximo agente faz algo diferente por causa dele); **ainda não coberto** (se a skill já diz e foi ignorada, a correção é posição e ênfase do texto existente, não item duplicado); **estrutural primeiro** (o que um teste, regra de analisador, script ou hook imporia vai para essa forma, não para texto); e **convergência** (fato visto uma vez precisa passar com folga nos outros critérios). Incluir os momentos em que o desenvolvedor colou contexto que o agente poderia ter buscado sozinho: o destino é a skill do fluxo onde isso aconteceu. Incluir a jardinagem: `node ${CLAUDE_PLUGIN_ROOT}/scripts/diff-smells.mjs --base <commit da última manutenção> --text` mostra válvulas de escape e comentários do período, e achados `simplicity` de "duas formas de fazer a mesma coisa" mostram padrões duplicados; tipo de válvula que apareceu em mais de uma tarefa é candidato a estancar (degrau 1 ou 2) e a uma atividade de limpeza. Incluir a distribuição dos números da escada de correção nas linhas de Registro do período ("escada N"; não confundir com os degraus de prova da `review-rubric`): correção que voltou depois de promovida para o nível 3 a 5 da escada é proposta de subir.
@@ -477,7 +479,7 @@ Classificada como SIMPLES, pedida pelo desenvolvedor ou sugerida pelo `lead`. O 
 8. Mecanismo determinístico aprovado (teste, regra de analisador, teste de arquitetura) segue o fluxo normal: implementar, verificar e revisar.
 9. Commitar pela skill `commit` (por exemplo `docs: consolida aprendizado do workflow`) e registrar a manutenção em Registro.
 
-Nunca apagar entrada de `docs/decisions.md` ou ADR: decisão revertida ganha entrada nova, não perde a antiga. A memória dos agentes pode ser editada pelo `lead` nesta tarefa; fora dela, cada agente cuida da própria.
+Nunca apagar entrada de `docs/decisions.md` ou ADR: decisão revertida ganha entrada nova, não perde a antiga. Os agentes não guardam memória própria entre sessões: o que aprendem chega ao `lead` na linha `aprendizado:` e vai para os arquivos acima.
 
 ## Relatório
 

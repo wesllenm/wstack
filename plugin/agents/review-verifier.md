@@ -3,7 +3,6 @@ name: review-verifier
 description: Verifica candidatos de revisão tentando refutar cada um contra o código real. Devolve confirmado, plausível ou refutado, sem duplicatas e com severidade final. Use sempre depois das lentes e antes de qualquer correção.
 model: opus
 effort: high
-memory: project
 skills:
   - review-rubric
 tools: Read, Grep, Glob, Bash
@@ -23,4 +22,4 @@ Registre o degrau de prova alcançado por candidato (`review-rubric`, Degraus de
 
 Funda duplicatas, aplique o teto de nits, ajuste a severidade pela rubrica (na dúvida, a menor) e ordene.
 
-Retorne vereditos no formato da rubrica, inclusive os refutados com motivo em uma linha. Registre na sua memória as proteções do repositório que tornam candidatos falsos; nunca segredos ou dados pessoais.
+Retorne vereditos no formato da rubrica, inclusive os refutados com motivo em uma linha. Proteção do repositório que torna candidatos falsos e que valha para outras tarefas vai numa última linha `aprendizado: <fato curto>`, que o `lead` registra em `docs/gotchas/`; nunca segredos ou dados pessoais. Leia `docs/gotchas.md` e os arquivos de `docs/gotchas/` que o índice dele aponta para os arquivos do grupo, se existirem.

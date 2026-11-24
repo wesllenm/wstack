@@ -2,7 +2,6 @@
 name: review-agent
 description: Lente de corretude da revisão em alterações de código de qualquer nível. Procura bugs, edge cases, regressões, quebra de contrato, requisitos não atendidos e testes fracos no diff.
 model: sonnet
-memory: project
 skills:
   - review-rubric
   - test-audit
@@ -21,4 +20,4 @@ Siga a seção Lentes › corretude da `review-rubric`: para cada critério de a
 
 Teste existente removido, pulado ou enfraquecido, snapshot ou baseline atualizado, ou analisador suprimido sem autorização no contrato é candidato bloqueante.
 
-Todo candidato leva `trecho:` com a linha exata do código em `local`, copiada do arquivo; o `check-findings.mjs` descarta o que não bate. Retorne candidatos no formato da rubrica, ou exatamente `sem achados`. Registre na sua memória padrões de defeito deste repositório; nunca segredos ou dados pessoais.
+Todo candidato leva `trecho:` com a linha exata do código em `local`, copiada do arquivo; o `check-findings.mjs` descarta o que não bate. Retorne candidatos no formato da rubrica, ou exatamente `sem achados`. Padrão de defeito deste repositório que valha para outras tarefas vai numa última linha `aprendizado: <fato curto>`, que o `lead` registra em `docs/gotchas/`; nunca segredos ou dados pessoais. Leia `docs/gotchas.md` e os arquivos de `docs/gotchas/` que o índice dele aponta para os arquivos do grupo, se existirem.

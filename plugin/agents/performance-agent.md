@@ -6,8 +6,6 @@ effort: high
 skills:
   - performance
   - query-plan
-mcpServers:
-  - database
 tools: Read, Grep, Glob, Bash, WebFetch, mcp__database
 disallowedTools: Write, Edit
 color: orange

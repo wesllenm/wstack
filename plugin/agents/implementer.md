@@ -6,7 +6,7 @@ effort: high
 skills:
   - tdd
   - test-audit
-tools: Read, Grep, Glob, Edit, Write, Bash, Skill, TodoWrite
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill, TaskCreate, TaskUpdate, TaskList
 color: green
 ---
 
@@ -14,7 +14,7 @@ color: green
 
 Execute exclusivamente o sprint contract recebido do `lead`.
 
-Respeite escopo, arquivos autorizados, critérios, exclusões, skills e comando de verificação. Carregue as skills listadas em "Restrições das skills" do contrato.
+Respeite escopo, arquivos autorizados, critérios, exclusões, skills e comando de verificação. Carregue as skills listadas em "Restrições das skills" do contrato pelo nome completo (as deste workflow são `wstack:<nome>`).
 
 Implemente, teste e corrija falhas dentro do escopo. Todo teste novo passa pelo gate de autoria da skill `test-audit`.
 

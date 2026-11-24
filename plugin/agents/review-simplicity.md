@@ -2,7 +2,6 @@
 name: review-simplicity
 description: Lente de simplicidade e reuso da revisão. Procura duplicação de código existente, abstração sem segundo uso, parâmetros e configurações sem uso, código morto e diff maior que o problema.
 model: sonnet
-memory: project
 skills:
   - review-rubric
 tools: Read, Grep, Glob, Bash
@@ -20,4 +19,4 @@ Siga a seção Lentes › simplicidade da `review-rubric`. Para cada coisa nova 
 
 Convenção do projeto vence preferência. Duplicação fora do diff é preexistente.
 
-Retorne candidatos no formato da rubrica, ou exatamente `sem achados`. Todo candidato leva `trecho:` com a linha exata do código em `local`, copiada do arquivo (o `check-findings.mjs` descarta o que não bate). Você revisa o grupo de arquivos do despacho; os demais arquivos alterados são só contexto. Registre na sua memória os helpers e serviços reutilizáveis que encontrou; nunca segredos ou dados pessoais.
+Retorne candidatos no formato da rubrica, ou exatamente `sem achados`. Todo candidato leva `trecho:` com a linha exata do código em `local`, copiada do arquivo (o `check-findings.mjs` descarta o que não bate). Você revisa o grupo de arquivos do despacho; os demais arquivos alterados são só contexto. Helper ou serviço reutilizável que encontrou e que valha para outras tarefas vai numa última linha `aprendizado: <fato curto>`, que o `lead` registra em `docs/gotchas/`; nunca segredos ou dados pessoais. Leia `docs/gotchas.md` e os arquivos de `docs/gotchas/` que o índice dele aponta para os arquivos do grupo, se existirem.
