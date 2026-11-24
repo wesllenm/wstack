@@ -6,7 +6,8 @@
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-setup=${1:-$(git rev-parse --show-toplevel 2> /dev/null)/.claude/cloud/setup.sh}
+here=$(cd "$(dirname "$0")" && pwd -P)
+setup=${1:-$here/../cloud/setup.sh}
 [ -f "$setup" ] || { echo "setup.sh não encontrado: $setup" >&2; exit 2; }
 setup=$(cd "$(dirname "$setup")" && pwd -P)/$(basename "$setup")
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-cloud-setup-XXXX")
@@ -264,8 +265,8 @@ fi
 
 # hosts para liberar na rede: só os das stacks detectadas, da lista .claude/cloud/hosts.conf do repositório, mais os
 # domínios do WebFetch do settings.json; texto fora do alfabeto de host nunca é impresso
-hosts=$(dirname "$setup")/hosts.conf
-[ -f "$hosts" ] || hosts=$(git rev-parse --show-toplevel 2> /dev/null)/.claude/cloud/hosts.conf
+# o hosts.conf é do projeto (modelo gerado pelo bootstrap); os casos usam a versão base, a fixture dos testes
+hosts=$here/fixtures/hosts.conf
 withhosts() { mkdir -p "$1/.claude/cloud" && cp "$hosts" "$1/.claude/cloud/hosts.conf"; }
 d=$(repo hostsdotnet 'global.json={"sdk":{"version":"10.0.100"}}' 'A.csproj=<Project />'); withhosts "$d"
 out=$(run "$d" --plan)
@@ -352,12 +353,15 @@ FALSO
   hasnt "$out" "recusado pelo proxy" recusa-limpa
 fi
 
-# o setup roda como root a cada sessão: mudar .claude/cloud/ é CRITICA no classificador do repositório
+# o setup roda como root a cada sessão e lê .claude/cloud/ do projeto: mudar essa pasta é CRITICA no classificador
+# do projeto (o risk.conf de referência, como o modelo)
 classify=$(dirname "$setup")/../scripts/classify-diff.sh
-[ -f "$classify" ] || classify=$(git rev-parse --show-toplevel 2> /dev/null)/.claude/scripts/classify-diff.sh
 if [ -f "$classify" ]; then
-  nivel=$(bash "$classify" --paths .claude/cloud/setup.sh 2> /dev/null | head -1)
-  [ "$nivel" = CRITICA ] || { echo "FALHOU [classificacao]: .claude/cloud/setup.sh saiu $nivel"; fails=$((fails + 1)); }
+  cproj=$(repo classificacao) && mkdir -p "$cproj/.claude" && cp "$here/fixtures/risk.conf" "$cproj/.claude/risk.conf"
+  for p in .claude/cloud/setup.sh .claude/cloud/hosts.conf; do
+    nivel=$(CLAUDE_PROJECT_DIR=$cproj bash "$classify" --paths "$p" 2> /dev/null | head -1)
+    [ "$nivel" = CRITICA ] || { echo "FALHOU [classificacao]: $p saiu $nivel"; fails=$((fails + 1)); }
+  done
 fi
 
 out=$(bash "$setup" --nada 2>&1); rc=$?

@@ -72,6 +72,15 @@ expect '2|' "$(run "$pg" "$plugin" '{"tool_name":"Bash","cwd":"/tmp","tool_input
 expect '0|' "$(run "$ct" "$plugin" "$bash_payload")" 'checkpoint-tests presente não diz nada fora de commit'
 expect '0|ask' "$(run "$pa" "$plugin" '{"tool_name":"Bash","cwd":"/tmp","tool_input":{"command":"cp /tmp/x .claude/settings.json"}}')" 'path-guard presente pede aprovação para trava'
 
+# SessionStart: a primeira linha diz a versão do plugin em uso (é como se confere a atualização automática), também
+# fora de repositório git e sem projeto
+ss=$(jq -r '.hooks.SessionStart[].hooks[].command | select(contains("session-start.sh"))' "$hooks")
+ver=$(jq -r .version "$plugin/.claude-plugin/plugin.json")
+for p in "$proj" "$work/vazio"; do
+  out=$(printf '{"session_id":"s1"}' | env -u CLAUDE_CODE_REMOTE CLAUDE_PLUGIN_ROOT="$plugin" CLAUDE_PROJECT_DIR="$p" sh -c "$ss" 2> /dev/null | head -1)
+  [ "$out" = "wstack $ver carregado." ] || { echo "FALHOU: SessionStart em $p não disse a versão: '$out'"; fails=$((fails + 1)); }
+done
+
 # TaskCompleted: o ask não vale fora do PreToolUse; ausente, o checkpoint-tests recusa fechar a tarefa (código 2)
 tc=$(jq -r '.hooks.TaskCompleted[].hooks[].command | select(contains("checkpoint-tests.sh"))' "$hooks")
 [ -n "$tc" ] || { echo "FALHOU: comando do TaskCompleted não encontrado"; fails=$((fails + 1)); }
