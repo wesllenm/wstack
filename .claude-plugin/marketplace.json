@@ -1,0 +1,14 @@
+{
+  "name": "wstack",
+  "owner": {
+    "name": "wesllenm"
+  },
+  "description": "Marketplace do wstack: workflow de desenvolvimento com agentes para qualquer projeto.",
+  "plugins": [
+    {
+      "name": "wstack",
+      "source": "./plugin",
+      "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação."
+    }
+  ]
+}

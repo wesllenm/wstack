@@ -1,0 +1,8 @@
+{
+  "name": "wstack",
+  "version": "0.0.1",
+  "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação. Versão 0.0.1: só a sonda de instalação.",
+  "author": {
+    "name": "wesllenm"
+  }
+}
