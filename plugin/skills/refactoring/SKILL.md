@@ -29,8 +29,8 @@ Nomes ruins, duplicação real, baixa coesão, acoplamento ou complexidade que a
 - refatoração e mudança de comportamento em commits separados (skill `commit`); [TDD-04]
 - preferir refatorações automáticas do IDE/Roslyn a edição manual quando disponíveis;
 - duplicação acidental em dois slices é aceitável (skill `vertical-slice`); extrair só o que muda pelos mesmos motivos;
-- contratos públicos, schema e JSON Schema de artefato não mudam em refatoração;
-- API interna substituída: migrar todos os chamadores e apagar a antiga no mesmo commit, sem alias, wrapper ou sobrecarga de compatibilidade para chamador interno (o próximo agente copia o alias que encontrar). Contrato público segue a skill `api-design`; nome persistido ou registrado (enum gravado como texto, workflow e activity do Dapr, tipo de evento do outbox) segue `db-evolution` e `dapr-workflow` (Versionamento), que mantêm o antigo até drenar.
+- contratos públicos, schema e JSON Schema publicado não mudam em refatoração;
+- API interna substituída: migrar todos os chamadores e apagar a antiga no mesmo commit, sem alias, wrapper ou sobrecarga de compatibilidade para chamador interno (o próximo agente copia o alias que encontrar). Contrato público segue a skill `api-design`; nome persistido ou registrado (enum gravado como texto, workflow e activity do Dapr, tipo de evento do outbox) segue `db-evolution` e o versionamento do motor de workflow, que mantêm o antigo até drenar.
 
 ## Greenfield
 

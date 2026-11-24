@@ -6,7 +6,7 @@ description: >
   benchmark base contra diff com escala, orçamento e perfil de CPU em caminho
   quente, suíte instrumentada e profiling sob demanda; inclui custo de tokens
   das chamadas de modelo. Carregar ao escrever acesso a dados, chamada externa,
-  componente do portal com lista, código em caminho quente, ou ao investigar latência, memória, CPU, tamanho
+  componente de frontend com lista, código em caminho quente, ou ao investigar latência, memória, CPU, tamanho
   de bundle ou custo de tokens.
 ---
 
@@ -18,16 +18,16 @@ Pegar regressão de performance com evidência medida, no ponto mais barato poss
 
 ## Referências
 
-Ferramentas, exemplos e comandos da stack em `reference/<stack>.md` nesta pasta: `dotnet.md` (backend do SquadOS), `node.md` (JavaScript e TypeScript: portal e scripts Node), `web-frontend.md` (portal Svelte 5/SvelteKit) e `bash.md` (scripts de CI e hooks). Ler a referência da stack do arquivo alterado antes de escrever teste ou benchmark.
+Ferramentas, exemplos e comandos da stack em `reference/<stack>.md` nesta pasta: `dotnet.md` (backend .NET), `node.md` (JavaScript e TypeScript: servidor, build e scripts Node), `web-frontend.md` (frontend web, com exemplos em Svelte 5/SvelteKit) e `bash.md` (scripts de CI e hooks). Ler a referência da stack do arquivo alterado antes de escrever teste ou benchmark.
 
 ## Quando aplicar
 
 - Camada 1: sempre (está no build ou no lint).
-- Camada 2: todo diff que cria ou altera leitura de banco, laço sobre dados persistidos, chamada a integração externa, ou tela do portal que renderiza lista ou faz requisições.
+- Camada 2: todo diff que cria ou altera leitura de banco, laço sobre dados persistidos, chamada a integração externa, ou tela do frontend que renderiza lista ou faz requisições.
 - Camada 3: quando o `classify-diff.sh` devolver linha `quente:`, inclusive em código novo.
 - Camada 3b: no caminho pesado de COMPLEXA e CRITICA, quando houver o coletor da stack.
 - Camada 4: quando houver um problema para investigar, pedido pelo desenvolvedor ou apontado pelas camadas 3 e 3b.
-- Custo de tokens: sempre que o diff mexer em prompt, contexto ou escolha de modelo de um agente do produto.
+- Custo de tokens: sempre que o diff mexer em prompt, contexto ou escolha de modelo de uma chamada de modelo de IA do produto.
 
 ## Princípios
 
@@ -36,7 +36,7 @@ Ferramentas, exemplos e comandos da stack em `reference/<stack>.md` nesta pasta:
 - O plano de execução diz se uma query é boa; a contagem diz quantas vezes ela roda. Acesso a banco passa sempre pela skill `query-plan`.
 - Profiling sem pergunta gera dado e não decisão.
 - Não adicionar cache, paralelismo, memoização ou índice sem explicar custo, consistência, invalidação e medição antes e depois. [PRF-02]
-- Em chamadas de modelo, o maior custo costuma ser contexto: medir tokens (tabela `agent_runs`, métricas `squados.agent.*`) antes de otimizar código; cache de contexto e modelo menor por estágio são as alavancas previstas no documento de visão.
+- Em chamadas de modelo, o maior custo costuma ser contexto: medir tokens (registro de execuções e métricas `gen_ai.*` do projeto) antes de otimizar código; cache de contexto e modelo menor por etapa são as alavancas usuais.
 
 ## Camada 1 — regras estáticas
 
@@ -83,11 +83,11 @@ Roda no caminho pesado da revisão (skill `lead`, Duas velocidades), nunca no r�
 
 ## Camada 3b — suíte instrumentada
 
-Uma rodada da suíte de integração com o coletor de runtime da stack (`tests/SquadOS.IntegrationTests/Support/PerfSnapshot.cs`, inerte sem `PERF_SNAPSHOT_OUT`). Não mede velocidade (teste roda com pouco dado e aquecimento frio), mas pega anomalias que nenhum teste afirma:
+Uma rodada da suíte de integração com o coletor de runtime da stack (em .NET, `PerfSnapshot` na suíte de integração, inerte sem `PERF_SNAPSHOT_OUT`; ver a referência da stack). Não mede velocidade (teste roda com pouco dado e aquecimento frio), mas pega anomalias que nenhum teste afirma:
 
 | Sinal | Onde a stack mede | Causa provável |
 |---|---|---|
-| Runtime sem conseguir atender trabalho | .NET: fila do thread pool cheia por mais de 1 s; Node: atraso do event loop p99 acima de 50 ms (não aplicável por ora) | trabalho síncrono bloqueante no caminho assíncrono |
+| Runtime sem conseguir atender trabalho | .NET: fila do thread pool cheia por mais de 1 s; Node: atraso do event loop p99 acima de 50 ms | trabalho síncrono bloqueante no caminho assíncrono |
 | Exceções em volume | .NET: tipo do projeto ou de I/O com centenas de ocorrências; Node: exceções não tratadas | exceção como fluxo de controle, ou erro engolido em laço |
 | GC pesado | coletas de geração alta em relação às de geração baixa; tempo de GC alto | objetos grandes ou retidos tempo demais |
 | Contenção | contagem de contenção de lock alta | lock disputado em código compartilhado |
@@ -97,8 +97,8 @@ Ignorar o que os próprios testes provocam de propósito. Anomalia não é achad
 
 ## Camada 4 — profiling sob demanda
 
-1. Escrever a pergunta: "por que `GET /v1/metrics/summary` leva 6 s com 50 mil demandas?".
-2. Reproduzir com carga controlada: teste de integração em laço, script de requisições ou o seed escalado do AppHost.
+1. Escrever a pergunta: "por que `GET /v1/orders/summary` leva 6 s com 50 mil pedidos?".
+2. Reproduzir com carga controlada: teste de integração em laço, script de requisições ou o seed escalado do ambiente local.
 3. Medir baseline com a ferramenta de contadores da stack; aprofundar com perfil de CPU ou de memória só na direção que os contadores indicarem.
 4. Formular hipótese com o trecho de código e o número que a sustenta.
 5. Aplicar a menor mudança e medir de novo, com a mesma carga.
@@ -124,7 +124,7 @@ O veredito é mais rápido, mais lento, sem diferença mensurável ou inconclusi
 
 ## Greenfield
 
-Camadas 1 e 2 e o coletor da camada 3b desde o primeiro endpoint; benchmark criado quando o primeiro caminho `hot` for declarado. Registrar metas de latência e de volume em `.claude/project.md` quando o piloto as definir.
+Camadas 1 e 2 e o coletor da camada 3b desde o primeiro endpoint; benchmark criado quando o primeiro caminho `hot` for declarado. Registrar metas de latência e de volume em `.claude/project.md` quando o produto as definir.
 
 ## Brownfield
 

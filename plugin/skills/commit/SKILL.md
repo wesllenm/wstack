@@ -37,14 +37,14 @@ Formato: `<type>(<scope>)!: <assunto>`
 
 Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`, `style`, `revert`.
 
-Scopes sugeridos (domínios e áreas): `demands`, `workflow`, `agents`, `adapters`, `portal`, `platform`, `observability`, `eval`, `ci`, `claude` (workflow de desenvolvimento).
+Scopes: os domínios e áreas do projeto, consistentes com o `git log` (ex.: `orders`, `billing`, `api`, `web`, `observability`, `ci`, `claude` para o workflow de desenvolvimento).
 
 - `scope` é opcional e nomeia o módulo, domínio ou slice afetado;
 - `!` indica quebra de compatibilidade (detalhada no rodapé);
 - assunto no infinitivo: "adicionar", "corrigir", "remover" (não "adicionado", "corrige");
 - idealmente até 50 caracteres, no máximo 72;
 - sem ponto final; minúscula após o type, salvo nomes próprios;
-- descreve o efeito, não a atividade: "impedir aprovação duplicada no portão técnico", não "atualizar serviço de aprovação";
+- descreve o efeito, não a atividade: "impedir cobrança duplicada no reenvio do webhook", não "atualizar serviço de aprovação";
 - proibido título genérico: "fix bug", "wip", "ajustes", "alterações", "diversos", "update".
 
 Teste do título: ele completa a frase "Se aplicado, este commit vai ___"?
@@ -86,13 +86,14 @@ Mensagem multilinha via heredoc, sem editor interativo:
 
 ```bash
 git commit -F - <<'EOF'
-fix(workflow): impedir aprovação duplicada no portão técnico
+fix(billing): impedir cobrança duplicada no reenvio do webhook
 
-O evento externo de aprovação era aceito mesmo depois do timeout, e o
-workflow avançava duas vezes quando o tech lead clicava após o prazo.
+O webhook de confirmação de pagamento não era deduplicado pelo id de
+entrega, e o pedido era cobrado duas vezes quando o provedor reenviava
+a notificação após um timeout.
 
-- ignorar eventos de aprovação recebidos fora da janela de espera
-- adicionar teste de regressão que reproduz o avanço duplicado
+- ignorar entregas com id de entrega já processado
+- adicionar teste de regressão que reproduz a cobrança duplicada
 
 Refs: #42
 EOF
@@ -104,11 +105,11 @@ Depois do commit, conferir com `git log -1 --stat`.
 
 ## Exemplos
 
-- Bom: `feat(demands): adicionar modelo canônico da demanda`
+- Bom: `feat(orders): adicionar modelo canônico do pedido`
 - Ruim: `Adicionado modelo e testes.`
 - Bom: `refactor(adapters): extrair validação de assinatura de webhook`
 - Ruim: `refactor + fix login + format`
-- Bom: `test(agents): cobrir corte por orçamento de tokens`
+- Bom: `test(billing): cobrir corte por limite de crédito`
 - Ruim: `mais testes`
 
 ## Restrições

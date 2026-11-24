@@ -1,4 +1,4 @@
-# Review — Sempre verificar, .NET (backend do SquadOS)
+# Review — Sempre verificar, .NET
 
 Aplicar às linhas do diff em `*.cs`, além do "Sempre verificar" genérico da `SKILL.md`.
 
@@ -9,22 +9,22 @@ Assíncrono e recursos:
 
 Corretude:
 - `DateTime.Now` em vez de `UtcNow` ou `TimeProvider` (o domínio é sem relógio e o `TimeProvider` é injetado); `decimal` para dinheiro; parsing e formatação com cultura explícita (`CultureInfo.InvariantCulture`);
-- regex de identificador com `$` em vez de `\z` (casa antes de `\n` final); o mesmo no `pattern` de JSON Schema de artefato, onde o fim é `(?![\s\S])`.
+- regex de identificador com `$` em vez de `\z` (casa antes de `\n` final); o mesmo no `pattern` de JSON Schema, onde o fim é `(?![\s\S])`.
 
 EF Core e dados:
 - leitura sem `AsNoTracking`; lazy loading em laço (N+1); `ToList()` antes de filtrar; `IQueryable` vazando para fora do repositório ou da consulta de leitura;
 - enum comparado por variável capturada em vez de constante (`EF.Constant`) quando o índice parcial depende do literal;
 - `Update()`/`Attach` de entidade desconectada contornando o token `Version`; escrita por `ExecuteUpdate`/`ExecuteDelete` contornando triggers, outbox e versão;
-- tabela só-inserção (`artifacts`, `approvals`, `audit_events`) alterada por `UPDATE`/`DELETE`.
+- tabela só-inserção (ex.: `audit_events`) alterada por `UPDATE`/`DELETE`.
 
 Observabilidade:
-- log com interpolação de string em vez de template estruturado; dado pessoal, segredo ou conteúdo de prompt em log ou atributo de span sem a trava do Langfuse;
+- log com interpolação de string em vez de template estruturado; dado pessoal, segredo ou conteúdo de prompt em log ou atributo de span sem a trava de mascaramento do projeto;
 - erro de programação embrulhado como "falha de infraestrutura" ou "timeout" (filtros de `catch` largos).
 
 Performance (categorias do diff): contagem de comandos e de chamadas nos testes; `bench-compare.sh` quando houver `quente:` (skill `performance`).
 
 Camada determinística de referência (o `lead` e o `risk.conf` são donos; aqui só o que a revisão assume):
-- build com `TreatWarningsAsErrors`, `AnalysisLevel` recomendado e `EnforceCodeStyleInBuild`; `dotnet format --verify-no-changes`; `SquadOS.ArchitectureTests`; `dotnet list SquadOS.slnx package --vulnerable --include-transitive`; gitleaks no CI. Stryker.NET está previsto para o CI (pendência em `ci/README.md`); sem ferramenta local, não há mutante para triar.
+- build com `TreatWarningsAsErrors`, `AnalysisLevel` recomendado e `EnforceCodeStyleInBuild`; `dotnet format --verify-no-changes`; `<App>.ArchitectureTests`; `dotnet list <App>.slnx package --vulnerable --include-transitive`; gitleaks no CI. Stryker.NET quando o projeto o configurar; sem ferramenta local, não há mutante para triar.
 - `SonarAnalyzer.CSharp` (licença SSAL) e `Meziantou.Analyzer` só entram por decisão do projeto em `docs/decisions.md`, o segundo com perfil enxuto e depois de limpar o residual: não cobrar do revisor o que esses analisadores cobririam.
 - Sinais de qualidade (`quality-signals.sh`): produtor `cobertura` com `coverlet.collector` sobre o filtro da suíte rápida (`Category!=Integration&Category!=E2E`), mais `jscpd` com `--format csharp`; async aparece com o nome do método. Linha no `risk.conf` é decisão do `lead`.
 - Em `ask`: `.editorconfig`, `Directory.Build.props`, `GlobalSuppressions.cs`, `*.ruleset` e os projetos de teste de arquitetura.

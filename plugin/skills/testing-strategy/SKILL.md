@@ -19,16 +19,16 @@ Todo plano SIMPLES ou COMPLEXO define os testes por esta skill.
 ## Pirâmide
 
 - Unitários (xUnit): lógica isolada, rápidos, sem I/O — rodam no hook Stop
-- Integração (`[Trait("Category", "Integration")]`): fronteiras reais com dependências em contêiner (Testcontainers: Postgres 18 + pgvector, RabbitMQ), reproduzíveis no CI e na máquina do desenvolvedor, e `WebApplicationFactory` para endpoints [ENV-03]
+- Integração (`[Trait("Category", "Integration")]`): fronteiras reais com dependências em contêiner (Testcontainers, ex.: Postgres e RabbitMQ), reproduzíveis no CI e na máquina do desenvolvedor, e `WebApplicationFactory` para endpoints [ENV-03]
 - Arquitetura (NetArchTest/ArchUnitNET): regras de slice e dependência — rodam no hook
 - Mutação (Stryker.NET): nos slices tocados, no CI, para pegar testes escritos "para passar" [TST-06]
 - E2E (`[Trait("Category", "E2E")]`, Playwright for .NET): fluxos críticos do usuário — poucos e estáveis [ENV-03]
-- Avaliação (conjunto de avaliação de demandas reais): a cada mudança de prompt, skill ou modelo dos agentes do produto
+- Avaliação (quando o produto usa modelo de IA): conjunto de avaliação com casos representativos, a cada mudança de prompt ou modelo
 - Carga: quando volume, SLA ou concorrência forem parte do risco
 
 ## BDD-first para SIMPLES e COMPLEXA
 
-Antes de implementar, derivar `Dado`, `Quando`, `Então` dos critérios de aceite. Os cenários definem o que implementar e testar, e cada teste referencia o critério que cobre (portão de rastreabilidade). [TST-01] [TDD-01]
+Antes de implementar, derivar `Dado`, `Quando`, `Então` dos critérios de aceite. Os cenários definem o que implementar e testar, e cada teste referencia o critério que cobre (rastreabilidade). [TST-01] [TDD-01]
 
 ## O que testar
 
@@ -38,7 +38,7 @@ Antes de implementar, derivar `Dado`, `Quando`, `Então` dos critérios de aceit
 
 ## Mocks
 
-Mock só em fronteira que você não controla (provedor de modelo, provedor de código, ferramenta de demanda); banco e broker são reais via Testcontainers. Provedor de modelo em teste usa fake determinístico com respostas gravadas. [TST-09]
+Mock só em fronteira que você não controla (provedor de modelo, gateway de pagamento, API de terceiro); banco e broker são reais via Testcontainers. Provedor de modelo em teste usa fake determinístico com respostas gravadas. [TST-09]
 
 ## Valor e proteção
 

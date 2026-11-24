@@ -34,13 +34,13 @@ Antes de adicionar qualquer teste, responda às cinco perguntas. Resposta faltan
 2. Qual regressão plausível o faz falhar?
 3. Por que a cobertura existente ainda não pega essa falha? Prefira estender um caso parametrizado (`[Theory]`) ou uma fixture compartilhada a criar um teste quase duplicado; consolide setup duplicado na mesma mudança.
 4. Ele exige um seam de produção (export, flag, wrapper, hook de injeção, visibilidade ampliada, `InternalsVisibleTo` novo) que nenhum chamador de produção precisa? Se sim, mova o teste para a fronteira real.
-5. Quebrando o comportamento de propósito (valor errado, efeito pulado ou duplicado), o teste falha? O valor esperado vem do critério de aceite ou do requisito, nunca de uma chamada ao código testado nem de dados montados pelo próprio teste (oráculo circular). A mutação ainda não roda (pendência TST-06 em `ci/README.md`); até lá, esta pergunta é a única checagem disso.
+5. Quebrando o comportamento de propósito (valor errado, efeito pulado ou duplicado), o teste falha? O valor esperado vem do critério de aceite ou do requisito, nunca de uma chamada ao código testado nem de dados montados pelo próprio teste (oráculo circular). Sem ferramenta de mutação configurada no projeto, esta pergunta é a única checagem disso.
 
 Teste que quebraria numa refatoração que preserva comportamento está afirmando implementação, não comportamento. Reescreva-o na fronteira dona antes de entregar.
 
 Teste de regressão de bug precisa falhar no código anterior à correção, pelo motivo esperado, e passar depois da correção na fronteira dona. Regressão que nunca falhou de forma demonstrada prova o mock, não a correção. Registre a execução que falhou como evidência. [TST-04]
 
-No SquadOS, todo teste de aceitação referencia o critério de aceite que cobre (portão de rastreabilidade), e teste sem critério é sinalizado. [TST-01]
+Quando o projeto tiver portão de rastreabilidade, todo teste de aceitação referencia o critério de aceite que cobre, e teste sem critério é sinalizado. [TST-01]
 
 ## Proteção do oráculo
 
@@ -67,9 +67,9 @@ Antes de julgar um candidato, leia o teste completo e o código de produção do
 
 Descoberta é somente leitura, e a evidência é reportada antes de qualquer edição. Para escopo amplo, dispare `explore` em paralelo, uma trilha por área, por exemplo:
 
-- orquestração e domínio (Demanda, workflows);
-- agentes do produto e adaptadores;
-- portal, scripts e tooling;
+- domínio e orquestração (agregados, workflows);
+- integrações e adaptadores;
+- frontend, scripts e tooling;
 - varredura transversal de padrões.
 
 Prefira poucos candidatos de alta confiança a um inventário especulativo grande. Procure:
@@ -86,7 +86,7 @@ Prefira poucos candidatos de alta confiança a um inventário especulativo grand
 
 ## Régua de retenção
 
-Mantenha o teste quando ele impõe de forma independente um contrato de API pública, SDK, protocolo, configuração, migration, armazenamento, segurança, plataforma, valor default, formato serializado (JSON Schema de artefato), contrato entre serviços ou linguagens, pacote, release ou arquitetura. Mantenha também:
+Mantenha o teste quando ele impõe de forma independente um contrato de API pública, SDK, protocolo, configuração, migration, armazenamento, segurança, plataforma, valor default, formato serializado (ex.: JSON Schema), contrato entre serviços ou linguagens, pacote, release ou arquitetura. Mantenha também:
 
 - ordem de chamadas, quando a ordem é comportamento observável;
 - regressões com modo de falha plausível;
@@ -133,8 +133,8 @@ Cobertura mostra que a linha rodou; mutação mostra se algum teste falharia se 
 
 Quando rodar:
 
-- o projeto tem ferramenta de mutação configurada (no SquadOS, Stryker.NET, previsto só para o CI; pendência em `ci/README.md`; StrykerJS não foi adotado para o portal);
-- o diff toca código coberto pelos critérios do `review-critical` (os globs `critical` do `.claude/risk.conf`: autenticação, autorização, segredos, dados pessoais, orçamento e corte de custo de tokens, migrations, contratos públicos) ou regra de domínio do agregado;
+- o projeto tem ferramenta de mutação configurada (ex.: Stryker.NET, StrykerJS);
+- o diff toca código coberto pelos critérios do `review-critical` (os globs `critical` do `.claude/risk.conf`, por exemplo autenticação, autorização, segredos, dados pessoais, migrations, contratos públicos) ou regra de domínio do agregado;
 - no modo auditoria, sobre a fronteira dona do lote, para provar que um teste candidato não mata nenhum mutante que os outros não matem.
 
 Como rodar:

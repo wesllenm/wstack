@@ -12,4 +12,4 @@ Aplicar às linhas do diff em `*.sh`.
 - validação com `jq` por `test("^...$")`: o `$` do Oniguruma casa antes de `\n` final; validar com classe negada (`test("[^...]") | not`) e `length`;
 - hook ou script de `ci/` que contorna uma verificação (`--no-verify`, `|| true` escondendo falha) ou que escreve no repositório.
 
-Camada determinística: ShellCheck sem supressão nova (`# shellcheck disable=` é supressão e exige autorização). Sinais de qualidade: só duplicação (`jscpd --format bash`); CRAP não se aplica a Bash. `shfmt -d` e `bats-core` (script com lógica) ainda não estão instalados: adotar só com aprovação. Em `ask`: `.shellcheckrc`, `.editorconfig`.
+Camada determinística: ShellCheck sem supressão nova (`# shellcheck disable=` é supressão e exige autorização). Sinais de qualidade: só duplicação (`jscpd --format bash`); CRAP não se aplica a Bash. `shfmt -d` e `bats-core` (script com lógica), se não instalados, só entram com aprovação. Em `ask`: `.shellcheckrc`, `.editorconfig`.

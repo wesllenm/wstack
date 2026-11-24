@@ -1,32 +1,32 @@
-# Performance — Frontend web (portal Svelte 5 / SvelteKit)
+# Performance — Frontend web (exemplos em Svelte 5 / SvelteKit)
 
-Stack real do portal (`src/portal`): SvelteKit 3.1 como SPA estática (`adapter-static`, `fallback: index.html`), Svelte 5 com runes, Vite 8, Vitest 5 + Testing Library + jsdom, axe-core, e testes de navegador reais em .NET (`tests/SquadOS.E2ETests`, Playwright for .NET e Chromium). Sem React, sem biblioteca de componentes, sem pacote npm em runtime: o bundle é só o framework e o código do portal. Referência de JS/TS em geral: `node.md`.
+Os exemplos supõem SvelteKit como SPA estática (`adapter-static`), Svelte 5 com runes, Vite, Vitest + Testing Library + jsdom, axe-core e testes de navegador reais com Playwright (for .NET ou Node). Em outra stack, usar o equivalente. Referência de JS/TS em geral: `node.md`.
 
 ## Camada 1 — regras estáticas
 
-`svelte-check --fail-on-warnings`, `eslint-plugin-svelte` e o compilador (avisos `a11y_*` viram erro no `vite.config.ts`) já rodam em `npm --prefix src/portal run check` e `run lint`. Nada específico de performance está ligado; regra nova entra no `eslint.config.js` (arquivo protegido).
+`svelte-check --fail-on-warnings`, `eslint-plugin-svelte` e o compilador (avisos `a11y_*` viram erro no `vite.config.ts`) rodam no check e no lint do frontend. Regra nova de performance entra no `eslint.config.js` (arquivo protegido).
 
 ## Camada 2 — contagem nos testes
 
-- **Requisições por página, em navegador real** (E2E .NET): registrar `page.Request += (_, r) => requested.Add(r.Url)` antes de navegar (padrão já usado em `StoryScreenTests.cs` e `SignOutTests.cs`), filtrar a API (`/v1/` e `/bff/`) e afirmar que (a) a contagem **não cresce** com a quantidade de itens da fila ou da Story (comparar com poucos e com muitos itens semeados no backend em memória), (b) não há URL repetida na carga e (c) a atualização automática reconsulta só a primeira página e a sessão (`/bff/user`) uma vez por ciclo. Não fixar o número exato: afirmar igualdade entre dois volumes.
-- **Requisições nos testes de componente** (Vitest): o `fetch` é simulado (`tests/fetch.ts`), então a contagem de chamadas por cenário se afirma ali; o recuo de 429/503, o intervalo mínimo entre gatilhos e o `AbortController` já têm teste (`PendingQueue.test.ts`); uma tela nova com lista precisa do mesmo tipo de afirmação.
+- **Requisições por página, em navegador real** (E2E): registrar as requisições antes de navegar (Playwright for .NET: `page.Request += (_, r) => requested.Add(r.Url)`; Node: `page.on('request', ...)`), filtrar a API (ex.: `/v1/` e `/bff/`) e afirmar que (a) a contagem **não cresce** com a quantidade de itens da lista (comparar com poucos e com muitos itens semeados no backend de teste), (b) não há URL repetida na carga e (c) a atualização automática reconsulta só a primeira página e a sessão uma vez por ciclo. Não fixar o número exato: afirmar igualdade entre dois volumes.
+- **Requisições nos testes de componente** (Vitest): o `fetch` é simulado, então a contagem de chamadas por cenário se afirma ali, inclusive recuo de 429/503, intervalo mínimo entre gatilhos e `AbortController`; uma tela nova com lista precisa do mesmo tipo de afirmação.
 - **Renders**: Svelte 5 não tem `<Profiler>`; o equivalente é contar execução de `$effect` e de `$derived` com um contador no teste de componente, só onde uma lista grande re-renderiza a cada atualização. Não criar seam de produção para isso (`test-audit`, pergunta 4).
 
 ## Camada 3 — tamanho do bundle
 
-Total comprimido por tipo (js, css), determinístico, pode virar achado (TAMANHO: +5% e +2 KB) e aceita orçamento. Medido pelo `bundle-size.sh` do plugin sobre `src/portal/build` (adaptador estático: o build é `build/`, não `dist/`); o script emite o TSV comum e é do `lead` (não editar daqui). Linhas do `risk.conf` (propostas, ainda não adotadas porque **nenhum caminho `hot` está declarado**):
+Total comprimido por tipo (js, css), determinístico, pode virar achado (TAMANHO: +5% e +2 KB) e aceita orçamento. Medido pelo `bundle-size.sh` do plugin sobre a pasta de build (com `adapter-static`, o build é `build/`, não `dist/`); o script emite o TSV comum e é do `lead` (não editar daqui). Linhas do `risk.conf` (exemplo, com o frontend em `<frontend>`):
 
 ```ini
-hot    = src/portal/src/* -> Bundle
-bench  = Bundle -> npm --prefix src/portal ci --ignore-scripts --no-audit --no-fund && SQUADOS_BUILD_VERSION=bench npm --prefix src/portal run build && bash "$BENCH_SCRIPTS/bundle-size.sh" src/portal/build > "$BENCH_TSV"
+hot    = <frontend>/src/* -> Bundle
+bench  = Bundle -> npm --prefix <frontend> ci --ignore-scripts --no-audit --no-fund && npm --prefix <frontend> run build && bash "$BENCH_SCRIPTS/bundle-size.sh" <frontend>/build > "$BENCH_TSV"
 budget = total:js -> <definir depois da primeira medição>
 ```
 
-Medido na S7.2a: JS ~38 KB e CSS ~2 KB gzip. Orçamento só com número de referência (a primeira medição em CI vira a base); a build usa `SQUADOS_BUILD_VERSION` para o hash do CSP ser reprodutível. Métricas de laboratório (Lighthouse) são opcionais e informativas.
+Orçamento só com número de referência (a primeira medição em CI vira a base). Se a build embute versão ou hash (ex.: hash do CSP), fixar a variável de versão no comando `bench` para o resultado ser reprodutível. Métricas de laboratório (Lighthouse) são opcionais e informativas.
 
 ## Camada 3b — suíte instrumentada
 
-Não aplicável por ora.
+Não aplicável (sem coletor para frontend).
 
 ## Camada 4 — profiling
 
