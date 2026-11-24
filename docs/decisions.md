@@ -64,4 +64,11 @@ Decisões do desenvolvedor sobre as pendências do inventário (`docs/migracao.m
 - Os conversores de stack que a origem tratava como arquivo do projeto vão para o plugin, como os demais: não têm
   dado do projeto.
 - A matriz de garantias dos hooks é documento do wstack, não modelo do projeto: os hooks agora são do plugin.
-- Os workflows, a configuração de MCP do banco e o arquivo de calibração da revisão ficam para depois da 0.1.0.
+- Os workflows e a configuração de MCP do banco ficam para depois da 0.1.0.
+- O arquivo de calibração da revisão entra na 2.4 como modelo do projeto: o hook de Stop exige esse arquivo para
+  registrar o aprendizado da sessão.
+- A versão fixada pelo projeto é a referência que o marketplace declara no `settings.json` do projeto; o
+  `autoUpdate` atualiza dentro dela, e o setup script da nuvem declara a mesma referência. Conferir na 2.4 com o
+  `claude plugin validate` e uma sessão de teste.
+- A avaliação comportamental fica para depois da 0.1.0, no repositório wstack (não no plugin), decidindo então entre
+  portar os scripts da origem e usar o `claude plugin eval`.

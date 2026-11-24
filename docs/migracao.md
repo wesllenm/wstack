@@ -45,7 +45,7 @@ de `$CLAUDE_PROJECT_DIR`.
 | `.claude/hooks/redirect-guard.sh` | mirror | plugin | PreToolUse Bash | |
 | `.claude/hooks/risk-conf.mjs` | mirror | plugin | módulo | lê `$CLAUDE_PROJECT_DIR/.claude/risk.conf`, não a pasta `.claude` onde o arquivo está |
 | `.claude/hooks/session-start.sh` | mirror | plugin | SessionStart | o wstack já tem um `plugin/hooks/session-start.sh` (o da sonda); o que fica continua imprimindo `wstack <versão> carregado.`, que é como se confere a versão em uso |
-| `.claude/hooks/verify-on-stop.sh` | template | plugin | Stop | `SOLUTION`, `BUILD_CMD`, `LINT_CMD` e `TEST_CMD` saem do arquivo e viram chaves do risk.conf; exige o arquivo de calibração (ver pendência 3) |
+| `.claude/hooks/verify-on-stop.sh` | template | plugin | Stop | `SOLUTION`, `BUILD_CMD`, `LINT_CMD` e `TEST_CMD` saem do arquivo e viram chaves do risk.conf; exige o arquivo de calibração, que o bootstrap cria (2.4) |
 | `.claude/hooks/write-guard.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/write-guard.sh` | mirror | plugin | PreToolUse edição | |
 | `.claude/hooks/write-rule.mjs` | mirror | plugin | módulo | |
@@ -183,7 +183,7 @@ Para `plugin/skills/`, na unidade 2.3 (ficam `/wstack:<nome>`), salvo a `verify-
 | `.github/workflows/merge-por-risco.yml` | mirror | depois da 0.1.0 | | baixa o wstack na versão fixada e roda o pr-risk-gate de lá |
 | `.mcp.json` | seed | depois da 0.1.0 | | só para projeto com banco |
 | `.claude/toolbox/tools.yaml` | seed | depois da 0.1.0 | | idem |
-| `docs/review-calibration.md` | seed | depois da 0.1.0 | | o verify-on-stop (2.2) exige este arquivo: ver pendência 3 |
+| `docs/review-calibration.md` | seed | modelo do projeto | 2.4 | o verify-on-stop (2.2) exige este arquivo para o gate de aprendizado |
 | `docs/harness-capabilities.md` | seed | docs do wstack | 2.2 | a matriz descreve os hooks, que passam a ser do plugin |
 
 ## Ajustes em todos os arquivos (2.2 a 2.4)
@@ -210,18 +210,12 @@ Para `plugin/skills/`, na unidade 2.3 (ficam `/wstack:<nome>`), salvo a `verify-
 ## Pendências
 
 1. *(decidida: workflows baixam o wstack na versão fixada; ver `docs/decisions.md`)*
-2. **Versão fixada e atualização automática:** o plano fixa o plugin numa versão no `settings.json` do projeto, e o
-   setup script da nuvem liga `autoUpdate`, que leva o plugin à última versão do marketplace. Para conviverem, a
-   versão fixada precisa ser a referência que o marketplace declara (o `autoUpdate` atualiza dentro dela), e o setup
-   script da nuvem precisa declarar a mesma referência que o projeto. A conferir na 2.4, com o `claude plugin
-   validate` e uma sessão de teste.
-3. **Arquivo de calibração da revisão:** ficou para depois da 0.1.0, mas o verify-on-stop, que entra na 2.2, exige
-   esse arquivo (é onde a sessão registra o aprendizado antes de encerrar). Opções: o arquivo entra na 2.4 como
-   modelo do projeto; ou o verify-on-stop passa a aceitar a falta dele até a 0.1.0 (o gate de aprendizado fica
-   desligado nesse projeto).
-4. *(decididas: os conversores de stack vão para o plugin; a matriz de garantias vira docs do wstack; os modelos fora
-   da lista da 2.4 ficam para depois da 0.1.0)*
-5. **Avaliação comportamental** (`check-trajectory.mjs`, `compare-results.mjs`, `validate-result.mjs`): fora agora,
-   porque nada no fluxo os chama e as tarefas e o executor da avaliação não estão no material genérico. Proposta:
-   retomar depois da 0.1.0, no repositório wstack (não no plugin), decidindo entre portar estes scripts e usar o
-   `claude plugin eval` do Claude Code.
+2. *(decidida: a versão fixada é a referência que o marketplace declara no `settings.json` do projeto; o
+   `autoUpdate` atualiza dentro dela e o setup script da nuvem declara a mesma; conferir na 2.4)*
+3. *(decidida: o arquivo de calibração entra na 2.4 como modelo do projeto)*
+4. *(decididas: os conversores de stack vão para o plugin; a matriz de garantias vira docs do wstack; workflows e
+   configuração de MCP ficam para depois da 0.1.0)*
+5. *(decidida: a avaliação comportamental fica para depois da 0.1.0, no repositório wstack, entre portar estes
+   scripts e usar o `claude plugin eval`)*
+
+Todas as pendências estão decididas (`docs/decisions.md`, 2026-11-24, destinos do inventário).
