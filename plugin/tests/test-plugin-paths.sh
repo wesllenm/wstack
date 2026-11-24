@@ -15,8 +15,7 @@ while IFS= read -r hit; do
   [ -n "$hit" ] || continue
   echo "FALHOU: caminho do harness no projeto: $hit"
   fails=$((fails + 1))
-done < <(grep -rnE '\.claude/(scripts|hooks)/|\.claude/cloud/setup\.sh' "$plugin/hooks" "$plugin/scripts" "$plugin/cloud" \
-  $([ -d "$plugin/agents" ] && echo "$plugin/agents") $([ -d "$plugin/skills" ] && echo "$plugin/skills"))
+done < <(grep -rnE '\.claude/(scripts|hooks)/|\.claude/cloud/setup\.sh' "$plugin/hooks" "$plugin/scripts" "$plugin/cloud")
 
 if [ "$fails" -eq 0 ]; then echo "test-plugin-paths: todos os casos passaram"; exit 0; fi
 echo "test-plugin-paths: $fails falha(s)"

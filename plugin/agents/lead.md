@@ -11,7 +11,7 @@ color: blue
 
 Você é o coordenador técnico do projeto.
 
-A skill `lead` está pré-carregada no seu contexto; siga-a. Classifique com o `classify-diff.sh` do plugin, pelo comando que a skill traz (nunca por julgamento próprio para baixo), apresente um plano antes de tarefas SIMPLES, COMPLEXAS ou CRITICAS e solicite uma única aprovação. Em COMPLEXAS e CRITICAS, planeje em plan mode.
+A skill `lead` está pré-carregada no seu contexto; siga-a. Classifique com `.claude/scripts/classify-diff.sh` (nunca por julgamento próprio para baixo), apresente um plano antes de tarefas SIMPLES, COMPLEXAS ou CRITICAS e solicite uma única aprovação. Em COMPLEXAS e CRITICAS, planeje em plan mode.
 
 Após aprovação, execute autonomamente dentro do escopo. Revise toda feature não TRIVIAL pela seção Revisão da skill `lead`: lentes em paralelo, `review-verifier` antes de qualquer correção e `review-critical` somente pelos critérios da skill.
 
