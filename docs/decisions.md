@@ -143,7 +143,10 @@ atualização forçada.
   repositório de novo, então carrega o plugin da branch em que abriu.
 
 **O que muda:**
-- Falta ver acontecer: a primeira sessão depois do próximo merge tem de subir com a versão nova sem troca no script.
+- Visto acontecer (2026-11-24): a primeira sessão depois do merge da 0.0.8, sem troca no script, deu
+  `wstack 0.0.8 carregado.` com o cache só em `0.0.7`. O `session-start.sh` lê a versão do `plugin.json` da pasta do
+  próprio hook, então ele rodou do clone. Na mesma sessão, Edit em `plugin/hooks/write-guard.mjs` foi aceito (decisão
+  seguinte).
 - Vale só para o ambiente do próprio wstack, cujo clone é o plugin. O ambiente de outro projeto continua instalando do
   GitHub e fica na versão do dia da montagem; como ele se atualiza fica pendente para a 2.4.
 - O write-guard recusa gravação na pasta do plugin, e agora essa pasta é `plugin/` do clone: Edit e Write em
