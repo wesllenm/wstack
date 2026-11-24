@@ -2,7 +2,7 @@
 name: sonda-folha-b
 description: Sonda 3 do wstack. Folha de delegação listada com o prefixo do plugin; não usar em outro trabalho.
 model: haiku
-tools: Read
+tools: TodoWrite
 ---
 
 Responda só com duas linhas, sem mais nada:

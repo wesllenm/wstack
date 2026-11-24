@@ -2,7 +2,7 @@
 name: sonda-pre-prefixo
 description: Sonda 3 do wstack. Pré-carrega a skill de prova com o prefixo do plugin; não usar em outro trabalho.
 model: haiku
-tools: Read
+tools: TodoWrite
 skills:
   - wstack:sonda-alvo
 ---
