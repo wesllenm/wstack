@@ -1,0 +1,35 @@
+# Testes do plugin: os hooks, scripts e o setup da nuvem rodam contra a pasta do plugin, sem rede e sem modelo.
+# As provas com o Claude Code real (plugin/tests/prove-*.sh) custam modelo e rodam à mão.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v4.2.2, fixada pelo commit (a tag é mutável)
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Ferramentas
+        run: |
+          bash --version | head -1
+          git --version
+          jq --version
+          node --version
+      - name: Identidade do git para os repositórios temporários dos testes
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+      - name: Testes do plugin
+        run: |
+          falhas=0
+          for t in plugin/tests/test-*.sh; do
+            echo "::group::$t"
+            if bash "$t"; then echo "ok: $t"; else echo "::error::falhou: $t"; falhas=$((falhas + 1)); fi
+            echo "::endgroup::"
+          done
+          [ "$falhas" -eq 0 ] || { echo "$falhas teste(s) falharam"; exit 1; }

@@ -1,5 +1,8 @@
 # Sonda de instalação do wstack
 
+Registro das sondas 1 e 2. As peças delas (skills `sonda` e `sonda-caminhos`, hooks e scripts `sonda-*`, as regras
+`allow` de teste do `.claude/settings.json`) saíram na versão 0.0.4, quando os hooks reais entraram no plugin.
+
 | Fato | Como aparece | Se falhar |
 |---|---|---|
 | 1. Instala sozinho pelo `.claude/settings.json` numa sessão na nuvem | `wstack <versão> carregado.` no início da sessão | instalação vira passo do setup script (`claude plugin marketplace add` + `install`) |
