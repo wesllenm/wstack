@@ -1,11 +1,71 @@
 {
   "hooks": {
     "SessionStart": [
-      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"", "timeout": 10 } ] }
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start.sh", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/sessions.sh register", "timeout": 10 },
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/map-staleness.mjs", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/cloud-services.sh", "timeout": 300 }
+        ]
+      }
     ],
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sonda-pretool.sh\"", "timeout": 10 } ] },
-      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sonda-node.sh\"", "timeout": 10 } ] }
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/write-guard.sh || exit 2", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "if [ -f \"${CLAUDE_PLUGIN_ROOT}\"/hooks/push-guard.sh ]; then bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/push-guard.sh; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"push-guard.sh ausente: todo comando Bash pede aprovação até o arquivo voltar\"}}'; fi", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/git-read-allow.sh", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/script-allow.sh", "timeout": 10 },
+          { "type": "command", "command": "if [ -f \"${CLAUDE_PLUGIN_ROOT}\"/hooks/redirect-guard.sh ]; then bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/redirect-guard.sh; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"redirect-guard.sh ausente: todo comando Bash pede aprovação até o arquivo voltar\"}}'; fi", "timeout": 10 },
+          { "type": "command", "command": "if [ -f \"${CLAUDE_PLUGIN_ROOT}\"/hooks/path-guard.sh ]; then bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/path-guard.sh; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"path-guard.sh ausente: todo comando Bash pede aprovação até o arquivo voltar\"}}'; fi", "timeout": 10 },
+          { "type": "command", "command": "if [ -f \"${CLAUDE_PLUGIN_ROOT}\"/hooks/checkpoint-tests.sh ]; then bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/checkpoint-tests.sh; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"checkpoint-tests.sh ausente: todo comando Bash pede aprovação até o arquivo voltar\"}}'; fi", "timeout": 900 }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/checkpoint-tests.sh || exit 2", "timeout": 900 }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/sessions.sh unregister", "timeout": 10 }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/notify.sh", "timeout": 10 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify-on-stop.sh", "timeout": 900 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/sessions.sh touch", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/iteration-guard.sh", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/edit-check.sh", "timeout": 120 }
+        ]
+      }
     ]
   }
 }

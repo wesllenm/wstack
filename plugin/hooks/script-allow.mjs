@@ -1,0 +1,80 @@
+// Veredito do script-allow.sh (payload do PreToolUse em Bash na entrada padrão). Imprime ALLOW ou nada.
+// Os scripts do harness ficam no plugin e as skills os chamam pelo caminho dele (docs/decisions.md, scripts no plugin,
+// aprovados por hook): sem regra allow no projeto, este hook aprova as mesmas chamadas que o harness liberava, só em
+// forma fechada. Nunca por prefixo: o comando inteiro casa com
+//   [bash |node ]<pasta do plugin>/scripts/<script da lista> <argumentos>
+// onde o interpretador é o do script, a pasta é a deste plugin (como o Claude Code a escreve nas skills, ou o caminho
+// real) e cada argumento é uma palavra simples, um texto entre aspas simples ou um texto entre aspas duplas sem $, crase,
+// barra invertida nem ! (nada que o bash expanda ou que encadeie outro comando). Também: os testes do plugin sem
+// argumento, o setup da nuvem em --check e --plan e a conferência de sintaxe (bash -n) de um arquivo do plugin.
+// A pasta do comando tem de ser a raiz do projeto ($CLAUDE_PROJECT_DIR, ou uma worktree registrada dele): em outra pasta
+// o script trataria outro repositório. Fora disso o hook não diz nada e vale o pedido de permissão normal. Os outros
+// hooks (path-guard, redirect-guard, push-guard) continuam conferindo o mesmo comando, e o pedido deles vale sobre esta
+// aprovação.
+import { existsSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { foreignRepo, git } from './git-repo.mjs';
+
+// Scripts que o harness liberava, com os interpretadores aceitos ('' = execução direta). O que envia trabalho para a
+// nuvem (enviar-nuvem.sh) pede aprovação de propósito e fica fora; nova-atividade, recall e permission-asks nunca foram
+// liberados.
+const SCRIPTS = {
+  'classify-diff.sh': ['bash', ''],
+  'bench-compare.sh': ['bash', ''],
+  'quality-signals.sh': ['bash'],
+  'calibrate-risk.sh': ['bash'],
+  'bundle-size.sh': ['bash'],
+  'sessions.sh': ['bash', ''],
+  'worktree-env.sh': ['bash', ''],
+  'checkpoint.sh': ['bash'],
+  'prune-merged.sh': ['bash'],
+  'summarize-runs.mjs': ['node'],
+  'review-dispatch.mjs': ['node'],
+  'check-findings.mjs': ['node'],
+  'diff-smells.mjs': ['node'],
+  'map-staleness.mjs': ['node'],
+  'pr-risk-gate.mjs': ['node'],
+};
+
+const here = fileURLToPath(new URL('..', import.meta.url)).replace(/\\/g, '/').replace(/\/$/, '');
+const ROOTS = [...new Set([here, realpathSync.native(here).replace(/\\/g, '/')])];
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ROOT = `(${ROOTS.map(escape).join('|')})`;
+const ARG = `(?:[A-Za-z0-9_@%+=:,./-]+|'[^'\\n\\r]*'|"[^"$\`\\\\!\\n\\r]*")`;
+const FREE = new RegExp(`^(?:(bash|node) )?${ROOT}/scripts/([A-Za-z0-9_-]+\\.(?:sh|mjs))((?: +${ARG})*) *$`);
+const TEST = new RegExp(`^bash ${ROOT}/tests/(test-[a-z0-9-]+\\.sh)$`);
+const SETUP = new RegExp(`^bash ${ROOT}/cloud/setup\\.sh --(?:check|plan)$`);
+const SYNTAX = new RegExp(`^bash -n ${ROOT}/(scripts|hooks|cloud)/([A-Za-z0-9_-][A-Za-z0-9._-]*)$`);
+
+function form(cmd) {
+  if (typeof cmd !== 'string' || /[\n\r]/.test(cmd)) return false;
+  let m = FREE.exec(cmd);
+  if (m) {
+    const [, interp = '', root, name] = m;
+    return (SCRIPTS[name] ?? []).includes(interp) && existsSync(`${root}/scripts/${name}`);
+  }
+  if ((m = TEST.exec(cmd))) return existsSync(`${m[1]}/tests/${m[2]}`);
+  if (SETUP.test(cmd)) return true;
+  if ((m = SYNTAX.exec(cmd))) return existsSync(`${m[1]}/${m[2]}/${m[3]}`);
+  return false;
+}
+
+const real = (p) => realpathSync.native(p).replace(/\\/g, '/');
+function atProjectRoot(cwd) {
+  if (!process.env.CLAUDE_PROJECT_DIR) return false;
+  try {
+    const dir = real(cwd);
+    return real(git(dir, 'rev-parse', '--show-toplevel')) === dir && foreignRepo(dir) === '';
+  } catch {
+    return false;
+  }
+}
+
+export const verdict = (cmd, cwd) => (form(cmd) && atProjectRoot(cwd) ? 'ALLOW' : '');
+
+let d = '';
+process.stdin.on('data', (c) => (d += c)).on('end', () => {
+  let j;
+  try { j = JSON.parse(d); } catch { return; }
+  process.stdout.write(verdict(j?.tool_input?.command, String(j?.cwd ?? process.cwd())));
+});
