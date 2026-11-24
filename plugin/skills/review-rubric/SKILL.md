@@ -16,6 +16,10 @@ Que toda revisão produza poucos achados, todos reais, comprováveis e acionáve
 
 Em toda lente de revisão, no verificador, no `review-critical`, no `security-agent` e quando o `lead` tria os achados.
 
+## Complemento do projeto
+
+Esta skill é do plugin wstack e é igual em todo projeto. O que é de um repositório fica em `docs/review-rubric.md` do projeto, com as seções Sempre verificar, Não reportar e Projeto: ler o arquivo antes de revisar e aplicar as seções dele junto com as de mesmo nome desta skill. Uma entrada de Não reportar do projeto não rebaixa o que a Severidade daqui chama de bloqueante. Sem o arquivo, vale só esta skill. A calibração e a escada de aprendizado da skill `lead` gravam no arquivo do projeto; mudança no texto desta skill é proposta no wstack.
+
 ## Princípios
 
 - Achado é candidato: só vira correção depois do `review-verifier`.
@@ -63,7 +67,7 @@ Por categoria:
 
 ## Sinais de qualidade
 
-Saída do `quality-signals.sh` (caminho pesado, quando o diff tem código de produção). É métrica, não defeito: cada linha vira candidato só depois de olhar o código. Produtores no SquadOS: cobertura do .NET (coverlet, complexidade por método), cobertura Istanbul e regra `complexity` do ESLint no portal, e jscpd para duplicação.
+Saída do `quality-signals.sh` (caminho pesado, quando o diff tem código de produção). É métrica, não defeito: cada linha vira candidato só depois de olhar o código. Os produtores são os que o `risk.conf` do projeto declara: por exemplo, cobertura do .NET (coverlet, complexidade por método), cobertura Istanbul e regra `complexity` do ESLint, e jscpd para duplicação.
 
 - `CRAP` em função `nova`: candidato `simplicity`, importante. A correção mais barata costuma ser testar (cobertura baixa domina a fórmula); se a complexidade sozinha passa de uns 15, dividir. Teste novo passa pelo gate de autoria da `test-audit`; não vale teste que só executa linhas para subir a cobertura.
 - `CRAP` em função `alterada`: preexistente, salvo se o diff aumentou a complexidade da função ou se as linhas que o diff mudou estão sem cobertura. Nesses dois casos, candidato como acima, restrito ao trecho alterado; senão, follow-up.
@@ -77,7 +81,7 @@ Problema real em código que o diff não introduziu nem piorou é `preexistente:
 
 ## Sempre verificar
 
-Itens que valem em qualquer stack. Os da linguagem e do framework estão em `reference/<stack>.md` nesta pasta (`dotnet.md`, `bash.md`, `node.md`, `web-frontend.md`): aplicar também os da stack de cada arquivo do diff (`*.cs`, `*.sh`, `*.ts`/`*.js` em `tools/` e no `src/portal`, `*.svelte`). Os checklists por caminho (`reference/paths/`: migrations, contrato público, workflow e outbox) são indicados pelo `review-dispatch.mjs` no campo `path_rules` (lista) de cada arquivo; ler o indicado antes de revisar o grupo.
+Itens que valem em qualquer stack. Os da linguagem e do framework estão em `reference/<stack>.md` nesta pasta (`dotnet.md`, `bash.md`, `node.md`, `web-frontend.md`): aplicar também os da stack de cada arquivo do diff (`*.cs`, `*.sh`, `*.ts`/`*.js`, `*.svelte`). Os checklists por caminho (`reference/paths/`: migrations, contrato público, workflow e outbox) são indicados pelo `review-dispatch.mjs` no campo `path_rules` (lista) de cada arquivo; ler o indicado antes de revisar o grupo.
 
 O despacho (`review-dispatch.mjs`) entrega a cada lente um **grupo** de arquivos, não o diff inteiro: revise só os arquivos do grupo, e use `other_changed` (os demais arquivos alterados) só para achar chamadores e chamados. Arquivo marcado `GRANDE` (acima de `review_max_file_lines`) é lido por partes, com o trecho alterado e as funções vizinhas. Lockfile, código gerado, saída de build e binário nunca chegam à lente: não pergunte por eles.
 
@@ -114,7 +118,7 @@ Testes:
 
 ## Não reportar
 
-- O que o compilador, os analisadores, o formatador e os testes de arquitetura já garantem: build com `TreatWarningsAsErrors` e analisadores, `dotnet format --verify-no-changes` (inclui nomenclatura IDE1006 e ordem de `using`), os testes de `SquadOS.ArchitectureTests` (camadas do ADR 0003, `Common` sem EF) e `ConstitutionSyncTests` (IDs entre skills e constitution).
+- O que o compilador, os analisadores, o formatador e os testes de arquitetura do projeto já garantem (na stack .NET, por exemplo: build com `TreatWarningsAsErrors` e analisadores, `dotnet format --verify-no-changes`, que inclui nomenclatura IDE1006 e ordem de `using`).
 - Segredos em arquivos versionados: o gitleaks do CI cobre.
 - Formatação, ordenação de `using`, estilo e preferências sem impacto de leitura.
 - Código gerado, snapshots e `*.Designer.cs` de migration, `packages.lock.json` e código de terceiros.
@@ -124,23 +128,11 @@ Testes:
 
 ### Adicionados pela calibração
 
-Entradas aprovadas pelo desenvolvedor a partir de `docs/review-calibration.md`, com data e motivo.
+Ficam em Não reportar de `docs/review-rubric.md`: entradas aprovadas pelo desenvolvedor a partir de `docs/review-calibration.md`, com data e motivo.
 
 ## Projeto
 
-Itens específicos do SquadOS, vindos das skills de domínio e de `docs/decisions.md` (quando um destes for tocado, verificar):
-
-- Código de workflow Dapr é determinístico: nada de `DateTime.UtcNow`, `Guid.NewGuid()` ou I/O no workflow; só `CurrentUtcDateTime`; políticas viajam no input; mudança incompatível em workflow publicado exige `...V2`.
-- Todo evento crítico passa por um comando do agregado que incrementa `Demand.Version`; ordem do outbox por `(demand_id, demand_version)`, nunca por `id` uuid v7.
-- Aprovação presa ao hash do artefato (`Approval.Covers`); decisão por nome exato; nenhum caminho aprova sem cobrir versão e hash.
-- Enums gravados como texto; `rejection_category`, `selection`, `block_reason` etc. por nome; eventos antigos têm texto livre (leitura como `Other`).
-- Conteúdo do negócio é dado delimitado (skill `agent-stage-contract`): texto invisível removido na entrada e recusado na saída; nada de conteúdo (documento, prompt, saída do modelo, mensagem do provedor, comentário) em log, métrica, `AgentRun` ou exceção.
-- Custo de IA: reserva do pior caso antes da chamada, `Ai:Resilience:MaxRetryAttempts=0` nos papéis pagos, gasto assumido na falha possivelmente cobrada, `registrado` e `assumido` nunca somados; `requested_model IS NULL` é origem desconhecida.
-- Migration: `SET LOCAL lock_timeout`, `ADD COLUMN` sem `UPDATE` em tabela só-inserção (triggers de imutabilidade), `Down` que não apaga evidência sem recusar, compatível com a release anterior (migrations antes do código).
-- Estrutura (ADR 0003): controller fino → service → repositório por agregado; consulta de leitura em `Infrastructure/Persistence/Queries`; `Common` sem EF; service sem EF.
-- Contrato público (OpenAPI, JSON Schema de artefato, payload de evento) só com mudança aditiva; ordem de respostas do endpoint de aprovação (401 → 403 permissão → 415 → corpo → 404 → 403 papel → 409) não muda sem decisão.
-- Sincronia da constitution: diff em skill de engenharia ou em `docs/constitution-base.md` precisa tocar o outro lado ou declarar "sem impacto na constitution".
-- Teste existente removido, pulado ou enfraquecido, e snapshot ou baseline atualizado, só com autorização no plano.
+Itens específicos do repositório (invariantes de domínio, regras de estrutura, contratos, convenções de migration) ficam na seção Projeto de `docs/review-rubric.md`; quando um deles for tocado, verificar.
 
 ## Lentes
 
@@ -150,7 +142,7 @@ O que cada lente procura. O prompt do agente só aponta para cá.
 
 1. Para cada critério de aceitação: onde é atendido e qual teste prova. Sem um dos dois, candidato.
 2. Para cada trecho alterado: chamadores, chamados, implementações irmãs e testes da fronteira. Procurar entrada no limite, estado inesperado, ordem diferente, falha de dependência, chamador que assume o comportamento antigo.
-3. Aplicar Sempre verificar e Projeto às linhas do diff.
+3. Aplicar Sempre verificar e Projeto (desta skill e de `docs/review-rubric.md`) às linhas do diff.
 4. Mutante sobrevivente ou sem cobertura em linha do diff é candidato `tests`, salvo equivalência evidente; sem cobertura e sem chamador de produção é candidato `simplicity` (código morto).
 5. Nos pontos de foco: falhas e timeouts da integração, disputa por concorrência, efeitos entre domínios.
 6. Linha `CRAP` do `quality-signals.sh` em função nova ou alterada: abrir a função e o teste que a cobre (seção Sinais de qualidade).
@@ -222,7 +214,7 @@ Quanto um fato está provado, do mais fraco ao mais forte. Vale para o achado e 
 2. **Apontado:** há `arquivo:linha` real, no código do projeto ou na fonte da biblioteca, que mostra o comportamento.
 3. **Raciocinado:** o caminho da falha foi percorrido passo a passo e chega (ou não chega) ao ponto.
 4. **Executado:** um teste ou script chama o código real e falha alto se o fato estiver errado.
-5. **Reproduzido:** o efeito apareceu na aplicação rodando (skill `verify-squados`).
+5. **Reproduzido:** o efeito apareceu na aplicação rodando (skill `verify-<app>` do projeto).
 
 ### Fato de segurança
 
