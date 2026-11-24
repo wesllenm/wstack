@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Casos do setup da nuvem (§14.11) sobre repositórios sintéticos, só pelos modos sem rede (--plan e --check):
+# Casos do setup da nuvem sobre repositórios sintéticos, só pelos modos sem rede (--plan e --check):
 # detecção de cada stack, pasta de dependência ignorada e texto hostil do repositório que nunca vira comando.
 # As asserções não dependem do que o host tem instalado (só da detecção e do texto do plano).
 # Uso: test-cloud-setup.sh [<setup.sh>]   (padrão: .claude/cloud/setup.sh do repositório atual)
@@ -90,14 +90,14 @@ d=$(repo hostil \
   "tests/E/E.csproj=<PackageReference Include=\"Microsoft.Playwright\" Version=\"1.0\$(touch $marker)\" />" \
   ".claude/risk.conf=cloud_extract = img\$(touch $marker) /x -> /tmp/y
 cloud_extract = img\$(id) /x -> /tmp/y
-cloud_extract = daprio/daprd:1 /daprd -> ../../etc
+cloud_extract = acmeio/acmed:1 /acmed -> ../../etc
 cloud_extract = sem seta")
 out=$(run "$d" --plan)
 has "$out" "versão do global.json fora do alfabeto" hostil-globaljson
 has "$out" "Playwright (dotnet) fora do alfabeto" hostil-playwright
 has "$out" "cloud_extract inválido: img" hostil-extract-com-espaco
 has "$out" "cloud_extract fora do alfabeto permitido: img" hostil-extract-imagem
-has "$out" "cloud_extract fora do alfabeto permitido: daprio" hostil-extract-caminho
+has "$out" "cloud_extract fora do alfabeto permitido: acmeio" hostil-extract-caminho
 has "$out" "cloud_extract inválido: sem seta" hostil-extract-formato
 hasnt "$out" "instalar Node" hostil-nvmrc
 [ ! -e "$marker" ] || { echo "FALHOU [hostil]: texto do repositório foi executado"; fails=$((fails + 1)); }

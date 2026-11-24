@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Manda para a nuvem a execução de um plano aprovado localmente (§14.11): planejar no terminal com o lead,
+# Manda para a nuvem a execução de um plano aprovado localmente: planejar no terminal com o lead,
 # aprovar, commitar o plano com a linha de aprovação, fazer push, e então este script abre a sessão na nuvem.
 # Confere antes o que faria a sessão nascer errada: plano não commitado, sem aprovação, branch sem push.
 # Uso: enviar-nuvem.sh <plano.md> [--dry-run]

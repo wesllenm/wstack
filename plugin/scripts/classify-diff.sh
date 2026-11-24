@@ -12,8 +12,8 @@
 #   critical_signal = dependency-lockfile | authentication | authorization | database-migration | infrastructure
 #                     | secrets | payment | public-api-contract   (convenção de pasta e tipo de arquivo; calibrar com
 #                     calibrate-risk.sh)
-# Sobre a versão 2.8.2 (§6.5): chave `complex`, base padrão HEAD, base inexistente => CRITICA (a 2.8.2 caía em HEAD),
-# arquivo novo soma linhas, teste por convenção de caminho e nome.
+# Também: chave `complex`, base padrão HEAD, base inexistente => CRITICA (nunca cai em HEAD), arquivo novo soma
+# linhas, teste por convenção de caminho e nome.
 set -uo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 1

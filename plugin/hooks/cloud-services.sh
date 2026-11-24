@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hook SessionStart para sessões na nuvem (§14.11): sobe os serviços de que a aplicação precisa (banco, cache,
+# Hook SessionStart para sessões na nuvem: sobe os serviços de que a aplicação precisa (banco, cache,
 # fila) e espera ficarem prontos. O snapshot do ambiente guarda imagens e pacotes, não processos, então os
 # serviços sobem a cada sessão. Fora da nuvem (CLAUDE_CODE_REMOTE diferente de true) não faz nada.
 # Configuração no .claude/risk.conf:

@@ -80,7 +80,7 @@ const summary = {
 const hookOnly = list.filter((x) => x.has_hook_events && x.cost_usd === null && x.tokens.input === null);
 const withHooks = list.filter((x) => x.has_hook_events).length;
 if (hookOnly.length > 0) summary.warnings.push(
-  `telemetria nativa ausente em ${hookOnly.length} de ${withHooks} sessões com eventos de gate: o receptor não subiu ou o bloco env do settings.json não está ativo (§6.8)`);
+  `telemetria nativa ausente em ${hookOnly.length} de ${withHooks} sessões com eventos de gate: o receptor não subiu ou o bloco env do settings.json não está ativo`);
 const t = summary.tokens;
 const prompt = (t.input ?? 0) + (t.cacheRead ?? 0) + (t.cacheCreation ?? 0);
 const nTok = list.filter((x) => x.tokens.input !== null).length;

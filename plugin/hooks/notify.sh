@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hook Notification (§14.10): avisa no sistema operacional quando uma sessão precisa de você (permissão ou espera
+# Hook Notification: avisa no sistema operacional quando uma sessão precisa de você (permissão ou espera
 # de resposta), com a branch no título, para saber qual atividade está parada sem alternar entre terminais.
 # Windows (Git Bash ou WSL) por notificação do PowerShell; macOS por osascript; Linux por notify-send; senão, o sino
 # do terminal. Roda em segundo plano e sai com 0 sempre: aviso que falha não pode atrapalhar a sessão.
@@ -22,12 +22,12 @@ send() {
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
 $x = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
 $n = $x.GetElementsByTagName("text")
-$n.Item(0).AppendChild($x.CreateTextNode($env:SQUADOS_NOTIFY_T)) > $null
-$n.Item(1).AppendChild($x.CreateTextNode($env:SQUADOS_NOTIFY_M)) > $null
+$n.Item(0).AppendChild($x.CreateTextNode($env:WSTACK_NOTIFY_T)) > $null
+$n.Item(1).AppendChild($x.CreateTextNode($env:WSTACK_NOTIFY_M)) > $null
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe").Show([Windows.UI.Notifications.ToastNotification]::new($x))
 PS
     enc=$(printf '%s' "$ps" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')
-    SQUADOS_NOTIFY_T=$title SQUADOS_NOTIFY_M=$msg WSLENV="${WSLENV:+$WSLENV:}SQUADOS_NOTIFY_T:SQUADOS_NOTIFY_M" \
+    WSTACK_NOTIFY_T=$title WSTACK_NOTIFY_M=$msg WSLENV="${WSLENV:+$WSLENV:}WSTACK_NOTIFY_T:WSTACK_NOTIFY_M" \
       powershell.exe -NoProfile -NonInteractive -EncodedCommand "$enc" > /dev/null 2>&1 && return 0
   fi
   if command -v osascript > /dev/null 2>&1; then

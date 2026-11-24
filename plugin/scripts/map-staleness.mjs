@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Avisa no início da sessão quando o mapa de features de uma skill verify-<app> ficou para trás do código (§12.24).
+// Avisa no início da sessão quando o mapa de features de uma skill verify-<app> ficou para trás do código.
 // Para cada .claude/skills/verify-*/features/, procura commits depois da última mudança no mapa que tocaram a
 // superfície do usuário (feature_surface no risk.conf: rotas, endpoints, telas, comandos). Hook SessionStart:
 // a saída vai para o contexto; nunca falha a sessão. Sem nenhuma skill verify-*, não diz nada.
@@ -55,7 +55,7 @@ for (const skill of skills) {
   const dir = `${skillsDir}/${skill}/features`;
   let last;
   try { last = git('log', '-1', '--format=%H%x09%cs', '--', dir).trim(); } catch { continue; }
-  if (!last) { out.push(`Mapa de features de ${skill} ainda não commitado; prove a skill e commite o mapa (§12.24).`); continue; }
+  if (!last) { out.push(`Mapa de features de ${skill} ainda não commitado; prove a skill e commite o mapa.`); continue; }
   const [sha, date] = last.split('\t');
   let log;
   try { log = git('log', `--max-count=${maxCommits}`, '--format=@%H', '--name-only', `${sha}..HEAD`); } catch { continue; }
@@ -69,7 +69,7 @@ for (const skill of skills) {
   const list = [...files].slice(0, 5).join(', ') + (files.size > 5 ? ` e mais ${files.size - 5}` : '');
   out.push(`Mapa de features de ${skill} pode estar desatualizado: ${commits} commit(s) desde ${date} tocaram a superfície`
     + `${surface.length ? '' : ' (feature_surface não configurado no risk.conf; contando todo código fora de testes)'}: ${list}. `
-    + `Antes de confiar no mapa numa condução, rodar a Manutenção da ${skill} (§12.24) para as features desses arquivos.`);
+    + `Antes de confiar no mapa numa condução, rodar a Manutenção da ${skill} para as features desses arquivos.`);
 }
 if (out.length) console.log(out.join('\n'));
 process.exit(0);

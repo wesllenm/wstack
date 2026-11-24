@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Válvulas de escape e comentários nas linhas que o diff adicionou (§6.14).
+// Válvulas de escape e comentários nas linhas que o diff adicionou.
 //   ESCAPE            supressão de aviso, tipo que desliga o compilador, exceção engolida, bloqueio de async
 //   CODIGO_COMENTADO  comentário cujo corpo é código
 //   MARCADOR          TODO, FIXME, HACK, XXX, workaround, gambiarra, temporário

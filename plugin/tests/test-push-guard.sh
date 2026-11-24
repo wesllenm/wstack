@@ -69,7 +69,7 @@ expect deny 'git push origin ccr-1ad6512c-bpqm1j:main'
 expect deny 'git push origin :ccr-1ad6512c-bpqm1j'
 # não são push: texto entre aspas e heredoc são dados
 expect ok 'git log -1 --oneline'
-expect ok 'grep -n "git push --force" docs/gotchas/harness.md'
+expect ok 'grep -n "git push --force" docs/notas.md'
 expect ok 'git commit -m "doc: o hook recusa git push origin main"'
 expect ok "cat <<'X'
 it's a note about push

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Abre uma atividade numa worktree própria (§14.10): branch task/<nome> a partir da base, worktree em
+# Abre uma atividade numa worktree própria: branch task/<nome> a partir da base, worktree em
 # .claude/worktrees/<nome> do checkout principal, arquivos locais listados em .worktreeinclude copiados
 # (appsettings de desenvolvimento, .env) e runtime isolado com worktree-env.sh.
 # Uso: nova-atividade.sh <nome> [--base <ref>] [--start]

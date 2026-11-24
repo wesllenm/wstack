@@ -5,8 +5,8 @@
 # O que protege: o classificador decide quanta revisão cada mudança recebe, então erro de coleta do diff NUNCA
 # pode virar um nível baixo (falha fechada), e a contagem de linhas e de testes removidos tem de refletir a mudança real.
 # Três blocos: (A) casos do classificador (diff, base, renomeação, arquivos novos, `complex`, `domain`);
-#              (B) a bateria do bootstrap 2.8.2 §6.5 (falso positivo e falso negativo dos sinais, git quebrado);
-#              (C) o que a 2.8.2 acrescenta: modo --commit, pipeline de CI lido de arquivo real, motivos com nível e `hot`.
+#              (B) a bateria de sinais (falso positivo e falso negativo, git quebrado);
+#              (C) modo --commit, pipeline de CI lido de arquivo real, motivos com nível e `hot`.
 set -uo pipefail
 
 if [ -n "${1:-}" ]; then SCRIPT=$(realpath "$1"); else SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)/classify-diff.sh"; fi
@@ -214,7 +214,7 @@ printf 'hot = src/Hot/* -> Pricing\n' >> "$repo/.claude/risk.conf"
 mkdir -p "$repo/src/Hot"; printf 'a\n' > "$repo/src/Hot/P.cs"
 expect "caminho quente emite 'quente: Pricing' e segue TRIVIAL" TRIVIAL "$(classify)" "quente: Pricing"
 
-echo "== B. bateria do bootstrap 2.8.2 (sinais, falso positivo e falso negativo)"
+echo "== B. bateria de sinais (falso positivo e falso negativo)"
 new_doc_repo() { # new_doc_repo <nome>: configuração com todos os sinais e dois workflows commitados
   repo="$ROOT/$1"
   mkdir -p "$repo/.claude" "$repo/.github/workflows"

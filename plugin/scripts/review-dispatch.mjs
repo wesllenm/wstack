@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Decide o que vai para cada revisor LLM, de forma determinística (§6.13):
+// Decide o que vai para cada revisor LLM, de forma determinística:
 //   1. separa o que não deve ir para revisão por LLM (removido, binário, gerado, lockfile, excluído no risk.conf);
 //   2. resolve, por arquivo, a referência da stack e a regra por caminho (review_rule no risk.conf);
 //   3. agrupa os arquivos: um grupo só até review_group_threshold arquivos; acima disso, grupos por pasta,
@@ -152,7 +152,7 @@ for (const f of [...files.values()].sort((a, b) => a.path.localeCompare(b.path))
   if (f.status === 'D') reason = 'arquivo removido: entra só como contexto';
   else if (f.binary) reason = 'binário';
   else if (isUserExcluded(p)) reason = 'review_exclude no risk.conf';
-  else if (LOCKFILES.includes(name) && !isUserIncluded(p)) reason = 'lockfile: coberto pelo scanner de dependências (§6.4)';
+  else if (LOCKFILES.includes(name) && !isUserIncluded(p)) reason = 'lockfile: coberto pelo scanner de dependências';
   else if (isExcludedDefault(p) && !isUserIncluded(p)) reason = 'gerado ou saída de build (lista padrão; review_include resgata)';
   // exclusão automática de arquivo de código sob src/, tests/ ou tools/ nunca é silenciosa: o lead decide (review_include resgata)
   if (reason) { excluded.push({ path: p, reason, attention: /^(src|tests|tools)\//.test(p) && reason.startsWith('gerado') && f.status !== 'D' }); continue; }

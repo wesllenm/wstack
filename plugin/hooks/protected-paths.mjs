@@ -1,5 +1,5 @@
 // Caminhos protegidos que o que SAI da máquina não pode alterar sem aprovação do desenvolvedor, e a conferência do que um
-// push ou um checkpoint publicaria (docs/decisions.md, 2026-11-23, opção B). Na VM da nuvem os hooks de escrita não leem o
+// push ou um checkpoint publicaria (docs/decisions.md, trava por texto na nuvem). Na VM da nuvem os hooks de escrita não leem o
 // texto do comando (trava por texto é contornável); a barreira é aqui: um workflow em .github/ numa ref publicada
 // dispara o GitHub Actions com segredos, e um hook, script ou settings alterado vale na próxima sessão.
 // Usado pelo push-guard.mjs (import) e pelo checkpoint.sh (linha de comando).

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PostToolUse em Edit/Write/MultiEdit/NotebookEdit: conta edições desde o último commit da sessão. A cada
-# iteration_limit edições sem commit, devolve "block" com a ordem do §16, que o Claude Code entrega ao modelo
+# iteration_limit edições sem commit, devolve "block" com a regra das três tentativas, que o Claude Code entrega ao modelo
 # como instrução. Não desfaz nada nem impede a próxima edição: instrui o modelo a parar e decidir, sem garantir
 # que ele obedeça. Edições feitas por Bash, scripts ou geradores não passam aqui. Commit zera a contagem.
 set -uo pipefail
@@ -34,6 +34,6 @@ if [ -d .claude/telemetry ]; then
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sid" "$count" >> ".claude/telemetry/sessions/$sid.jsonl" 2> /dev/null || true
 fi
 
-reason="Limite de iteração: $count edições desde o último commit, sem uma unidade verde commitada. Pare antes da próxima edição e aplique o §16 (três tentativas sem progresso): (1) se existe uma unidade verde, commite-a; (2) senão, ataque a premissa: escreva em .claude/SESSION.md, numa frase, a suposição que as tentativas que falharam têm em comum, e a evidência que a confirma ou não; se ela não foi verificada, verifique-a (teste, log, leitura do código) antes de qualquer nova correção; se foi refutada, descarte a linha de ataque inteira, não só a última tentativa; (3) se a premissa se sustenta e não há saída, registre o que foi tentado e reporte ao desenvolvedor com a decisão necessária. Outra variação da mesma correção, sem esse passo, é desvio do workflow."
+reason="Limite de iteração: $count edições desde o último commit, sem uma unidade verde commitada. Pare antes da próxima edição e aplique a regra das três tentativas sem progresso: (1) se existe uma unidade verde, commite-a; (2) senão, ataque a premissa: escreva em .claude/SESSION.md, numa frase, a suposição que as tentativas que falharam têm em comum, e a evidência que a confirma ou não; se ela não foi verificada, verifique-a (teste, log, leitura do código) antes de qualquer nova correção; se foi refutada, descarte a linha de ataque inteira, não só a última tentativa; (3) se a premissa se sustenta e não há saída, registre o que foi tentado e reporte ao desenvolvedor com a decisão necessária. Outra variação da mesma correção, sem esse passo, é desvio do workflow."
 printf '{"decision":"block","reason":"%s"}\n' "$reason"
 exit 0

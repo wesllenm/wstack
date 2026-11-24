@@ -21,7 +21,7 @@ for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
-# Telemetria do workflow (§6.8): só se .claude/telemetry existir; nunca falha o hook nem grava conteúdo.
+# Telemetria do workflow: só se .claude/telemetry existir; nunca falha o hook nem grava conteúdo.
 emit() {
   [ -d .claude/telemetry ] && [ -n "$sid" ] || return 0
   mkdir -p .claude/telemetry/sessions 2> /dev/null

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checkpoint de tarefa (§6.15): roda os testes da área tocada quando o Claude tenta commitar (PreToolUse em Bash,
+# Checkpoint de tarefa: roda os testes da área tocada quando o Claude tenta commitar (PreToolUse em Bash,
 # só para comandos git commit) ou marcar uma tarefa como concluída (TaskCompleted). Falha devolve código 2:
 # o commit não acontece, ou a tarefa não fecha, e a saída vai para o Claude corrigir.
 # Configuração no .claude/risk.conf, uma linha por área; cada comando roda uma vez, mesmo que várias áreas casem:

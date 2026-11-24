@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Isola o runtime de cada worktree (§14.10): reserva um slot no diretório comum do git, visível a todas as worktrees,
+# Isola o runtime de cada worktree: reserva um slot no diretório comum do git, visível a todas as worktrees,
 # e grava .claude/worktree.env na worktree com a faixa de portas, o sufixo do banco e o nome do projeto do Compose.
 # O checkout principal é sempre o slot 0 e não precisa de reserva; worktrees usam os slots 1..worktree_slots.
 #   worktree-env.sh alloc     reserva (ou reaproveita) o slot desta worktree e grava .claude/worktree.env

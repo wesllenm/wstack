@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Revisão humana proporcional ao risco no PR (§14.11), rodada pela Action merge-por-risco.yml a partir da base.
+// Revisão humana proporcional ao risco no PR, rodada pela Action merge-por-risco.yml a partir da base.
 // O lead rotula o PR com o nível do classify-diff (risco:trivial, risco:simples, risco:complexa, risco:critica);
 // este script decide, sem confiar só no rótulo:
 //   - auto-merge (merge quando os checks ficarem verdes) só para risco:trivial que mude apenas documentação;
@@ -52,7 +52,7 @@ function globRe(glob) {
 }
 const matcher = (g) => { const re = globRe(g); return g.includes('/') ? (p) => re.test(p) : (p) => re.test(posix.basename(p)); };
 const docs = (process.env.DOCS_GLOBS || 'docs/**,*.md,*.txt,*.png,*.jpg,*.svg').split(',').map((s) => s.trim()).filter(Boolean).map(matcher);
-// instruções e configuração de agente nunca são "só documentação": mudam o comportamento do workflow (§14.9)
+// instruções e configuração de agente nunca são "só documentação": mudam o comportamento do workflow
 // Também nunca são documentação: o que os agentes carregam como instrução em toda sessão (docs/gotchas.md é
 // importado pelo CLAUDE.md), a constitution verificada por teste, os ADRs e o corpus de avaliação.
 const NEVER_DOCS = ['CLAUDE.md', 'AGENTS.md', 'REVIEW.md', '.claude/**', '.github/**', 'docs/gotchas.md',

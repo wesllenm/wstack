@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Registro das sessões ativas do Claude Code no repositório (§14.10), no diretório comum do git, que todas as
+# Registro das sessões ativas do Claude Code no repositório, no diretório comum do git, que todas as
 # worktrees enxergam. Uma sessão por worktree; cada uma declara os arquivos que o plano prevê tocar.
 #   sessions.sh register      hook SessionStart: registra a sessão e devolve avisos para o contexto
 #   sessions.sh touch         hook Stop: renova o registro (a sessão continua viva)

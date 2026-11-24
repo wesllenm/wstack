@@ -5,7 +5,7 @@
 # Emite o total comprimido (gzip -9) por tipo: total:js, total:css, total:wasm, total:dll e total:all.
 # Totais por tipo, e não por arquivo, porque nomes com hash e a divisão em chunks mudam entre builds;
 # o que importa para o usuário é quanto ele baixa. Tamanho em bytes é determinístico: pode virar achado.
-# Exemplo de risk.conf (bootstrap §12.23, frontend web), com o frontend em web/:
+# Exemplo de risk.conf (frontend web), com o frontend em web/:
 #   hot    = web/src/* -> Bundle
 #   bench  = Bundle -> npm --prefix web ci --prefer-offline --no-audit && npm --prefix web run build && bash "$BENCH_SCRIPTS/bundle-size.sh" web/build > "$BENCH_TSV"
 #   budget = total:js -> 250000

@@ -2,7 +2,7 @@
 # Roda os produtores de sinais de qualidade declarados no .claude/risk.conf e filtra o resultado pelo diff
 # com quality-diff.mjs (CRAP por função tocada e duplicação que envolve código do diff).
 #   quality = <tipo> -> <comando que grava os relatórios dentro da pasta $QUALITY_OUT>
-#   tipos: cobertura | istanbul | eslint | lcov | rca | jscpd     (exemplos por stack na §12.23 do bootstrap)
+#   tipos: cobertura | istanbul | eslint | lcov | rca | jscpd
 #   crap_threshold = 30    crap_info = 10                         (opcionais)
 # Uso: quality-signals.sh [tipo...]    sem argumento, roda todos os produtores declarados
 # Código: 0 sem candidato, 1 com candidato, 2 uso errado, 3 produtor falhou ou não gerou relatório.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hook PostToolUse em Edit|Write|MultiEdit|NotebookEdit (§6.15): roda a checagem rápida do arquivo recém-editado
+# Hook PostToolUse em Edit|Write|MultiEdit|NotebookEdit: roda a checagem rápida do arquivo recém-editado
 # (lint, formatação) e devolve a falha ao Claude enquanto o contexto ainda está no arquivo, em vez de só no Stop.
 # Configuração no .claude/risk.conf, uma linha por regra, todas as que casarem rodam:
 #   edit_check = <glob> -> <comando com {file}>      ex.: edit_check = *.ts -> npx eslint {file}
@@ -56,5 +56,5 @@ while IFS= read -r line; do
 done < "$conf"
 
 [ -z "$fail" ] && exit 0
-printf '%sCorrija %s antes de seguir; não desligue a regra para passar (§6.14).\n' "$fail" "$rel" >&2
+printf '%sCorrija %s antes de seguir; não desligue a regra para passar.\n' "$fail" "$rel" >&2
 exit 2

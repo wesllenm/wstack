@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Ancora cada candidato de revisão no código antes do review-verifier (§6.13).
+// Ancora cada candidato de revisão no código antes do review-verifier.
 // Cada candidato traz `local: <arquivo:linha>` e `trecho:` com a linha (ou as linhas consecutivas) exatas do código
 // naquele local. Uma janela deslizante procura o trecho no arquivo, ignorando diferenças de espaço:
 //   ancorado    trecho encontrado a até --tolerance linhas do local citado

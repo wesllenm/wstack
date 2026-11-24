@@ -13,7 +13,7 @@
 // Na VM descartável da nuvem (CLAUDE_CODE_REMOTE=true) o hook não pede nada: trava por texto do comando é contornável
 // (cp /dev/null .cl""aude/x, tee, sed -i passam) e custava pedido por > que não redirecionava (grep "X =>"). O que
 // importa na VM é o que SAI dela: push-guard e checkpoint.sh conferem os caminhos protegidos do que será publicado
-// (docs/decisions.md, 2026-11-23, opção B). O desenvolvedor, na máquina dele, segue com a regra acima.
+// (docs/decisions.md, trava por texto na nuvem). O desenvolvedor, na máquina dele, segue com a regra acima.
 import { inTempDir, isCommitHeredoc } from './closed-forms.mjs';
 
 const TARGET = '[A-Za-z0-9._/+=:@-]+';

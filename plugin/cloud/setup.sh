@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Setup do ambiente de nuvem (§14.11). Colar no campo Setup script do ambiente em claude.ai/code (esta é a versão de
+# Setup do ambiente de nuvem. Colar no campo Setup script do ambiente em claude.ai/code (esta é a versão de
 # referência, versionada em .claude/cloud/setup.sh) e rodar na própria sessão quando o retrato do cloud-services.sh
 # acusar falta. Detecta as stacks pelos arquivos rastreados do repositório e provisiona cada uma por uma cadeia de
 # rotas: o instalador oficial; se o proxy de saída o recusar (403 é política: não insistir), a imagem oficial no
@@ -419,7 +419,7 @@ for cmd in "${pulls[@]+"${pulls[@]}"}"; do
     run) bash -c "$cmd" || warn "falhou: $cmd" ;;
   esac
 done
-# cloud_extract = <imagem> <caminho na imagem> -> <destino>   (binário que só existe em imagem, como o daprd)
+# cloud_extract = <imagem> <caminho na imagem> -> <destino>   (binário que só existe em imagem, como o daemon de um runtime distribuído só por imagem)
 for line in "${extracts[@]+"${extracts[@]}"}"; do
   [ -n "$line" ] || continue
   if [[ ! $line =~ ^([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*-\>[[:space:]]*([^[:space:]]+)$ ]]; then

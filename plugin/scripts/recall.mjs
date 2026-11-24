@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Busca contexto em sessões anteriores do Claude Code deste repositório (§12.25), inclusive as de worktrees
+// Busca contexto em sessões anteriores do Claude Code deste repositório, inclusive as de worktrees
 // em .claude/worktrees/. Lê os transcripts locais (~/.claude/projects/<caminho codificado>/*.jsonl, ou
 // $CLAUDE_CONFIG_DIR/projects) e devolve trechos curtos das mensagens que contêm todos os termos.
 // Uso: node recall.mjs <termo> [<termo>...] [--days 60] [--max 20] [--tools] [--exclude <session_id>]
