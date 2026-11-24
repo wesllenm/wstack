@@ -1,30 +1,33 @@
 // Veredito do path-guard.sh (payload do PreToolUse em Bash na entrada padrão). Imprime ASK <motivo> ou nada.
-// No modo automático e no acceptEdits, o Claude Code não aplica as regras ask de Edit aos comandos de terminal: provado
-// com a 2.1.328 (prove-write-matrix.sh), cp, mv, sed -i, rm e tee gravaram até em .claude/hooks/push-guard.sh. Só o deny
-// e o ask vindo de hook seguram em todo modo.
-// Desenho de autonomia com trava mínima (docs/decisions.md, 2026-11-20): o hook é cinto de segurança, não fronteira (a
-// fronteira é o PR, o isolamento e o deny), e pede aprovação só para o que desligaria as próprias travas ou exporia
-// segredo. Tudo o mais é livre. O texto é lido sem interpretar aspas, com \ trocada por / (Windows).
-// - trava: comando que cita os hooks, o settings.json, o risk.conf, os scripts e o setup da nuvem que os hooks rodam,
-//   o .mcp.json, ~/.claude.json, o .git, o .gitignore ou os workflows do GitHub (test-path-guard.sh confere que cada
-//   glob de Edit do ask e do deny do settings.json cai numa regra daqui), ou que roda numa pasta dessas;
+// No modo automático e no acceptEdits, o Claude Code não aplica as regras ask de Edit aos comandos de terminal
+// (tests/prove-write-matrix.sh mede isso com o Claude Code real: cp, mv, sed -i, rm e tee gravam em caminho do ask).
+// Este hook cobre esse buraco pelo texto do comando.
+// Trava mínima (docs/decisions.md, trava mínima nos comandos): o hook é cinto de segurança, não fronteira (a fronteira é
+// o PR, o isolamento e o deny), e pede aprovação só para o que desligaria as próprias travas ou exporia segredo. Tudo o
+// mais é livre. O texto é lido sem interpretar aspas, com \ trocada por / (Windows).
+// - trava: comando que cita os arquivos do plugin (~/.claude/plugins, onde estão estes hooks e os scripts que eles e as
+//   skills rodam), o settings.json (que fixa a versão do plugin), o risk.conf, os hooks, scripts e setup da nuvem que um
+//   projeto ainda tenha em .claude/, o .mcp.json, ~/.claude.json, o .git, o .gitignore ou os workflows do GitHub
+//   (test-path-guard.sh confere que cada glob de Edit do ask e do deny do settings.json modelo cai numa regra daqui), ou
+//   que roda numa pasta dessas;
 // - segredo: .env, chaves, settings.local.json, configs com credencial da home, ou comando que mostra credencial
 //   (gh auth token, --show-token, git credential): um comando livre mostraria ou publicaria o arquivo por cima do deny;
 // - config que executa programa sem citar o caminho: git config (fora da leitura; core.hooksPath desliga os hooks do
 //   git, core.fsmonitor executa), gh config/alias/extensão e gh --web (executa o browser: da config), npm config set.
 // Livres: as formas fechadas do git-read-allow (git add/diff/log/show não mudam o arquivo) e dos módulos que o risk.conf
 // declara (allow_module = dotnet carrega ./dotnet-allow.mjs; sem a declaração, as formas do dotnet caem na regra geral;
-// módulo declarado que não carrega faz todo comando pedir), o script do
-// projeto no começo do comando (bash .claude/scripts/<nome>, node ..., bash -n ...) quando a pasta do comando é a raiz do
+// módulo declarado que não carrega faz todo comando pedir), o script do plugin no começo do comando, pelo caminho real
+// desta pasta de plugin (bash <plugin>/scripts/<nome>, node ..., bash -n ...), quando a pasta do comando é a raiz do
 // projeto ou de uma worktree registrada dele (os argumentos depois continuam conferidos), e a leitura simples (cat, ls,
 // grep, head, tail, wc, shellcheck, node --check, sem operador do shell), que confere só segredo.
-// Na nuvem (CLAUDE_CODE_REMOTE=true) a citação de caminho do harness não pede (docs/decisions.md, 2026-11-23, opção B):
-// continuam pedindo o .git, o ~/.claude.json, os segredos, a config que executa programa (git config que grava etc.) e
-// a pasta do comando dentro do .git.
+// Na nuvem (CLAUDE_CODE_REMOTE=true) a citação de caminho do harness não pede (docs/decisions.md, trava por texto na
+// nuvem): continuam pedindo o .git, o ~/.claude.json, os segredos, a config que executa programa (git config que grava
+// etc.) e a pasta do comando dentro do .git.
 // Riscos aceitos (docs/harness-capabilities.md, Riscos aceitos): caminho montado para esconder; comando que troca a árvore
 // inteira sem citar a trava (git checkout <ref> -- ., extração de arquivo compactado na raiz).
 import { realpathSync } from 'node:fs';
 import { relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isCommitHeredoc } from './closed-forms.mjs';
 import { allowed as gitForm } from './git-read-allow.mjs';
 import { foreignRepo, git } from './git-repo.mjs';
@@ -53,7 +56,7 @@ const END = '(?![A-Za-z0-9_-])';
 // executaria código no push com a credencial da VM) e o ~/.claude.json (config do usuário, fora do repositório).
 const GUARD = [
   // os marcadores .verify-ok e .session/checkpoint-ok-* fazem o Stop e o checkpoint pularem build e testes
-  ['.claude/hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|\.session\/checkpoint-ok)/i],
+  ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|\.session\/checkpoint-ok)/i],
   ['pasta .claude', /\.claude\/?(?=$|[\s;&|)'"`])/i],
   ['~/.claude.json', /\.claude\.json/i, true],
   ['.mcp.json', /\.mcp\.json/i],
@@ -78,7 +81,11 @@ const SECRET = [
   ['.claude/.credentials', /\.claude\/\.credentials/i],
   ['.nuget/NuGet', /\.nuget\/NuGet/i],
 ];
-const SCRIPT = /^(?:bash(?: -n)? |node )?\.claude\/(?:scripts|hooks|cloud)\/[A-Za-z0-9._-]+(?=\s|$)/;
+// A pasta do plugin, como o Claude Code a escreve no texto das skills e pelo caminho real (sem link simbólico).
+const PLUGIN_ROOTS = [...new Set([fileURLToPath(new URL('..', import.meta.url)), realpathSync.native(fileURLToPath(new URL('..', import.meta.url)))]
+  .map((p) => p.replace(/\\/g, '/').replace(/\/$/, '')))];
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const SCRIPT = new RegExp(`^(?:bash(?: -n)? |node )?(?:${PLUGIN_ROOTS.map(escape).join('|')})/(?:scripts|hooks|cloud)/[A-Za-z0-9._-]+(?=\\s|$)`);
 // Programa na posição de comando: começo, depois de ; & | ( { crase $( aspas, quebra de linha, palavra-chave do bash
 // (then, do, else, elif, !), atribuição e prefixo que roda o comando seguinte (env, xargs, nice, timeout 10...), com ou
 // sem caminho antes do nome (/usr/bin/gh). "grep gh x" não conta.
@@ -103,19 +110,6 @@ const MAX = 20000;
 const real = (p) => { try { return realpathSync.native(p).replace(/\\/g, '/'); } catch { return p.replace(/\\/g, '/'); } };
 const hit = (list, text) => list.find(([, re]) => re.test(text))?.[0];
 
-// O script do harness chamado pelo caminho absoluto da raiz do projeto (a pasta do comando) vale o relativo: o texto
-// ganha a forma relativa, e a posição e a pasta do comando continuam conferidas como nela. Outra raiz fica como está.
-function relativeScript(text, here) {
-  const project = process.env.CLAUDE_PROJECT_DIR;
-  const roots = [here, project && real(project) === here ? project.replace(/\\/g, '/') : ''].filter(Boolean);
-  const lead = /^(?:bash(?: -n)? |node )?/.exec(text)[0].length;
-  for (const root of roots) {
-    const prefix = `${root.replace(/\/$/, '')}/`;
-    if (text.startsWith(`${prefix}.claude/`, lead)) return text.slice(0, lead) + text.slice(lead + prefix.length);
-  }
-  return text;
-}
-
 // Raiz do repositório da pasta do comando, ou '' fora de repositório
 function toplevel(cwd) {
   try { return real(git(cwd, 'rev-parse', '--show-toplevel')); } catch { return ''; }
@@ -137,9 +131,10 @@ export function verdict(cmd, cwd) {
   const guards = process.env.CLAUDE_CODE_REMOTE === 'true' ? GUARD.filter(([, , cloud]) => cloud) : GUARD;
   const inCwd = hit(guards, rel) ?? hit(SECRET, rel);
   if (inCwd) return `ASK a pasta do comando é uma trava ou guarda segredo (${inCwd}): ${here}`;
-  const relText = relativeScript(text, here);
-  const script = SCRIPT.exec(relText);
-  if (script && top && top === here && foreignRepo(here) === '') text = relText.slice(script[0].length);
+  // o script do plugin no começo, rodando na raiz do projeto: o nome dele não conta como citação de trava (os
+  // argumentos e o que vier depois continuam conferidos); em outra pasta, ele trataria outro repositório
+  const script = SCRIPT.exec(text);
+  if (script && top && top === here && foreignRepo(here) === '') text = text.slice(script[0].length);
   const implicit = hit(IMPLICIT, text);
   if (implicit) return `ASK ${implicit} muda config que executa programa ou mostra credencial sem citar o caminho`;
   if (READONLY.test(text)) return '';

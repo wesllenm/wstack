@@ -72,3 +72,35 @@ Decisões do desenvolvedor sobre as pendências do inventário (`docs/migracao.m
   `claude plugin validate` e uma sessão de teste.
 - A avaliação comportamental fica para depois da 0.1.0, no repositório wstack (não no plugin), decidindo então entre
   portar os scripts da origem e usar o `claude plugin eval`.
+
+## 2026-11-24: trava mínima nos comandos
+
+**Decisão:** os hooks que leem o texto dos comandos Bash (path-guard, redirect-guard, push-guard) são cinto de
+segurança, não fronteira. Pedem aprovação só para o que desligaria as próprias travas (os arquivos do plugin, o
+`settings.json` e o `risk.conf` do projeto, `.git`, `.gitignore`, workflows, `.mcp.json`) ou exporia segredo; o resto é
+livre. A fronteira é o PR revisado, o isolamento da sessão e as regras `deny`.
+
+**Por quê:** no modo automático e no "Accept edits", o Claude Code não aplica as regras `ask` de Edit aos comandos de
+terminal (`plugin/tests/prove-write-matrix.sh` mede isso com o Claude Code real); só um hook que leia o comando cobre
+esse caminho. Ler texto de comando nunca é completo (aspas no meio do nome, caminho montado em variável), então pedir
+aprovação para tudo o que parece arriscado só gera pedidos que o desenvolvedor aprova sem ler.
+
+**O que muda no plugin:** os hooks e os scripts que eles e as skills rodam moram em `~/.claude/plugins/...`, fora do
+projeto e fora do que o push publica. Por isso `.claude/plugins` entrou nas travas do path-guard (comando que cita ou
+roda nessa pasta pede aprovação) e `Edit(~/.claude/plugins/**)` entra no `deny` do `settings.json` modelo: o plugin muda
+por `claude plugin update`, nunca por edição. O script do plugin chamado pelo caminho da própria pasta do plugin, no
+começo do comando e com a pasta do comando na raiz do projeto, não conta como citação de trava (o resto do comando
+continua conferido); `.claude/scripts` e `.claude/hooks` num projeto deixam de ser do harness e pedem como qualquer
+trava.
+
+## 2026-11-24: trava por texto na nuvem
+
+**Decisão:** na sessão na nuvem (`CLAUDE_CODE_REMOTE=true`), a mera citação de caminho do harness (arquivos do plugin,
+`.claude/` do projeto, workflows) não pede aprovação. Continuam pedindo: `.git` (config e hooks do git executariam
+código no push com a credencial da sessão), `~/.claude.json`, segredos, credenciais e comandos de config que executam
+programa.
+
+**Por quê:** a VM da nuvem é descartável e ninguém está olhando para aprovar a cada pedido; a trava por texto é
+contornável de qualquer jeito. O que importa é o que sai da VM: o push-guard e o `checkpoint.sh` conferem os caminhos
+protegidos do que o push publica, e o resto passa pelo PR. Uma alteração nos arquivos do plugin dentro da VM não sai
+dela.

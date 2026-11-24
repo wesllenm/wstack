@@ -7,8 +7,7 @@
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-top=$(git rev-parse --show-toplevel 2> /dev/null)
-hook=${1:-$top/.claude/hooks/git-read-allow.sh}
+hook=${1:-$(dirname "$0")/../hooks/git-read-allow.sh}
 [ -f "$hook" ] || { echo "git-read-allow.sh não encontrado" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente" >&2; exit 2; }
 hook=$(cd "$(dirname "$hook")" && pwd -P)/$(basename "$hook")

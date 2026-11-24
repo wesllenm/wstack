@@ -9,7 +9,7 @@
 #              (C) o que a 2.8.2 acrescenta: modo --commit, pipeline de CI lido de arquivo real, motivos com nível e `hot`.
 set -uo pipefail
 
-if [ -n "${1:-}" ]; then SCRIPT=$(realpath "$1"); else SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/classify-diff.sh"; fi
+if [ -n "${1:-}" ]; then SCRIPT=$(realpath "$1"); else SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)/classify-diff.sh"; fi
 [ -f "$SCRIPT" ] || { echo "classificador não encontrado: $SCRIPT" >&2; exit 2; }
 ROOT=$(mktemp -d "${TMPDIR:-/tmp}/claude-classify-test-XXXXXX")
 trap 'rm -rf "$ROOT"' EXIT

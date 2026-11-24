@@ -2,21 +2,26 @@
 # Casos do path-guard (hook PreToolUse em Bash, autonomia com trava mínima): pede aprovação só para comando que cita uma
 # trava do harness (hooks, settings, risk.conf, scripts, cloud, .mcp.json, .git, .gitignore, workflows) ou um segredo,
 # que mostra credencial ou que muda config que executa programa; o resto é livre. Sem rede e sem modelo. Confere também
-# que cada glob de Edit do ask e do deny do settings.json cai numa regra do hook: um caminho novo no ask sem regra aqui
-# reprova. A prova com o Claude Code real está em prove-write-matrix.sh (custa modelo; roda à mão).
+# que cada glob de Edit do ask e do deny do settings.json modelo cai numa regra do hook: um caminho novo no ask sem regra
+# aqui reprova. A prova com o Claude Code real está em prove-write-matrix.sh (custa modelo; roda à mão).
+# Os hooks rodam de uma cópia instalada onde o Claude Code instala plugins (<home>/.claude/plugins/cache/...), para que a
+# trava dos arquivos do plugin e a liberação dos scripts dele sejam conferidas no caminho real.
 # Uso: test-path-guard.sh [<path-guard.sh>]
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-top=$(git rev-parse --show-toplevel 2> /dev/null)
-hook=${1:-$top/.claude/hooks/path-guard.sh}
-[ -f "$hook" ] || { echo "path-guard.sh não encontrado" >&2; exit 2; }
+here=$(cd "$(dirname "$0")" && pwd -P)
+src=${1:-$here/../hooks/path-guard.sh}
+[ -f "$src" ] || { echo "path-guard.sh não encontrado" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente" >&2; exit 2; }
-hook=$(cd "$(dirname "$hook")" && pwd -P)/$(basename "$hook")
+src=$(cd "$(dirname "$src")" && pwd -P)
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-pg-XXXX")
 work=$(cd "$work" && pwd -P)
 trap 'rm -rf "$work"' EXIT
 fails=0
+plug=$work/home/.claude/plugins/cache/wstack/wstack/0.0.0
+mkdir -p "$plug/scripts" && cp -r "$src" "$plug/hooks"
+hook=$plug/hooks/path-guard.sh
 proj=$work/projeto
 git init -q "$proj" && git -C "$proj" -c user.email=t@t -c user.name=t commit -q --allow-empty -m base
 mkdir -p "$proj/.claude/hooks" "$proj/.claude/skills/x" "$proj/src" "$work/fora"
@@ -35,9 +40,8 @@ expect() { # expect <livre|ask> <comando>
 }
 
 # rotina do dia a dia e o que deixou de pedir com a autonomia: tudo livre
-for c in 'git status --short' 'ls src' 'cp a b' 'npm --prefix web run check' 'bash .claude/scripts/classify-diff.sh' \
-  '.claude/scripts/classify-diff.sh' 'bash .claude/scripts/checkpoint.sh a 1 b' 'node .claude/scripts/review-dispatch.mjs --base main' \
-  'bash -n .claude/hooks/push-guard.sh' 'git add .claude/hooks/path-guard.mjs .claude/settings.json' 'git diff .claude/' \
+for c in 'git status --short' 'ls src' 'cp a b' 'npm --prefix web run check' \
+  'git add .claude/hooks/path-guard.mjs .claude/settings.json' 'git diff .claude/' \
   'dotnet test tests/App.ArchitectureTests' 'dotnet build App.slnx' 'dotnet run --project src/App.AppHost' \
   'dotnet list App.slnx package --vulnerable --include-transitive' 'grep -rn "dotnet build" ci' \
   'node -e "console.log(process.env.HOME)"' 'gh pr view 3' 'gh pr create --title x --body-file /tmp/x.md' 'git push -u origin fix/x' \
@@ -50,10 +54,22 @@ for c in 'git status --short' 'ls src' 'cp a b' 'npm --prefix web run check' 'ba
   expect livre "$c"
 done
 expect livre "$(printf '%s\n' "git commit -F - <<'EOF'" 'fix(claude): ajustar .claude/hooks e .env' '' 'corpo' 'EOF')"
+# os scripts do plugin, pelo caminho em que ele está instalado, rodando na raiz do projeto
+for c in "bash $plug/scripts/classify-diff.sh" "$plug/scripts/classify-diff.sh" "bash $plug/scripts/checkpoint.sh a 1 b" \
+  "node $plug/scripts/review-dispatch.mjs --base main" "bash -n $plug/hooks/push-guard.sh"; do
+  expect livre "$c"
+done
+# o projeto não tem mais scripts do harness: um .claude/scripts ou .claude/hooks no projeto é trava como as outras
+for c in 'bash .claude/scripts/classify-diff.sh' '.claude/scripts/classify-diff.sh' 'bash .claude/scripts/checkpoint.sh a 1 b' \
+  'node .claude/scripts/review-dispatch.mjs --base main' 'bash -n .claude/hooks/push-guard.sh' "bash $proj/.claude/scripts/classify-diff.sh"; do
+  expect ask "$c"
+done
 
 # travas do harness: pedem, por qualquer programa, também em Windows e com a pasta como cwd
 for t in .claude/hooks/push-guard.sh .claude/settings.json .claude/risk.conf .claude/scripts/checkpoint.sh .claude/cloud/setup.sh \
-  .mcp.json .gitignore .git/config .github/workflows/ci.yml .claude/settings.local.json; do
+  .mcp.json .gitignore .git/config .github/workflows/ci.yml .claude/settings.local.json "$plug/hooks/push-guard.sh" \
+  "$plug/scripts/checkpoint.sh" "$plug/hooks/hooks.json" '~/.claude/plugins/cache/wstack/wstack/0.1.0/hooks/path-guard.mjs' \
+  '~/.claude/plugins/known_marketplaces.json' '~/.claude/settings.json'; do
   expect ask "cp /tmp/x $t"
   expect ask "sed -i s/^/x/ $t"
   expect ask "python3 -c \"open('$t','w').write('x')\""
@@ -78,21 +94,24 @@ VCWD=$work/fora expect ask 'bash .claude/scripts/checkpoint.sh a 1 b'
 VCWD=$proj/src expect ask 'bash .claude/scripts/checkpoint.sh a 1 b'
 VCWD=$proj/.claude/skills/x expect livre 'ls'
 VCWD=$work/fora expect livre 'ls'
+VCWD=$plug/hooks expect ask 'cp a push-guard.sh'
+VCWD=$work/home/.claude/plugins expect ask 'rm -rf cache'
 
-# script do harness pelo caminho absoluto da raiz do projeto: equivale ao relativo, com as mesmas restrições de posição e pasta
-for c in "bash $proj/.claude/scripts/classify-diff.sh --paths src/a.cs" "node $proj/.claude/scripts/review-dispatch.mjs --base main" \
-  "bash -n $proj/.claude/hooks/push-guard.sh" "$proj/.claude/scripts/classify-diff.sh" "bash $proj/.claude/scripts/checkpoint.sh a 1 b"; do
+# script do plugin: livre só no começo do comando, pelo caminho da pasta do plugin que roda este hook, e com a pasta do
+# comando na raiz do projeto (em outra pasta ele trataria outro repositório); o resto do comando continua conferido
+for c in "bash $plug/scripts/classify-diff.sh --paths src/a.cs" "node $plug/scripts/review-dispatch.mjs --base main" \
+  "bash -n $plug/hooks/push-guard.sh" "$plug/scripts/classify-diff.sh" "bash $plug/scripts/checkpoint.sh a 1 b"; do
   expect livre "$c"
 done
-for c in "true; bash $proj/.claude/scripts/classify-diff.sh" "true && bash $proj/.claude/scripts/classify-diff.sh" \
-  "cp x y; node $proj/.claude/scripts/review-dispatch.mjs" "bash $proj/.claude/scripts/checkpoint.sh a 1 b && cp x $proj/.claude/hooks/push-guard.sh" \
-  "bash $proj/.claude/scripts/checkpoint.sh $proj/.claude/hooks/x 1 b" "bash $proj/.claude/scripts/../hooks/x.sh" \
-  "bash $work/fora/.claude/scripts/classify-diff.sh" "bash $proj/x/.claude/scripts/classify-diff.sh" "bash ${proj}x/.claude/scripts/classify-diff.sh" \
-  "cp /tmp/x $proj/.claude/hooks/push-guard.sh"; do
+for c in "true; bash $plug/scripts/classify-diff.sh" "true && bash $plug/scripts/classify-diff.sh" \
+  "cp x y; node $plug/scripts/review-dispatch.mjs" "bash $plug/scripts/checkpoint.sh a 1 b && cp x $plug/hooks/push-guard.sh" \
+  "bash $plug/scripts/checkpoint.sh $plug/hooks/x 1 b" "bash $plug/scripts/../hooks/x.sh" "bash $plug/scripts/x/../../hooks/x.sh" \
+  "bash $work/fora/.claude/plugins/cache/wstack/wstack/0.0.0/scripts/classify-diff.sh" "bash $plug/x/scripts/classify-diff.sh" \
+  "bash ${plug}x/scripts/classify-diff.sh" "bash $plug/scripts/classify-diff.sh .claude/settings.json" "cp /tmp/x $plug/hooks/push-guard.sh"; do
   expect ask "$c"
 done
-VCWD=$proj/src expect ask "bash $proj/.claude/scripts/checkpoint.sh a 1 b"
-VCWD=$work/fora expect ask "bash $proj/.claude/scripts/checkpoint.sh a 1 b"
+VCWD=$proj/src expect ask "bash $plug/scripts/checkpoint.sh a 1 b"
+VCWD=$work/fora expect ask "bash $plug/scripts/checkpoint.sh a 1 b"
 
 # segredos: o comando mostraria ou publicaria o arquivo por cima do deny de Read, também pelas formas livres do git
 for c in 'shellcheck -s bash .env' 'bash -n .claude/scripts/../../.env' 'gh pr edit 3 --body-file .env.local' 'cat certs/api.pfx' \
@@ -130,7 +149,8 @@ done
 for c in 'cp /dev/null .cl""aude/hooks/pre.sh' 'ls .claude' 'grep -rl ask .claude/ | xargs sed -i s/ask/allow/g' 'find .claude/ -name push-guard.sh -delete' \
   'cd .claude/ && cp a hooks/push-guard.sh' 'pushd .claude/ && rm hooks/push-guard.sh' 'bash .claude/scripts/checkpoint.sh .claude/hooks/x 1 b' \
   'bash .claude/scripts/../hooks/x.sh' 'bash .claude/scripts/checkpoint.sh a 1 b && cp x .claude/hooks/push-guard.sh' \
-  "cp /tmp/x $proj/.claude/hooks/push-guard.sh" 'copy x .claude\hooks\push-guard.sh' 'git add .claude/hooks/path-guard.mjs'; do
+  "cp /tmp/x $proj/.claude/hooks/push-guard.sh" 'copy x .claude\hooks\push-guard.sh' 'git add .claude/hooks/path-guard.mjs' \
+  "cp /tmp/x $plug/hooks/push-guard.sh" "bash $plug/scripts/checkpoint.sh a 1 b && cp x $plug/hooks/push-guard.sh"; do
   nuvem livre "$c"
 done
 VCWD=$proj/.claude/hooks nuvem livre 'cp a push-guard.sh'
@@ -154,6 +174,8 @@ nuvem livre 'git config --list'
 nuvem livre 'git status --short'
 nuvem livre 'bash .claude/scripts/classify-diff.sh'
 nuvem livre "bash $proj/.claude/scripts/classify-diff.sh"
+nuvem livre "bash $plug/scripts/classify-diff.sh"
+VCWD=$work/fora nuvem livre "bash $plug/scripts/checkpoint.sh a 1 b"
 nuvem livre 'git push -u origin fix/x'
 nuvem livre "$(printf '%s\n' "git commit -F - <<'EOF'" 'fix(claude): ajustar .claude/hooks e .env' '' 'corpo' 'EOF')"
 # qualquer valor diferente de true segue o modo local
@@ -162,12 +184,12 @@ for r in false 1 TRUE yes; do
   [ "$got" = ask ] || { echo "FALHOU: CLAUDE_CODE_REMOTE=$r deveria seguir o modo local: obtido $got"; fails=$((fails + 1)); }
 done
 
-# as formas fechadas livres vêm de allow_module no .claude/risk.conf do projeto do hook (a pasta .claude onde ele está):
-# uma cópia dos hooks com um risk.conf próprio por caso. Um dotnet build de projeto dentro de .claude/hooks cita uma trava;
-# só a forma fechada do módulo o libera antes dessa conferência
-cfg=$work/cfg/.claude; mkdir -p "$cfg" && cp -r "$(dirname "$hook")" "$cfg/hooks"
+# as formas fechadas livres vêm de allow_module no .claude/risk.conf do projeto (CLAUDE_PROJECT_DIR), e o módulo é carregado
+# da pasta dos hooks: uma cópia dos hooks (para pôr módulos quebrados ao lado) e um risk.conf próprio por caso. Um dotnet
+# build de projeto dentro de .claude/hooks cita uma trava; só a forma fechada do módulo o libera antes dessa conferência
+cfg=$work/cfg; mkdir -p "$cfg" && cp -r "$plug/hooks" "$cfg/hooks"
 cfghook=$cfg/hooks/$(basename "$hook")
-conf() { local l; : > "$cfg/risk.conf"; for l in "$@"; do printf '%s\n' "$l" >> "$cfg/risk.conf"; done; }
+conf() { local l; : > "$proj/.claude/risk.conf"; for l in "$@"; do printf '%s\n' "$l" >> "$proj/.claude/risk.conf"; done; }
 cfgexpect() { hook=$cfghook expect "$@"; }
 conf 'allow_module = dotnet'
 cfgexpect livre 'dotnet build .claude/hooks/x.csproj'
@@ -175,7 +197,7 @@ cfgexpect livre 'dotnet build App.slnx'
 conf '# allow_module = dotnet'
 cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
 cfgexpect livre 'dotnet build App.slnx'
-rm -f "$cfg/risk.conf"
+rm -f "$proj/.claude/risk.conf"
 cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
 # módulo declarado que não carrega (ausente, nome inválido): todo comando pede, nunca exceção nem forma livre
 for m in inexistente 'Dotnet' 'dotnet/../x' '../dotnet' 'dotnet x'; do
@@ -192,9 +214,10 @@ cfgexpect ask 'ls src'
 # um módulo quebrado ao lado do válido não libera nada: continua pedindo
 conf 'allow_module = dotnet' 'allow_module = inexistente'
 cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
+rm -f "$proj/.claude/risk.conf"
 
-# cada glob de Edit do ask e do deny do settings.json cai numa regra do hook
-settings=$top/.claude/settings.json
+# cada glob de Edit do ask e do deny do settings.json modelo cai numa regra do hook
+settings=$here/fixtures/settings.json
 globs=$(jq -r '.permissions.ask[], .permissions.deny[] | select(startswith("Edit(")) | sub("^Edit\\(";"") | sub("\\)$";"")' "$settings")
 [ -n "$globs" ] || { echo "FALHOU: nenhum glob de Edit no settings.json"; fails=$((fails + 1)); }
 while IFS= read -r g; do

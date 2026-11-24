@@ -5,10 +5,12 @@
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-top=$(git rev-parse --show-toplevel 2> /dev/null)
-guard=${1:-$top/.claude/hooks/push-guard.sh}
-ckpt=${2:-$top/.claude/scripts/checkpoint.sh}
-[ -f "$guard" ] && [ -f "$ckpt" ] || { echo "push-guard.sh ou checkpoint.sh não encontrado" >&2; exit 2; }
+here=$(cd "$(dirname "$0")" && pwd -P)
+guard=${1:-$here/../hooks/push-guard.sh}
+ckpt=${2:-$here/../scripts/checkpoint.sh}
+# o hook lê o risk.conf do projeto: cada repositório temporário versiona este no commit base, como um projeto real
+fixture=$here/fixtures/risk.conf
+[ -f "$guard" ] && [ -f "$ckpt" ] && [ -f "$fixture" ] || { echo "push-guard.sh, checkpoint.sh ou fixtures/risk.conf não encontrado" >&2; exit 2; }
 guard=$(cd "$(dirname "$guard")" && pwd -P)/$(basename "$guard"); ckpt=$(cd "$(dirname "$ckpt")" && pwd -P)/$(basename "$ckpt")
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-pg-XXXX")
 trap 'rm -rf "$work"' EXIT
@@ -32,7 +34,8 @@ expect() { # expect <ok|ask|deny> <comando>
 # depende do repositório em que o teste roda (o push de uma branch que não existe aqui não publica nada)
 hermetic="$work/hermetico"
 git init -q --bare "$work/hermetico.git" && git init -q "$hermetic" && git -C "$hermetic" remote add origin "$work/hermetico.git"
-git -C "$hermetic" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base && git -C "$hermetic" push -q origin HEAD:refs/heads/main 2> /dev/null
+mkdir -p "$hermetic/.claude" && cp "$fixture" "$hermetic/.claude/risk.conf" && git -C "$hermetic" add .claude/risk.conf
+git -C "$hermetic" -c user.name=t -c user.email=t@t commit -q -m base && git -C "$hermetic" push -q origin HEAD:refs/heads/main 2> /dev/null
 export PAYLOAD_CWD="$hermetic" CLAUDE_PROJECT_DIR="$hermetic"
 
 # permitidos: forma exata validada
@@ -163,6 +166,7 @@ remote="$work/remote.git"; repo="$work/repo"
 git init -q --bare "$remote" && git init -q "$repo" && cd "$repo" || exit 2
 git config user.name t && git config user.email t@t && git remote add origin "$remote"
 # o push de HEAD para main grava refs/remotes/origin/main, a base de comparação do que o push ou o checkpoint publica
+mkdir -p .claude && cp "$fixture" .claude/risk.conf
 printf 'a\n' > a.txt && printf '.env\n' > .gitignore && git add -A && git commit -qm base && git push -q origin HEAD:refs/heads/main HEAD:refs/heads/chore/x 2> /dev/null
 printf 'mudou\n' >> a.txt && printf 'novo\n' > novo.txt && printf 'segredo\n' > .env
 head_before=$(git rev-parse HEAD); status_before=$(git status --porcelain)
@@ -171,7 +175,7 @@ sha=$(git ls-remote "$remote" refs/heads/wip/teste-1 | cut -f1)
 [ -n "$sha" ] || { echo "FALHOU: ref wip/teste-1 não chegou ao remoto"; fails=$((fails + 1)); }
 if [ -n "$sha" ]; then
   files=$(git ls-tree -r --name-only "$sha" | tr '\n' ' ')
-  [ "$files" = ".gitignore a.txt novo.txt " ] || { echo "FALHOU: árvore do checkpoint: $files"; fails=$((fails + 1)); }
+  [ "$files" = ".claude/risk.conf .gitignore a.txt novo.txt " ] || { echo "FALHOU: árvore do checkpoint: $files"; fails=$((fails + 1)); }
   [ "$(git log -1 --format=%s "$sha")" = "checkpoint: esperando aprovação" ] || { echo "FALHOU: mensagem do checkpoint"; fails=$((fails + 1)); }
 fi
 [ "$(git rev-parse HEAD)" = "$head_before" ] || { echo "FALHOU: checkpoint mexeu no HEAD"; fails=$((fails + 1)); }
@@ -195,14 +199,14 @@ for p in .claude/hooks/x.sh .github/workflows/x.yml .claude/settings.json .claud
   [ "$rc" != 0 ] || { echo "FALHOU: checkpoint publicou mudança em $p"; fails=$((fails + 1)); }
   grep -qF "checkpoint com mudança protegida" <<< "$msg" && grep -qF -- "$p" <<< "$msg" || { echo "FALHOU: a recusa não cita o arquivo $p: $msg"; fails=$((fails + 1)); }
   [ -z "$(git ls-remote "$remote" "refs/heads/wip/teste-$n")" ] || { echo "FALHOU: ref com $p chegou ao remoto"; fails=$((fails + 1)); }
-  rm -f "$p"
+  rm -f "$p"; cp "$fixture" .claude/risk.conf # o risk.conf versionado volta como estava (o caso dele o alterou)
 done
-rm -rf .claude .github ci .devcontainer
+rm -rf .claude .github ci .devcontainer && mkdir -p .claude && cp "$fixture" .claude/risk.conf
 # o que não é protegido segue livre: src, docs, e nomes parecidos fora da raiz protegida
 mkdir -p src/ci docs .claude && printf 'x\n' > src/ci/a.cs && printf 'x\n' > docs/a.md && printf 'x\n' > cix.txt && printf 'x\n' > .claude/project.md
 bash "$ckpt" teste 30 "sem protegido" > /dev/null 2>&1 || { echo "FALHOU: checkpoint recusou mudança só em src, docs e .claude/project.md"; fails=$((fails + 1)); }
 [ -n "$(git ls-remote "$remote" refs/heads/wip/teste-30)" ] || { echo "FALHOU: checkpoint sem protegido não chegou ao remoto"; fails=$((fails + 1)); }
-rm -rf src docs .claude cix.txt
+rm -rf src docs .claude cix.txt && mkdir -p .claude && cp "$fixture" .claude/risk.conf
 # sem origin/main não dá para saber o que o push publica: falha fechada, o checkpoint não publica
 main_sha=$(git rev-parse refs/remotes/origin/main) && git update-ref -d refs/remotes/origin/main
 msg=$(bash "$ckpt" teste 31 "sem origin main" 2>&1) && { echo "FALHOU: checkpoint publicou sem origin/main"; fails=$((fails + 1)); }
@@ -467,10 +471,10 @@ expect ask "git -C $repo push -u origin HEAD:feat/h" 'criaria uma tag'
 git -C "$repo" symbolic-ref HEAD "$head"
 git -C "$repo" update-ref -d refs/tags/v1 && git -C "$repo" update-ref -d refs/tags/v2 && git -C "$repo" update-ref -d refs/tags/feat/soltag
 
-# prefixos de atividade, branch padrão e caminhos protegidos extras vêm do .claude/risk.conf do projeto do hook (a pasta
-# .claude onde ele está, sem variável de teste): uma cópia dos hooks com um risk.conf próprio por caso
-cfg="$work/cfg/.claude"; mkdir -p "$cfg" && cp -r "$(dirname "$guard")" "$cfg/hooks"
-cfgguard="$cfg/hooks/$(basename "$guard")"
+# prefixos de atividade, branch padrão e caminhos protegidos extras vêm do .claude/risk.conf do projeto
+# (CLAUDE_PROJECT_DIR, aqui o $repo): um risk.conf próprio por caso, na árvore dele (o push confere commits, não a árvore)
+cfg="$repo/.claude"; mkdir -p "$cfg"
+cfgguard="$guard"
 conf() { local l; : > "$cfg/risk.conf"; for l in "$@"; do printf '%s%b' "$l" "${EOL:-\n}" >> "$cfg/risk.conf"; done; }
 cfgexpect() { guard="$cfgguard" expect "$@"; }
 # só o prefixo declarado vale (um comentário não declara; CRLF é tolerado); o ccr- da nuvem e o wip/ são embutidos

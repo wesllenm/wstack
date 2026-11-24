@@ -5,8 +5,7 @@
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-top=$(git rev-parse --show-toplevel 2> /dev/null)
-script=${1:-$top/.claude/scripts/prune-merged.sh}
+script=${1:-$(dirname "$0")/../scripts/prune-merged.sh}
 [ -f "$script" ] || { echo "prune-merged.sh não encontrado" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente: o gh falso precisa dele" >&2; exit 2; }
 script=$(cd "$(dirname "$script")" && pwd -P)/$(basename "$script")

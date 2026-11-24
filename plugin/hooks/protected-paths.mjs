@@ -61,7 +61,7 @@ export function exactRefCommit(dir, name) {
 // { files, failed }: os arquivos protegidos alterados entre o merge-base de origin/<branch padrão> com o commit e o commit,
 // ou o motivo de não ter conseguido conferir (failed não vazio vale como alterado: falha fechada).
 export function protectedChanged(dir, commit) {
-  if (confError()) return { files: [], failed: `não foi possível ler o .claude/risk.conf dos hooks (${confError()}): sem ele faltam os caminhos protegidos do projeto` };
+  if (confError()) return { files: [], failed: `não foi possível ler o .claude/risk.conf do projeto (${confError()}): sem ele faltam os caminhos protegidos do projeto` };
   const origin = `origin/${baseBranch()}`;
   try {
     git(dir, 'rev-parse', '--verify', '-q', `refs/remotes/${origin}^{commit}`);

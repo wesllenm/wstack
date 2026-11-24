@@ -6,8 +6,7 @@
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
 
-top=$(git rev-parse --show-toplevel 2> /dev/null)
-script=${1:-$top/.claude/scripts/permission-asks.mjs}
+script=${1:-$(dirname "$0")/../scripts/permission-asks.mjs}
 [ -f "$script" ] || { echo "permission-asks.mjs não encontrado" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente" >&2; exit 2; }
 command -v node > /dev/null || { echo "node ausente" >&2; exit 2; }
