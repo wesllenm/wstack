@@ -95,6 +95,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.12: o projeto nasce na nuvem. No projeto que ainda não cita o plugin, o `setup.sh` instala a maior tag
   `v<versão>` publicada, e o `session-start` do projeto sem `risk.conf` indica o `/wstack:bootstrap`
   (`docs/decisions.md`, plugin antes do bootstrap na nuvem). Antes disso, adotar exigia um passo no Claude Code local.
+- 0.0.13: a skill lead vira núcleo com leitura sob demanda (`reference/`) e playbooks por tipo de tarefa; entram as
+  skills `correct`, `how`, `why` e `unslop`, a revisão por outro fornecedor (`interrogate.mjs`), a arena de design e os
+  princípios citados no relatório (`principles.mjs`).
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
