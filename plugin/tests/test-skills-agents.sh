@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Conferência estática das skills e agentes do plugin (unidade 2.3, docs/migracao.md):
+# Conferência estática das skills, dos agentes e dos modelos .md do bootstrap (unidades 2.3 e 2.4, docs/migracao.md):
 # - nada cita o harness no projeto (.claude/scripts, .claude/hooks, .claude/cloud/setup.sh), o documento de origem (§)
 #   nem o projeto de origem;
 # - todo ${CLAUDE_PLUGIN_ROOT}/scripts/<x> e ${CLAUDE_PLUGIN_ROOT}/cloud/<x> citado existe no plugin, e a variável não
@@ -28,7 +28,10 @@ const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =
   return e.isDirectory() ? walk(p) : [p];
 });
 const rel = (p) => path.relative(plugin, p);
-const files = [...walk(path.join(plugin, 'skills')), ...walk(path.join(plugin, 'agents'))].filter((f) => f.endsWith('.md'));
+// os modelos do bootstrap (templates/) também: viram arquivos do projeto e não podem citar a origem nem o harness antigo
+const templates = path.join(plugin, 'templates');
+const files = [...walk(path.join(plugin, 'skills')), ...walk(path.join(plugin, 'agents')),
+  ...(fs.existsSync(templates) ? walk(templates) : [])].filter((f) => f.endsWith('.md'));
 
 const frontmatter = (text) => {
   const m = text.match(/^---\n([\s\S]*?)\n---\n/);

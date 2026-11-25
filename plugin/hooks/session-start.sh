@@ -18,6 +18,9 @@ if ! git_ge_238 || [ "$(git config --global --get safe.bareRepository 2> /dev/nu
   echo "AVISO de segurança: rode git config --global safe.bareRepository explicit (exige git 2.38 ou mais novo; hoje: $(git version)). Sem isso, um repositório bare forjado faz um git do allow executar comando."
 fi
 
+# Projeto sem o wstack (risk-conf.mjs --absent sai 10; a regra mora lá): daqui para baixo é workflow, não trava; nada é gravado.
+if [ ! -e .claude/risk.conf ]; then node "$plugin/hooks/risk-conf.mjs" --absent; [ $? = 10 ] && exit 0; fi
+
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 [ -n "$sid" ] || exit 0
 head=$(git rev-parse --verify -q HEAD) || exit 0

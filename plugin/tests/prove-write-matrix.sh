@@ -47,11 +47,11 @@ mkproject() { # mkproject <pasta>: repositório com as permissões e os hooks Pr
   local p=$1 t
   git init -q "$p" && git -C "$p" -c user.email=t@t -c user.name=t commit -q --allow-empty -m base
   mkdir -p "$p/.claude"
-  cp -r "$here/../hooks" "$p/.claude/hooks" && cp "$here/fixtures/risk.conf" "$p/.claude/risk.conf"
+  cp -r "$here/../hooks" "$p/.claude/hooks" && cp "$here/../templates/.claude/risk.conf" "$p/.claude/risk.conf"
   # as permissões do settings.json modelo e os PreToolUse do hooks.json do plugin, apontados para a cópia no projeto
   jq --slurpfile h "$here/../hooks/hooks.json" '{permissions: .permissions,
       hooks: {PreToolUse: ($h[0].hooks.PreToolUse | walk(if type == "string" then gsub("\"\\$\\{CLAUDE_PLUGIN_ROOT\\}\"/hooks/"; "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/") else . end))}}' \
-    "$here/fixtures/settings.json" > "$p/.claude/settings.json"
+    "$here/../templates/.claude/settings.json" > "$p/.claude/settings.json"
   for t in "${targets[@]}"; do t=${t%%|*}; case $t in .claude/hooks/push-guard.sh | .claude/settings.json) continue ;; esac; mkdir -p "$p/$(dirname "$t")"; echo original > "$p/$t"; done
 }
 

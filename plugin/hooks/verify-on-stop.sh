@@ -22,7 +22,8 @@ LINT_CMD=$(conf verify_lint)
 TEST_CMD=$(conf verify_test)
 
 LEARN_FILE="docs/review-calibration.md"
-LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
+# onde a escada de aprendizado da skill lead grava: núcleo e arquivos de área dos gotchas, complemento da rubrica
+LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/gotchas" "docs/review-rubric.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
 
 BLOCKED=".claude/verify-blocked.md"
 STAMP=".claude/.verify-ok"

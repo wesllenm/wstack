@@ -23,6 +23,10 @@ self_dir=$(cd "$(dirname "$0")" && pwd -P) # antes do cd: $0 pode ser relativo
 cd "${CLAUDE_PROJECT_DIR:-.}" 2> /dev/null || fail "diretório do projeto inacessível"
 top=$(git rev-parse --show-toplevel 2> /dev/null) || fail "fora de um repositório git"
 top=$(cd "$top" && pwd -P)
+# Projeto sem o wstack (risk-conf.mjs --absent sai 10; a regra mora lá): os hooks não registram nada.
+if [ "$hook" = 1 ] && [ ! -e "$top/.claude/risk.conf" ]; then
+  CLAUDE_PROJECT_DIR=$top node "$self_dir/../hooks/risk-conf.mjs" --absent; [ $? = 10 ] && exit 0
+fi
 common=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || fail "diretório comum do git inacessível"
 gitdir=$(cd "$(git rev-parse --git-dir)" && pwd -P)
 is_main=0; [ "$gitdir" = "$common" ] && is_main=1

@@ -445,6 +445,69 @@ for line in "${extracts[@]+"${extracts[@]}"}"; do
   esac
 done
 
+# ---------- plugin wstack na versão que o projeto fixa ----------
+# O .claude/settings.json do projeto (modelo do /wstack:bootstrap) declara o marketplace wstack com a referência (tag
+# vX.Y.Z ou commit) e liga o plugin; a sessão na nuvem não instala sozinha pelo settings.json do projeto (docs/sonda.md,
+# fato 1), então o setup instala no escopo do usuário. Sem ref, nada a fazer (o ambiente do próprio wstack instala do
+# clone). O arquivo é lido como dado pelo jq; repositório e ref só viram argumento depois do alfabeto fechado.
+pin_ok() { [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}#[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$ && $1 != *..* ]]; }
+wstack_pin() { # "<dono>/<repo>#<ref>"; "!" se o projeto liga o plugin e a referência não pôde ser lida; nada se não fixa
+  regular .claude/settings.json && grep -q '"wstack@wstack"' .claude/settings.json || return 0
+  command -v jq > /dev/null || { echo '!'; return 0; }
+  local r
+  r=$(jq -r '.extraKnownMarketplaces.wstack.source as $s | if .enabledPlugins["wstack@wstack"] == true and $s.source == "github"
+    and ($s.ref != null) then "\($s.repo)#\($s.ref)" else empty end' < .claude/settings.json 2> /dev/null) || { echo '!'; return 0; }
+  [ -z "$r" ] && return 0
+  if pin_ok "$r"; then echo "$r"; else echo '!'; fi
+}
+wstack_ok() { # wstack_ok <pin>: o marketplace do usuário está nessa ref e o plugin instalado é ela (tag pela versão, commit pelo sha)
+  local ref=${1#*#} known v c
+  known=$(jq -r '.wstack.source | "\(.repo)#\(.ref // "")"' < "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
+  [ "$known" = "$1" ] || return 1
+  read -r v c < <(jq -r '.plugins["wstack@wstack"][]? | select(.scope == "user") | "\(.version) \(.gitCommitSha)"' \
+    < "$HOME/.claude/plugins/installed_plugins.json" 2> /dev/null)
+  [ -n "${v:-}" ] || return 1
+  if [[ $ref =~ ^v[0-9] ]]; then [ "$ref" = "v$v" ]
+  elif [[ $ref =~ ^[0-9a-f]{7,40}$ ]]; then [[ ${c:-} == "$ref"* ]]
+  else return 0; fi # branch: a ref do marketplace basta
+}
+pin=$(wstack_pin)
+if [ "$pin" = '!' ]; then
+  # texto fixo: o valor do repositório não vai para o contexto da sessão
+  msg="referência do plugin wstack no .claude/settings.json ilegível (jq ausente, JSON inválido ou ref fora do alfabeto): plugin não instalado"
+  case "$mode" in plan | run) warn "$msg" ;; check) lack "$msg" ;; esac
+elif [ -n "$pin" ]; then
+  host_stacks+=(wstack)
+  if wstack_ok "$pin"; then
+    [ "$mode" = plan ] && plan "wstack: plugin já instalado de $pin"
+  else
+    case "$mode" in
+      plan) plan "wstack: instalar o plugin de $pin (claude plugin marketplace add e install, escopo do usuário)" ;;
+      check) lack "plugin wstack na versão fixada no .claude/settings.json (rodar setup.sh)" ;;
+      run)
+        if ! command -v claude > /dev/null; then warn "claude ausente: plugin wstack de $pin não instalado"
+        else
+          # a mesma entrada com outra ref é recusada pelo claude: sai e volta na ref nova. O remove desinstala o plugin
+          # (Claude Code 2.1.332), então, se a ref nova falhar (tag ainda não publicada, rede), volta a anterior: ficar sem o
+          # plugin é ficar sem as travas dele
+          prev=$(jq -r '.wstack.source | select(.source == "github") | "\(.repo)#\(.ref // "")"' \
+            < "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
+          pin_ok "$prev" || prev=""
+          claude plugin marketplace remove wstack > /dev/null 2>&1
+          if claude plugin marketplace add "$pin" && claude plugin install wstack@wstack; then
+            wstack_ok "$pin" && note "plugin wstack de $pin" || warn "plugin wstack instalado, mas o registro não confere com $pin"
+          elif [ -n "$prev" ] && [ "$prev" != "$pin" ] && { claude plugin marketplace remove wstack > /dev/null 2>&1
+            claude plugin marketplace add "$prev" && claude plugin install wstack@wstack; }; then
+            warn "plugin wstack de $pin não instalado (claude plugin falhou); mantido o anterior, $prev"
+          else
+            warn "plugin wstack de $pin não instalado (claude plugin falhou) e nenhum anterior voltou: as sessões ficam sem as travas do plugin"
+          fi
+        fi
+        ;;
+    esac
+  fi
+fi
+
 # ---------- git: repositório bare só explícito ----------
 # O git descobre um repositório bare pela pasta atual. Um bare forjado pela ferramenta de escrita (HEAD, objects, refs e
 # config, sem .git no nome, que o write-guard não barra) faria um git status do allow executar a config dele.

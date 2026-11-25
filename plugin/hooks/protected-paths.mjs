@@ -14,7 +14,7 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { git } from './git-repo.mjs';
-import { confError, confValues } from './risk-conf.mjs';
+import { confAbsent, confError, confValues, remoteDefault } from './risk-conf.mjs';
 
 // Caminho relativo à raiz do repositório. .gitattributes e .gitmodules valem em qualquer pasta: o git lê o .gitattributes de
 // cada pasta (filter= executa programa) e o .gitmodules de uma subpasta é inócuo, mas custa nada pedir. O .gitignore também:
@@ -36,8 +36,9 @@ const PROTECTED = [...CORE, ...confValues('protected').filter(Boolean).map(globR
 export const isProtected = (path) => PROTECTED.some((re) => re.test(path));
 
 // Primeira default_branch declarada no alfabeto fechado (sem barra); ausente ou inválida, main. O push-guard.mjs usa o
-// mesmo alfabeto para recusar o push para cada uma.
-export const defaultBranches = () => confValues('default_branch').filter((v) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v));
+// mesmo alfabeto para recusar o push para cada uma. No projeto sem risk.conf, a branch padrão do remoto (origin/HEAD).
+export const defaultBranches = () => [...confValues('default_branch'), ...(confAbsent() ? [remoteDefault()] : [])]
+  .filter((v) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v));
 const baseBranch = () => defaultBranches()[0] ?? 'main';
 
 // Commit da ref, '' se ela não existe (o git push dela também falharia: nada é publicado), erro se o git falhou.
@@ -61,7 +62,7 @@ export function exactRefCommit(dir, name) {
 // { files, failed }: os arquivos protegidos alterados entre o merge-base de origin/<branch padrão> com o commit e o commit,
 // ou o motivo de não ter conseguido conferir (failed não vazio vale como alterado: falha fechada).
 export function protectedChanged(dir, commit) {
-  if (confError()) return { files: [], failed: `não foi possível ler o .claude/risk.conf do projeto (${confError()}): sem ele faltam os caminhos protegidos do projeto` };
+  if (confError() && !confAbsent()) return { files: [], failed: `não foi possível ler o .claude/risk.conf do projeto (${confError()}): sem ele faltam os caminhos protegidos do projeto` };
   const origin = `origin/${baseBranch()}`;
   try {
     git(dir, 'rev-parse', '--verify', '-q', `refs/remotes/${origin}^{commit}`);

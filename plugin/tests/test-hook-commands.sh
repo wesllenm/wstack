@@ -10,15 +10,15 @@ set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd -P)
 hooks=${1:-$here/../hooks/hooks.json}
-settings=${2:-$here/fixtures/settings.json}
+settings=${2:-$here/../templates/.claude/settings.json}
 [ -f "$hooks" ] && [ -f "$settings" ] || { echo "hooks.json ou settings.json modelo não encontrado" >&2; exit 2; }
 command -v jq > /dev/null || { echo "jq ausente" >&2; exit 2; }
 plugin=$(cd "$(dirname "$hooks")/.." && pwd -P)
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-hookcmd-XXXX")
 trap 'rm -rf "$work"' EXIT
 fails=0
-# projeto de teste: um repositório com o risk.conf de referência versionado
-proj=$work/projeto; mkdir -p "$proj/.claude" && git init -q "$proj" && cp "$here/fixtures/risk.conf" "$proj/.claude/risk.conf"
+# projeto de teste: um repositório com o risk.conf modelo versionado
+proj=$work/projeto; mkdir -p "$proj/.claude" && git init -q "$proj" && cp "$here/../templates/.claude/risk.conf" "$proj/.claude/risk.conf"
 git -C "$proj" add -A && git -C "$proj" -c user.email=t@t -c user.name=t commit -q -m base
 
 cmd_of() { # cmd_of <matcher> <nome do hook>

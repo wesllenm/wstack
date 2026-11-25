@@ -8,9 +8,9 @@ set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd -P)
 guard=${1:-$here/../hooks/push-guard.sh}
 ckpt=${2:-$here/../scripts/checkpoint.sh}
-# o hook lê o risk.conf do projeto: cada repositório temporário versiona este no commit base, como um projeto real
-fixture=$here/fixtures/risk.conf
-[ -f "$guard" ] && [ -f "$ckpt" ] && [ -f "$fixture" ] || { echo "push-guard.sh, checkpoint.sh ou fixtures/risk.conf não encontrado" >&2; exit 2; }
+# o hook lê o risk.conf do projeto: cada repositório temporário versiona o modelo do bootstrap no commit base, como um projeto real
+fixture=$here/../templates/.claude/risk.conf
+[ -f "$guard" ] && [ -f "$ckpt" ] && [ -f "$fixture" ] || { echo "push-guard.sh, checkpoint.sh ou templates/.claude/risk.conf não encontrado" >&2; exit 2; }
 guard=$(cd "$(dirname "$guard")" && pwd -P)/$(basename "$guard"); ckpt=$(cd "$(dirname "$ckpt")" && pwd -P)/$(basename "$ckpt")
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-pg-XXXX")
 trap 'rm -rf "$work"' EXIT
@@ -484,7 +484,7 @@ cfgexpect ok "git -C $repo push -u origin feat/x"
 cfgexpect ok "git -C $repo push -u origin HEAD:refs/heads/feat/x"
 cfgexpect ok "git -C $repo push -u origin ccr-1ad6512c-bpqm1j"
 cfgexpect ok "git -C $repo push origin abc123:refs/heads/wip/x-1"
-# sem nenhum activity_branch (ou sem risk.conf), só o ccr- e o wip/ valem; main segue recusada
+# sem nenhum activity_branch (ou com o risk.conf do HEAD apagado da árvore), só o ccr- e o wip/ valem; main segue recusada
 conf '# vazio'
 cfgexpect ask "git -C $repo push -u origin feat/x"
 cfgexpect ok "git -C $repo push -u origin ccr-1ad6512c-bpqm1j"
@@ -562,9 +562,63 @@ mkbranch "$repo" ccr-1ad6512c-semconf src/b.cs
 rm -f "$cfg/risk.conf" && mkdir "$cfg/risk.conf"
 cfgexpect ask "git -C $repo push -u origin ccr-1ad6512c-semconf" 'risk.conf'
 rmdir "$cfg/risk.conf"
-# sem risk.conf também: os caminhos protegidos do projeto sumiriam em silêncio
+# apagado da árvore com o arquivo no HEAD também: os caminhos protegidos do projeto sumiriam em silêncio
 cfgexpect ask "git -C $repo push -u origin ccr-1ad6512c-semconf" 'risk.conf'
 cfgexpect ask "git -C $repo "$'\\\n'"push -u origin ccr-1ad6512c-semconf"
+
+# projeto que nunca adotou o wstack (sem .claude/risk.conf na árvore nem no HEAD): o hook não força pedido para branch
+# que não é a padrão, mas a padrão (main, master e a do origin/HEAD), o force e o núcleo de caminhos protegidos continuam
+cru="$work/cru"; git init -q --bare "$work/cru.git" && git init -q "$cru" && git -C "$cru" remote add origin "$work/cru.git"
+printf 'a\n' > "$cru/a.txt" && git -C "$cru" add a.txt && git -C "$cru" -c user.name=t -c user.email=t@t commit -q -m base
+git -C "$cru" push -q origin HEAD:refs/heads/develop 2> /dev/null && git -C "$cru" fetch -q origin
+git -C "$cru" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/develop
+mkbranch "$cru" qualquer/coisa src/a.cs
+mkbranch "$cru" feat/wf .github/workflows/x.yml
+mkbranch "$cru" feat/ci ci/x.sh
+crexpect() { CLAUDE_PROJECT_DIR="$cru" PAYLOAD_CWD="$cru" expect "$@"; }
+crexpect ok "git -C $cru push -u origin qualquer/coisa"
+crexpect ok "git -C $cru push -u origin feat/ci"
+crexpect ask "git -C $cru push -u origin feat/wf" '.github/workflows/x.yml'
+crexpect deny "git -C $cru push origin develop"
+crexpect deny "git -C $cru push origin qualquer/coisa:main"
+crexpect deny "git -C $cru push origin master"
+crexpect deny "git -C $cru push --force origin qualquer/coisa"
+crexpect ask "git status && git -C $cru push -u origin qualquer/coisa"
+# tag, nota e ref de rastreio não são branch: continuam pedindo, como no projeto que declara os prefixos
+crexpect ask "git -C $cru push origin qualquer/coisa:refs/tags/v1"
+crexpect ask "git -C $cru push origin HEAD:refs/tags/v1"
+crexpect ask "git -C $cru push origin qualquer/coisa:refs/notes/commits"
+crexpect ask "git -C $cru push origin qualquer/coisa:refs/remotes/origin/x"
+crexpect ask "git -C $cru push -u origin tags/v1"
+crexpect ask "git -C $cru push -u origin Refs/tags/v1"
+crexpect ok "git -C $cru push -u origin qualquer/coisa:refs/heads/outra"
+
+# projeto que adotou o wstack com o HEAD num commit anterior ao bootstrap (checkout que não cita a trava): o arquivo está
+# na branch padrão, então nada afrouxa: sem o arquivo na árvore o hook não conhece prefixos, branch padrão nem caminhos
+# protegidos do projeto, e pede (falha fechada, como na 0.0.10); nenhum desses pushes sai sem decisão
+ado="$work/adotado"; git init -q --bare "$work/adotado.git" && git init -q -b develop "$ado" && git -C "$ado" remote add origin "$work/adotado.git"
+printf 'a\n' > "$ado/a.txt" && git -C "$ado" add a.txt && git -C "$ado" -c user.name=t -c user.email=t@t commit -q -m pre
+pre=$(git -C "$ado" rev-parse HEAD)
+mkdir -p "$ado/.claude" && printf 'default_branch = develop\nactivity_branch = feat/\nprotected = ci/*\n' > "$ado/.claude/risk.conf"
+git -C "$ado" add -A && git -C "$ado" -c user.name=t -c user.email=t@t commit -q -m bootstrap
+git -C "$ado" push -q origin develop 2> /dev/null && git -C "$ado" fetch -q origin
+git -C "$ado" checkout -q -b release/a "$pre"
+mkdir -p "$ado/ci" && printf 'x\n' > "$ado/ci/x.sh" && git -C "$ado" add -A && git -C "$ado" -c user.name=t -c user.email=t@t commit -q -m ci
+git -C "$ado" branch -q feat/b
+adexpect() { CLAUDE_PROJECT_DIR="$ado" PAYLOAD_CWD="$ado" expect "$@"; }
+adexpect ask "git -C $ado push -u origin release/a"
+adexpect ask "git -C $ado push -u origin feat/b"
+adexpect ask "git -C $ado push -u origin feat/b:release/b"
+adexpect notok "git -C $ado push origin feat/b:develop"
+adexpect notok "git -C $ado push origin feat/b:refs/tags/v9"
+# objeto de troca (git replace, que não cita a trava): o hook vê os commits reais, que são os que o push manda
+git -C "$ado" replace "$(git -C "$ado" rev-parse develop)" "$(git -C "$ado" commit-tree "$pre^{tree}" -p "$pre" -m x)"
+adexpect ask "git -C $ado push -u origin release/a"
+git -C "$ado" replace -d "$(git -C "$ado" rev-parse develop)" > /dev/null
+git -C "$ado" checkout -q -b feat/x develop
+mkdir -p "$ado/ci" && printf 'y\n' > "$ado/ci/y.sh" && git -C "$ado" add -A && git -C "$ado" -c user.name=t -c user.email=t@t commit -q -m ci
+git -C "$ado" replace "$(git -C "$ado" rev-parse feat/x)" "$(git -C "$ado" commit-tree "develop^{tree}" -p develop -m inocente)"
+adexpect ask "git -C $ado push -u origin feat/x" 'ci/y.sh'
 
 # repositório bare forjado numa pasta qualquer (sem .git no nome, fora do alcance do write-guard): com
 # safe.bareRepository=explicit, que o setup.sh grava na config global, o git recusa usá-lo pela pasta atual

@@ -46,8 +46,61 @@ mkdir -p "$solto/.claude/risk.conf"
 got=$(CLAUDE_PROJECT_DIR="$solto" probe "$proj" activity_branch)
 [ "${got%%|*}" = '' ] && [ -n "${got#*|}" ] || { echo "FALHOU [conf-pasta]: esperado vazio com motivo, obtido '$got'"; fails=$((fails + 1)); }
 # um risk.conf ao lado do módulo (a pasta do plugin) nunca é lido
-plug="$work/plugin"; mkdir -p "$plug/hooks" && cp "$mod" "$plug/hooks/" && printf 'activity_branch = plugin/\n' > "$plug/risk.conf"
+plug="$work/plugin"; mkdir -p "$plug/hooks" && cp "$mod" "$(dirname "$mod")/git-repo.mjs" "$plug/hooks/" && printf 'activity_branch = plugin/\n' > "$plug/risk.conf"
 expect conf-do-plugin "$(mod="$plug/hooks/risk-conf.mjs" CLAUDE_PROJECT_DIR="$proj" probe "$solto" activity_branch)" 'feat/,fix/|'
+
+# confAbsent: só o projeto que não adotou o wstack (arquivo fora da árvore E do HEAD) é "sem risk.conf"
+absent() { (cd "$1" && CLAUDE_PROJECT_DIR="$1" node --input-type=module -e "
+  const m = await import(process.argv[1]); process.stdout.write(String(m.confAbsent()) + '|' + m.remoteDefault());" "$mod"); }
+cru="$work/cru"; mkdir -p "$cru" && git init -q "$cru"
+expect ausente-sem-commit "$(absent "$cru")" 'true|'
+git -C "$cru" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
+expect ausente-com-commit "$(absent "$cru")" 'true|'
+git -C "$cru" update-ref refs/remotes/origin/develop HEAD && git -C "$cru" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/develop
+expect ausente-branch-do-remoto "$(absent "$cru")" 'true|develop'
+expect presente "$(absent "$proj")" 'false|'
+apagado="$work/apagado"; mkdir -p "$apagado/.claude" && git init -q "$apagado" && printf 'default_branch = main\n' > "$apagado/.claude/risk.conf"
+git -C "$apagado" add .claude/risk.conf && git -C "$apagado" -c user.name=t -c user.email=t@t commit -q -m base && rm "$apagado/.claude/risk.conf"
+expect apagado-da-arvore-nao-conta "$(absent "$apagado")" 'false|'
+expect conf-pasta-nao-conta "$(absent "$solto")" 'false|'
+# HEAD num commit anterior ao bootstrap (checkout de branch ou commit antigo): o arquivo está em outra ref, então o projeto
+# adotou o wstack (o estado que o agente move sem citar a trava não liga o modo inerte)
+antigo="$work/antigo"; mkdir -p "$antigo" && git init -q -b main "$antigo"
+git -C "$antigo" -c user.name=t -c user.email=t@t commit -q --allow-empty -m pre && pre=$(git -C "$antigo" rev-parse HEAD)
+mkdir -p "$antigo/.claude" && printf 'default_branch = main\n' > "$antigo/.claude/risk.conf"
+git -C "$antigo" add -A && git -C "$antigo" -c user.name=t -c user.email=t@t commit -q -m bootstrap
+git -C "$antigo" checkout -q -b release/a "$pre"
+expect head-antigo-branch-com-conf "$(absent "$antigo")" 'false|'
+git -C "$antigo" checkout -q --detach "$pre"
+expect head-antigo-destacado "$(absent "$antigo")" 'false|'
+# só no remoto (branch local apagada): também adotado
+git -C "$antigo" update-ref refs/remotes/origin/main main && git -C "$antigo" checkout -q release/a && git -C "$antigo" branch -q -D main
+expect so-no-remoto "$(absent "$antigo")" 'false|'
+# objeto de troca (git replace) que esconde o arquivo na ponta: o que vale é o commit real
+git -C "$antigo" replace "$(git -C "$antigo" rev-parse origin/main)" "$(git -C "$antigo" commit-tree "$pre^{tree}" -p "$pre" -m x)"
+expect replace-nao-esconde "$(absent "$antigo")" 'false|'
+git -C "$antigo" replace -d "$(git -C "$antigo" rev-parse origin/main)" > /dev/null
+# branch e ref de rastreio apagadas (git branch -d e -d -r, que não citam a trava): o reflog do HEAD ainda guarda o bootstrap
+git -C "$antigo" update-ref -d refs/remotes/origin/main
+expect so-no-reflog "$(absent "$antigo")" 'false|'
+# branch órfã (HEAD sem commit) com as refs apagadas: o reflog continua valendo
+orfa="$work/orfa"; mkdir -p "$orfa/.claude" && git init -q -b main "$orfa" && printf 'default_branch = main\n' > "$orfa/.claude/risk.conf"
+git -C "$orfa" add -A && git -C "$orfa" -c user.name=t -c user.email=t@t commit -q -m bootstrap
+git -C "$orfa" switch -q --orphan novo && git -C "$orfa" branch -q -D main
+(cd "$orfa" && CLAUDE_PROJECT_DIR="$orfa" node "$mod" --absent); expect cli-orfa "$?" 0
+# muitas refs (repositório alheio grande): continua sem o wstack, sem estourar o buffer
+muitas="$work/muitas"; mkdir -p "$muitas" && git init -q "$muitas" && git -C "$muitas" -c user.name=t -c user.email=t@t commit -q --allow-empty -m b
+h=$(git -C "$muitas" rev-parse HEAD)
+for i in $(seq 1 20000); do echo "create refs/remotes/origin/b$i $h"; done | git -C "$muitas" update-ref --stdin
+expect muitas-refs "$(absent "$muitas")" 'true|'
+# ref corrompida: dúvida, não ausente
+corr="$work/corrompido"; mkdir -p "$corr" && git init -q -b main "$corr" && git -C "$corr" -c user.name=t -c user.email=t@t commit -q --allow-empty -m b
+printf 'lixo\n' > "$corr/.git/refs/heads/main"
+expect ref-corrompida-duvida "$(absent "$corr")" 'false|'
+# a linha de comando que os hooks de shell usam: código 10 = projeto sem o wstack (o 1 é o do node que falha), 0 = adotado
+# ou dúvida
+(cd "$cru" && CLAUDE_PROJECT_DIR="$cru" node "$mod" --absent); expect cli-ausente "$?" 10
+(cd "$antigo" && CLAUDE_PROJECT_DIR="$antigo" node "$mod" --absent); expect cli-head-antigo "$?" 0
 
 if [ "$fails" -eq 0 ]; then echo "test-risk-conf: todos os casos passaram"; exit 0; fi
 echo "test-risk-conf: $fails falha(s)"
