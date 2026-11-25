@@ -60,7 +60,27 @@ printf '%s\n' 'Princípios aplicados: domain-modeling — invariantes — agrega
 out=$(node "$script" "$main" --report "$rel"); code=$?
 [ "$code" = 3 ] || fail "citação sem leitura: código $code"
 printf '%s\n' "$out" | grep -q '^SEM LEITURA: domain-modeling' || fail 'citação sem leitura: skill não acusada'
-printf '%s\n' "$out" | grep -q '^SEM LEITURA: lead/reference/arena.md' || fail 'citação sem leitura: referência não acusada'
+printf '%s\n' "$out" | grep -q '^SEM LEITURA: .*reference/arena.md' || fail 'citação sem leitura: referência não acusada'
+
+# separador com meia-risca ou hífen no lugar do travessão: mesma skill, sem falso "sem leitura"
+for sep in '–' '-'; do
+  printf 'Princípios aplicados: tdd %s vermelho antes %s teste novo\nReferências lidas: reference/revisao.md %s antes\n' "$sep" "$sep" "$sep" > "$rel"
+  out=$(node "$script" "$main" --report "$rel"); code=$?
+  [ "$code" = 0 ] || fail "separador '$sep': código $code ($out)"
+done
+# referência de outra skill sem o prefixo dela, e com o prefixo errado
+use Read '{"file_path":"/h/.claude/plugins/cache/wstack/wstack/0.0.13/skills/performance/reference/dotnet.md"}' > "$work/perf.jsonl"
+printf 'Princípios aplicados: nenhum\nReferências lidas: reference/dotnet.md — antes do benchmark\n' > "$rel"
+node "$script" "$work/perf.jsonl" --report "$rel" > /dev/null; code=$?
+[ "$code" = 0 ] || fail "referência de outra skill sem prefixo: código $code"
+printf 'Princípios aplicados: nenhum\nReferências lidas: query-plan/reference/dotnet.md — antes\n' > "$rel"
+node "$script" "$work/perf.jsonl" --report "$rel" > /dev/null; code=$?
+[ "$code" = 3 ] || fail "referência com prefixo de outra skill: código $code"
+# frontmatter de agente com CRLF: a pré-carga continua valendo (agente sintético numa cópia do plugin)
+plug=$work/plug; mkdir -p "$plug/scripts" "$plug/agents"; cp "$script" "$plug/scripts/"
+printf -- '---\r\nname: crlf\r\nskills:\r\n  - security\r\n---\r\n# x\r\n' > "$plug/agents/crlf.md"
+out=$(node "$plug/scripts/principles.mjs" "$main" --agent crlf)
+printf '%s\n' "$out" | grep '^carregadas:' | grep -qw security || fail "frontmatter CRLF: pré-carga ignorada ($out)"
 
 printf 'Princípios aplicados: nenhum\nReferências lidas: nenhuma\n' > "$rel"
 node "$script" "$main" --report "$rel" > /dev/null; code=$?
