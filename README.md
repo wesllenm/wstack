@@ -16,13 +16,26 @@ encerrar, e push só para branch de atividade.
 
 ## Como uma tarefa anda
 
-```text
-pedido ─► início ─► classificação ─► plano ─► aprovação única ─► execução ─► revisão ─► commit ─► limpeza ─► relatório
-            │            │                                          │            │
-       contexto,    classify-diff.sh                         implementer    lentes ─► check-findings
-       recall,      (risk.conf)                              (TDD, sprint      ─► review-verifier
-       sessões                                               contract)         ─► correção (máx. 2 rodadas)
+```mermaid
+flowchart TD
+    A([Pedido do desenvolvedor]) --> B["<b>1. Início</b><br/>contexto do projeto<br/>sessões paralelas e recall"]
+    B --> C["<b>2. Classificação</b><br/>classify-diff.sh + risk.conf<br/>TRIVIAL · SIMPLES · COMPLEXA · CRITICA"]
+    C --> D["<b>3. Plano</b><br/>escopo, testes, agentes<br/>e condição de parada"]
+    D --> E{{"Aprovação única<br/>(desenvolvedor)"}}
+    E -->|aprovado| F["<b>4. Execução</b><br/>implementer com TDD<br/>planner e explore quando precisa"]
+    F --> G["<b>5. Revisão</b><br/>lentes em paralelo<br/>check-findings + review-verifier"]
+    G -->|achado confirmado| H["Correção<br/>(no máximo 2 rodadas)"]
+    H -->|revisa só o delta| G
+    G -->|sem achado pendente| I["<b>6. Commit</b><br/>skill commit, branch de atividade"]
+    I --> J["<b>7. Limpeza e aprendizado</b><br/>gotchas e calibração da revisão"]
+    J --> K([Relatório])
+
+    classDef humano fill:#fde68a,stroke:#b45309,color:#000
+    class E humano
 ```
+
+Os hooks valem em todos os passos, sem depender do modelo: travas de escrita, de comando e de push na execução, e
+build, formato e testes verdes antes de a sessão encerrar.
 
 1. **Início.** Lê o contexto do projeto (`CLAUDE.md`, `.claude/project.md`, decisões), confere sessões
    paralelas no mesmo repositório (`sessions.sh`) e recupera histórico de sessões anteriores quando a área já foi
