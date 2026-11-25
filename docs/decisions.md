@@ -343,3 +343,20 @@ não foi lido conta como passo pulado. O `test-skills-agents.sh` passa a conferi
 os scripts na forma `<plugin>/scripts/<x>` de `reference/` e que todo `reference/<x>.md` seja citado no `SKILL.md` da
 skill. Que o modelo leia o arquivo no momento certo é orientação, sem hook que confira: o campo Referências lidas e a
 calibração mostram se falha.
+
+## 2026-11-25: correção do desenvolvedor registrada na hora (skill `correct`)
+
+**Decisão:** a skill `correct` (`/wstack:correct`, ou carregada pelo `lead` quando o desenvolvedor corrige o agente)
+corrige o trabalho em curso, escreve a correção como fato de uma linha, procura se ela já estava escrita (primeira,
+ignorada ou repetida), escolhe o degrau da escada de correção e grava tudo na seção Correções do `.claude/SESSION.md`.
+Texto do projeto (degraus 3 a 5) é aplicado na hora. Mecanismo (degraus 1 e 2), hook, `settings.json` e texto do plugin
+ficam como proposta para o relatório. O passo Aprendizado do `lead` consome a seção, e o Clean state check exige destino
+para cada linha.
+
+**Por quê:** a escada já promovia na primeira vez a correção vinda do desenvolvedor, mas só no fim da tarefa. A correção
+feita no meio se perdia em compactação, reinício da VM ou interrupção. O `SESSION.md` já é arquivo de aprendizado para o
+gate do Stop (gravar nele não dispara build) e já é lido no Início e no Aprendizado.
+
+**O que não faz:** nenhum hook detecta a correção. Que a skill seja carregada depende do gatilho da `description` e da
+linha na seção Aprendizado do `lead`; o `/wstack:correct` cobre o caso em que o modelo não percebe. Um `UserPromptSubmit`
+que reconheça correção por texto fica para quando a calibração mostrar correções perdidas.

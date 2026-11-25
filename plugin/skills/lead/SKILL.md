@@ -253,7 +253,7 @@ Antes do relatório final:
 9. nenhum teste existente removido, pulado ou enfraquecido, e nenhum snapshot ou baseline atualizado, sem autorização (`git diff` nos arquivos de teste);
 10. commits atômicos e mensagens conforme a skill `commit`;
 11. working tree sem mudanças esquecidas fora dos commits;
-12. aprendizado promovido ou proposto, e a tarefa tem a sua linha em Registro de `docs/review-calibration.md` (inclusive sem commit);
+12. aprendizado promovido ou proposto, nenhuma linha de Correções do `SESSION.md` sem destino, e a tarefa tem a sua linha em Registro de `docs/review-calibration.md` (inclusive sem commit);
 13. `.claude/verify-blocked.md` ausente, salvo quando a tarefa termina bloqueada;
 14. limpeza comparada com o estado inicial;
 15. nada que já existia removido sem pergunta;
@@ -271,6 +271,7 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
 
 - Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md` (inclusive as linhas `aprendizado:` dos revisores, que não gravam arquivo: o `lead` as registra, cortando o que já está lá). Só entra no núcleo (`docs/gotchas.md`, que o `CLAUDE.md` importa em toda sessão) o que pega qualquer tarefa, em qualquer área; o núcleo fica em até 40 linhas e 8 KB. Área nova exige arquivo novo e linha no índice do núcleo, com os caminhos e assuntos que obrigam a lê-lo; fato que serve a duas áreas fica em uma só, com uma linha de referência na outra.
 - Segunda ocorrência, ou primeira quando a correção veio do desenvolvedor (na sessão ou no PR): promover para o degrau mais alto da escada de correção que resolva com custo aceitável. A atenção do desenvolvedor é o recurso que não escala; o que ele precisou apontar uma vez não pode depender de ele apontar de novo.
+- Correção do desenvolvedor no meio da tarefa: carregar a skill `correct` na hora, não no fim. Ela corrige o trabalho em curso, grava a correção na seção Correções do `.claude/SESSION.md` com o degrau proposto e aplica o que for texto do projeto. Neste passo, cada linha de Correções é fonte obrigatória e termina promovida, proposta ou recusada pelo desenvolvedor; depois a seção sai do `SESSION.md`.
 
 **Escada de correção** (quanto mais alto, menos depende de alguém lembrar):
 
@@ -340,7 +341,7 @@ Calibração: nenhuma | categoria — refutados/recusados — proposta para Não
 Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do PR — critério do review-critical atendido
 Queries (query-plan): não aplicável | comando (arquivo:método) — veredito — evidência — referência oficial
 Decisões: nenhuma | aguardando aprovação
-Aprendizado: nenhum | falha recorrente — onde foi promovida | proposta; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
+Aprendizado: nenhum | falha recorrente — onde foi promovida | proposta; correções na sessão: nenhuma | fato — degrau — aplicado | proposta | recusado; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
 Limpeza: removido / mantido (motivo) / preexistente aguardando decisão
 Riscos e limitações:
 Follow-ups: candidatos de test-audit e itens fora do escopo
