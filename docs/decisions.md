@@ -322,3 +322,135 @@ passam a ler os modelos no lugar das fixtures da 2.2, e os dois casos fracos ano
 arquivo dentro do projeto, então os checklists de `review-rubric/reference/paths/` do plugin não podem ser citados ali
 (follow-up). O gate de aprendizado do Stop passa a tratar `docs/gotchas/` e `docs/review-rubric.md` como arquivos de
 aprendizado, onde a escada da skill lead grava desde a 2.3.
+
+## 2026-11-25: skill lead em núcleo e leitura sob demanda
+
+**Decisão:** o `SKILL.md` da skill `lead` fica só com o que vale em toda tarefa (classificar, planejar, aprovação
+única, roteamento, testes, as duas velocidades da revisão, commits, pipeline, interrupções, stop condition, aprendizado
+e relatório). O detalhe que só parte das tarefas usa vai para `plugin/skills/lead/reference/`: `revisao.md`,
+`delegacao.md`, `limpeza.md`, `sessao.md`, `paralelo.md`, `nuvem.md`, `lote.md` e `aprendizado.md`. A tabela Leitura sob
+demanda do núcleo diz quando ler cada um, e cada seção que saiu deixa no núcleo um parágrafo com o gatilho e o que não
+muda em nenhum caso. O texto foi movido sem reescrita; só mudaram as referências cruzadas e `${CLAUDE_PLUGIN_ROOT}`,
+que em `reference/` vira `<plugin>`. A primeira mensagem de toda tarefa passa a trazer as linhas Objetivo e Menor
+mudança, e o plano parte delas.
+
+**Por quê:** com 76 KB carregados em toda tarefa, as regras do meio do arquivo eram as que mais se perdiam. O núcleo
+ficou com cerca de 43 KB, e o detalhe passa a ser lido no momento em que é usado, mais perto da ação. A linha de menor
+mudança segura o escopo antes de o processo crescer em volta dele.
+
+**O que muda:** o relatório ganha os campos Objetivo e menor mudança e Referências lidas; arquivo que o momento pedia e
+não foi lido conta como passo pulado. O `test-skills-agents.sh` passa a conferir os caminhos `${CLAUDE_PLUGIN_ROOT}/skills/…`,
+os scripts na forma `<plugin>/scripts/<x>` de `reference/` e que todo `reference/<x>.md` seja citado no `SKILL.md` da
+skill. Que o modelo leia o arquivo no momento certo é orientação, sem hook que confira: o campo Referências lidas e a
+calibração mostram se falha.
+
+## 2026-11-25: correção do desenvolvedor registrada na hora (skill `correct`)
+
+**Decisão:** a skill `correct` (`/wstack:correct`, ou carregada pelo `lead` quando o desenvolvedor corrige o agente)
+corrige o trabalho em curso, escreve a correção como fato de uma linha, procura se ela já estava escrita (primeira,
+ignorada ou repetida), escolhe o degrau da escada de correção e grava tudo na seção Correções do `.claude/SESSION.md`.
+Texto do projeto (degraus 3 a 5) é aplicado na hora. Mecanismo (degraus 1 e 2), hook, `settings.json` e texto do plugin
+ficam como proposta para o relatório. O passo Aprendizado do `lead` consome a seção, e o Clean state check exige destino
+para cada linha.
+
+**Por quê:** a escada já promovia na primeira vez a correção vinda do desenvolvedor, mas só no fim da tarefa. A correção
+feita no meio se perdia em compactação, reinício da VM ou interrupção. O `SESSION.md` já é arquivo de aprendizado para o
+gate do Stop (gravar nele não dispara build) e já é lido no Início e no Aprendizado.
+
+**O que não faz:** nenhum hook detecta a correção. Que a skill seja carregada depende do gatilho da `description` e da
+linha na seção Aprendizado do `lead`; o `/wstack:correct` cobre o caso em que o modelo não percebe. Um `UserPromptSubmit`
+que reconheça correção por texto fica para quando a calibração mostrar correções perdidas.
+
+## 2026-11-25: playbooks por tipo de tarefa na skill lead
+
+**Decisão:** depois de classificar o risco, o `lead` escolhe o tipo da tarefa pela tabela Tipo de tarefa do núcleo e
+põe os passos do playbook na lista de tarefas. Só três tipos ganham playbook, em `plugin/skills/lead/playbooks/`, porque
+só eles mudam a sequência de passos: `bug.md` (reproduzir, achar a causa, corrigir), `investigacao.md` (hipóteses e
+evidência, sem diff nem commit; a resposta substitui o relatório) e `performance.md` (alvo, linha de base, uma mudança
+por vez medida de novo, ganho preso por teste). Feature segue o Pipeline do nível; refatoração, auditoria de testes,
+manutenção do aprendizado e retomada apontam para o que já existia (skill `refactoring`, Pipeline, `aprendizado.md`,
+`sessao.md`).
+
+**Por quê:** o nível de risco decidia quanto processo aplicar, mas tratava toda tarefa como "implementar uma mudança".
+Um bug corrigido sem reprodução e sem causa, ou uma otimização sem linha de base, passam por todos os gates e continuam
+errados. Risco e tipo são eixos separados: um bug CRITICA segue o playbook de bug com os gates da CRITICA.
+
+**O que muda:** o Registro aceita `investigação` no lugar do nível (o `summarize-runs.mjs` a conta) e o relatório ganha
+o campo Tipo. O `test-skills-agents.sh` aplica a `playbooks/` as mesmas regras de `reference/`. Que o tipo seja escolhido
+e o playbook lido é orientação; o campo Referências lidas do relatório mostra quando não foi.
+
+## 2026-11-25: interrogatório por outro fornecedor e arena de design
+
+**Decisão (interrogatório):** o `interrogate.mjs` manda o pacote de revisão de COMPLEXA e CRITICA para os modelos que
+o projeto declara em `interrogate_cmd` no `risk.conf` (`<nome> <comando>`, um por modelo; o comando lê o pedido da
+entrada padrão). Cada modelo tenta quebrar o diff e devolve candidatos no formato da `review-rubric`, que passam pela
+ancoragem do `check-findings.mjs` e pelo `review-verifier` como os das lentes: um ataca, o outro confirma. Desligado
+por padrão. O `script-allow` o aprova sem pedido porque o consentimento é o `interrogate_cmd`, num arquivo que já é
+trava (ask/deny).
+
+**Por quê:** as lentes, o verificador e o `review-critical` são todos do mesmo fornecedor, e erram parecido. Um modelo
+de outro fornecedor tende a errar diferente. O plugin não escolhe fornecedor nem guarda chave: o comando é do projeto,
+como os `verify_*`.
+
+**Riscos aceitos:** o pacote sai da máquina para o fornecedor, então ligar é decisão registrada no `docs/decisions.md`
+do projeto (em projeto de cliente, decisão do cliente). O diff pode trazer texto hostil para o modelo externo: a CLI
+deve ser configurada sem ferramentas de escrita nem de execução, e a saída dele só vira correção depois do verificador.
+O ganho ainda não foi medido: o relatório conta por modelo os candidatos, os descartados na ancoragem e os
+confirmados, e a manutenção do aprendizado decide se o interrogatório fica.
+
+**Decisão (arena):** em decisão de design cara de reverter (modelagem de domínio, contrato público, forma do dado
+persistido), no plano de COMPLEXA ou CRITICA, dois ou três `planner` em paralelo com posturas diferentes, critérios
+escritos antes das propostas, e protótipo em worktree por `implementer` só para critério que só se decide rodando. A
+comparação vai ao plano, e a aprovação única decide. Arena de N implementações completas para juntar as melhores partes
+ficou de fora: juntar partes que tocam o mesmo invariante é uma proposta nova, e o custo de integrar e revisar N
+implementações não se paga onde a decisão difícil é de design.
+
+## 2026-11-25: princípios citados na decisão
+
+**Decisão:** o campo Skills usadas do relatório vira Princípios aplicados, `skill — regra — decisão que mudou`, um por
+linha, e só vale skill carregada na sessão e regra que fez o plano ou o código sair diferente; `nenhum` é resposta
+válida. No fechamento, o `principles.mjs` lê a transcrição da sessão e dos subagentes, lista o que foi carregado
+(ferramenta Skill, `/comando`, pré-carga dos agentes chamados) e lido (`reference/`, `playbooks/`), e recusa citação sem
+leitura. A linha de Registro ganha `— princípios: <citadas> (carregadas: N)`, que o `summarize-runs.mjs` conta.
+
+**Por quê:** "Skills usadas" listava o que foi carregado, não o que mudou alguma coisa, e não havia como conferir. Com a
+citação presa a uma decisão e a leitura conferida na transcrição, o raciocínio fica auditável e a manutenção de 90 dias
+ganha o dado que o orçamento de complexidade pedia: skill carregada e nunca citada tem gatilho largo ou texto que não
+muda decisão; skill que nem aparece é candidata a sair.
+
+**O que muda:** as skills de engenharia continuam como estão (já eram skills separadas e curtas). O `principles.mjs`
+pede aprovação, como o `permission-asks.mjs`, porque lê a transcrição. Que a regra citada tenha de fato mudado a
+decisão continua sendo palavra do relatório: o script só garante que ela foi lida.
+
+## 2026-11-25: skills de entender código (`how` e `why`)
+
+**Decisão:** duas skills só de leitura, fora do pipeline de risco do `lead` (sem classificação, plano, aprovação nem
+Registro), invocáveis por `/wstack:how` e `/wstack:why` ou pela `description`, e válidas em repositório sem o wstack
+adotado. A `how` segue o caminho da entrada ao efeito lendo o código, com `arquivo:linha` em cada passo e o que foi
+deduzido sem abrir separado em Não verificado. A `why` acha no histórico o commit que mudou o significado do trecho
+(`git log -L` e `git log -S`, que o `git-read-allow` aprova; `git blame` pediria permissão), o PR e a revisão, as
+decisões e os gotchas, e separa motivo registrado de inferido.
+
+**Por quê:** perguntar algo sobre o código exigia passar pelo `lead` ou chamar o `explore` à mão, e o `explore` devolve
+localização, não explicação nem motivo. Em projeto de cliente, entender antes de mudar é a maior parte do trabalho.
+Separar registrado de inferido importa porque a pergunta "por que isso está aqui" costuma preceder "posso tirar?".
+
+**O que não faz:** não decide se o código pode sair, não roda experimento (isso é o playbook de investigação) e não
+reescreve o histórico de onde a resposta vem: em clone raso, diz que o histórico acaba ali.
+
+## 2026-11-25: texto técnico em PT-BR sem enfeite (skill `unslop`)
+
+**Decisão:** a skill `unslop` reúne as regras de escrita para commit, PR, documentação, relatório e comentário de
+revisão em português: o que cortar, o que trocar, formato e a gramática que texto gerado erra. O que dá para checar por
+padrão foi para o `slop-check.mjs`. **Erro** é o que sempre sai: abertura e fecho vazios, "este commit", muleta de
+ênfase, gerundismo, "a nível de", "o mesmo" como pronome e emoji. **Aviso** é palavra suspeita, que só fica se disser
+algo concreto. A skill `commit` passa a escrever a mensagem num arquivo da pasta temporária, rodar o script e commitar
+com `git commit -F <arquivo>`. O corpo do PR passa pelo mesmo script antes do `gh pr create`.
+
+**Por quê:** os commits são em português, e as listas de anti-slop que existem são de inglês. Erro e aviso ficaram
+separados porque palavras como "otimizar" e "através de" têm uso legítimo. Nos commits desta branch, o script deu um
+aviso e nenhum erro; em `docs/decisions.md`, dois avisos legítimos.
+
+**O que não faz:** não julga clareza nem estrutura, que continuam com a skill. Não é hook: rodar antes do commit é
+orientação da skill `commit`. O script imprime só a linha e o padrão, nunca o texto, porque o `script-allow` o aprova
+sem pedido e ele não pode servir para ler um arquivo protegido por tabela.

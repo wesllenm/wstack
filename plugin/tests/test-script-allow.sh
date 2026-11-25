@@ -20,7 +20,7 @@ trap 'rm -rf "$work"' EXIT
 fails=0
 plug=$work/home/.claude/plugins/cache/wstack/wstack/0.0.0
 mkdir -p "$plug/scripts" "$plug/tests" "$plug/cloud" && cp -r "$src" "$plug/hooks"
-for s in classify-diff.sh checkpoint.sh sessions.sh enviar-nuvem.sh nova-atividade.sh review-dispatch.mjs recall.mjs; do
+for s in classify-diff.sh checkpoint.sh sessions.sh enviar-nuvem.sh nova-atividade.sh review-dispatch.mjs recall.mjs interrogate.mjs slop-check.mjs; do
   printf '#!/usr/bin/env bash\n' > "$plug/scripts/$s"
 done
 printf '#!/usr/bin/env bash\n' > "$plug/tests/test-path-guard.sh" && printf '#!/usr/bin/env bash\n' > "$plug/cloud/setup.sh"
@@ -44,6 +44,8 @@ for c in "bash $plug/scripts/classify-diff.sh" "bash $plug/scripts/classify-diff
   "$plug/scripts/classify-diff.sh abc123" "bash $plug/scripts/checkpoint.sh permissoes 1 \"esperando aprovação\"" \
   "bash $plug/scripts/checkpoint.sh permissoes 2 'motivo com \$(id) literal'" "bash $plug/scripts/sessions.sh claim src/a.cs" \
   "$plug/scripts/sessions.sh touch" "node $plug/scripts/review-dispatch.mjs --base main --json" \
+  "node $plug/scripts/interrogate.mjs /tmp/claude-x/pacote.txt /tmp/claude-x/interrogate.txt" \
+  "node $plug/scripts/slop-check.mjs /tmp/claude-x/commit.txt" \
   "bash $plug/scripts/classify-diff.sh --base=origin/main" "bash $plug/scripts/classify-diff.sh  --paths   src/a.cs"; do
   expect allow "$c"
 done
@@ -55,7 +57,7 @@ done
 
 # fora da lista: o que pede aprovação de propósito e o que a origem nunca liberou
 for c in "bash $plug/scripts/enviar-nuvem.sh plano" "bash $plug/scripts/nova-atividade.sh x" "node $plug/scripts/recall.mjs termo" \
-  "node $plug/scripts/otlp-sink.mjs" "bash $plug/scripts/inexistente.sh"; do
+  "node $plug/scripts/otlp-sink.mjs" "bash $plug/scripts/inexistente.sh" "bash $plug/scripts/interrogate.mjs a b"; do
   expect nada "$c"
 done
 # interpretador trocado, ou execução direta onde a origem não liberava
