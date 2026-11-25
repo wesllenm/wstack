@@ -159,9 +159,37 @@ completa, com quem chama cada um, está em `docs/migracao.md`.
    | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto |
    | `.claude/skills/verify-<app>/` | esqueleto da skill que sobe a aplicação e prova comportamento (só com aplicação) |
 
-3. Na nuvem, colar `plugin/cloud/setup.sh` no setup script do ambiente. Ele instala as ferramentas das stacks
+3. Revisar e preencher o que o bootstrap deixa ao projeto: os `<...>` dos modelos (a skill preenche o que consegue
+   detectar) e a receita da `verify-<app>`, que sai como esqueleto. Commitar na branch `chore/bootstrap-wstack` e
+   fazer o merge.
+4. Na nuvem, colar `plugin/cloud/setup.sh` no setup script do ambiente. Ele instala as ferramentas das stacks
    detectadas e o plugin na versão que o `.claude/settings.json` do projeto fixa. O `--check`, rodado a cada sessão,
    aponta o que falta.
+
+### Primeira vez na nuvem
+
+Na nuvem, o `.claude/settings.json` do projeto não instala o plugin sozinho (`docs/sonda.md`, fato 1): quem instala é o
+setup script. Antes do bootstrap o projeto ainda não fixou versão, e o setup não instala o plugin. Cada sessão nova
+começa num contêiner novo, então instalar à mão numa sessão não serve para a seguinte. Por isso:
+
+- **Caminho recomendado:** fazer os passos 1 a 3 no Claude Code local (terminal, desktop ou IDE) e o merge na branch
+  padrão. Daí em diante, toda sessão na nuvem com o setup script já sobe com o plugin na versão fixada.
+- **Só na nuvem (não testado de ponta a ponta):** na primeira sessão, pedir ao Claude que clone o wstack na tag
+  (`git clone --branch v<versão> https://github.com/wesllenm/wstack` numa pasta temporária), rode o
+  `plugin/scripts/bootstrap.sh` de lá na raiz do projeto e siga o `plugin/skills/bootstrap/SKILL.md` lendo o arquivo.
+  O resultado é o mesmo commit do bootstrap; as sessões seguintes já instalam o plugin pelo setup.
+
+### Cobertura por stack
+
+O workflow, as travas, a classificação de risco e a revisão não dependem de linguagem: valem para qualquer
+repositório git. O que depende da stack:
+- **Ferramentas na nuvem:** o `setup.sh` instala .NET (SDK do `global.json`), Node (dependências de cada pasta com
+  lockfile), Rust, Go e Python (`.venv` com os `requirements*.txt`). Outra stack (Java, por exemplo) entra no setup
+  script do ambiente à mão.
+- **Referências específicas** de revisão e performance: .NET, Node, Bash e frontend web; de plano de execução: EF Core
+  e PostgreSQL. Nas outras stacks, as skills de engenharia valem do mesmo jeito, com orientação genérica.
+- **Comandos de build, formato e teste:** são do projeto, declarados nas chaves `verify_*` do `.claude/risk.conf`; o
+  hook `Stop` roda os que estiverem ali.
 
 O projeto mantém os próprios arquivos. Uma mudança em skill, agente ou hook do plugin vira proposta aqui no wstack,
 não edição no projeto.
