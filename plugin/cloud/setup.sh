@@ -448,11 +448,16 @@ done
 # ---------- plugin wstack na versão que o projeto fixa ----------
 # O .claude/settings.json do projeto (modelo do /wstack:bootstrap) declara o marketplace wstack com a referência (tag
 # vX.Y.Z ou commit) e liga o plugin; a sessão na nuvem não instala sozinha pelo settings.json do projeto (docs/sonda.md,
-# fato 1), então o setup instala no escopo do usuário. Sem ref, nada a fazer (o ambiente do próprio wstack instala do
-# clone). O arquivo é lido como dado pelo jq; repositório e ref só viram argumento depois do alfabeto fechado.
+# fato 1), então o setup instala no escopo do usuário. O projeto que cita o plugin sem ref não instala por aqui (o
+# ambiente do próprio wstack instala do clone). O projeto que não cita o plugin ainda não passou pelo /wstack:bootstrap:
+# recebe a maior tag v<versão> publicada, para a primeira sessão na nuvem já ter o bootstrap (que fixa essa mesma tag);
+# sem o risk.conf o plugin fica inerte, salvo as travas (docs/decisions.md, plugin antes do bootstrap na nuvem).
+# O arquivo é lido como dado pelo jq; repositório e ref só viram argumento depois do alfabeto fechado.
+WSTACK_REPO=wesllenm/wstack
 pin_ok() { [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}#[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$ && $1 != *..* ]]; }
-wstack_pin() { # "<dono>/<repo>#<ref>"; "!" se o projeto liga o plugin e a referência não pôde ser lida; nada se não fixa
-  regular .claude/settings.json && grep -q '"wstack@wstack"' .claude/settings.json || return 0
+wstack_pin() { # "<dono>/<repo>#<ref>"; "!" se o projeto liga o plugin e a referência não pôde ser lida; "?" se não cita o
+  # plugin (sem bootstrap); nada se cita sem ref
+  regular .claude/settings.json && grep -q '"wstack@wstack"' .claude/settings.json || { echo '?'; return 0; }
   command -v jq > /dev/null || { echo '!'; return 0; }
   local r
   r=$(jq -r '.extraKnownMarketplaces.wstack.source as $s | if .enabledPlugins["wstack@wstack"] == true and $s.source == "github"
@@ -462,22 +467,48 @@ wstack_pin() { # "<dono>/<repo>#<ref>"; "!" se o projeto liga o plugin e a refer
 }
 wstack_ok() { # wstack_ok <pin>: o marketplace do usuário está nessa ref e o plugin instalado é ela (tag pela versão, commit pelo sha)
   local ref=${1#*#} known v c
-  known=$(jq -r '.wstack.source | "\(.repo)#\(.ref // "")"' < "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
+  known=$(jq -r '.wstack.source | "\(.repo)#\(.ref // "")"' "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
   [ "$known" = "$1" ] || return 1
   read -r v c < <(jq -r '.plugins["wstack@wstack"][]? | select(.scope == "user") | "\(.version) \(.gitCommitSha)"' \
-    < "$HOME/.claude/plugins/installed_plugins.json" 2> /dev/null)
+    "$HOME/.claude/plugins/installed_plugins.json" 2> /dev/null)
   [ -n "${v:-}" ] || return 1
   if [[ $ref =~ ^v[0-9] ]]; then [ "$ref" = "v$v" ]
   elif [[ $ref =~ ^[0-9a-f]{7,40}$ ]]; then [[ ${c:-} == "$ref"* ]]
   else return 0; fi # branch: a ref do marketplace basta
 }
-pin=$(wstack_pin)
+wstack_any() { # algum wstack instalado no escopo do usuário
+  [ -n "$(jq -r '.plugins["wstack@wstack"][]? | select(.scope == "user") | .version' \
+    "$HOME/.claude/plugins/installed_plugins.json" 2> /dev/null)" ]
+}
+latest_tag() { # maior tag v<maior>.<menor>.<correção> publicada; vazio sem rede ou sem tag (pré-release fica de fora). Fora do
+  # repositório do projeto (-C /): o .git/config local (insteadOf, proxy, credencial) não escolhe de onde vem o plugin
+  GIT_TERMINAL_PROMPT=0 timeout 60 git -C / ls-remote --tags --refs "https://github.com/$WSTACK_REPO" 2> /dev/null \
+    | sed -n 's|^[0-9a-f]*[[:space:]]*refs/tags/||p' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1
+}
+pin=$(wstack_pin) fresh=""
+if [ "$pin" = '?' ]; then
+  pin=""
+  host_stacks+=(wstack)
+  if wstack_any; then
+    [ "$mode" = plan ] && plan "wstack: plugin já instalado (projeto sem bootstrap)"
+  else
+    case "$mode" in
+      plan) plan "wstack: instalar o plugin da última tag v<versão> de $WSTACK_REPO (projeto sem bootstrap; o /wstack:bootstrap fixa a versão)" ;;
+      check) lack "plugin wstack (projeto sem bootstrap; rodar setup.sh)" ;;
+      run)
+        tag=$(latest_tag)
+        if [ -n "$tag" ] && pin_ok "$WSTACK_REPO#$tag"; then pin="$WSTACK_REPO#$tag" fresh=1
+        else warn "plugin wstack não instalado: nenhuma tag v<versão> de $WSTACK_REPO alcançável (rede, ou github.com fora da rede do ambiente)"; fi
+        ;;
+    esac
+  fi
+fi
 if [ "$pin" = '!' ]; then
   # texto fixo: o valor do repositório não vai para o contexto da sessão
   msg="referência do plugin wstack no .claude/settings.json ilegível (jq ausente, JSON inválido ou ref fora do alfabeto): plugin não instalado"
   case "$mode" in plan | run) warn "$msg" ;; check) lack "$msg" ;; esac
 elif [ -n "$pin" ]; then
-  host_stacks+=(wstack)
+  [ -n "$fresh" ] || host_stacks+=(wstack)
   if wstack_ok "$pin"; then
     [ "$mode" = plan ] && plan "wstack: plugin já instalado de $pin"
   else
@@ -491,7 +522,7 @@ elif [ -n "$pin" ]; then
           # (Claude Code 2.1.332), então, se a ref nova falhar (tag ainda não publicada, rede), volta a anterior: ficar sem o
           # plugin é ficar sem as travas dele
           prev=$(jq -r '.wstack.source | select(.source == "github") | "\(.repo)#\(.ref // "")"' \
-            < "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
+            "$HOME/.claude/plugins/known_marketplaces.json" 2> /dev/null)
           pin_ok "$prev" || prev=""
           claude plugin marketplace remove wstack > /dev/null 2>&1
           if claude plugin marketplace add "$pin" && claude plugin install wstack@wstack; then

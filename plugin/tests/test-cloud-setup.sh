@@ -66,7 +66,8 @@ has "$out" "playwright (dotnet) 1.64.1" playwright-dotnet
 d=$(repo vazio 'README.md=nada')
 out=$(run "$d" --plan); rc=$?
 [ "$rc" = 0 ] || { echo "FALHOU [vazio]: código $rc"; fails=$((fails + 1)); }
-hasnt "$out" "plano:" vazio-sem-plano
+# sem stack, o único plano é o do plugin wstack (projeto sem bootstrap)
+hasnt "$(grep -v '^plano: wstack:' <<< "$out")" "plano:" vazio-sem-plano
 run "$d" --check > /dev/null || { echo "FALHOU [vazio-check]: --check sem stack precisa sair 0"; fails=$((fails + 1)); }
 
 # safe.bareRepository=explicit: sem a chave, --plan a mostra e --check acusa a falta
@@ -428,6 +429,47 @@ calls=$(tr '\n' '|' < "$work/fake.log")
 [ "$calls" = "plugin marketplace remove wstack|plugin marketplace add wesllenm/wstack#v9.9.9|plugin marketplace remove wstack|plugin marketplace add wesllenm/wstack#v0.0.10|plugin install wstack@wstack|" ] \
   || { echo "FALHOU [pin-rollback]: chamadas: $calls"; fails=$((fails + 1)); }
 has "$out" "mantido o anterior" pin-rollback-aviso
+
+# projeto sem bootstrap (settings.json não cita o plugin, ou não existe): o plugin entra na maior tag v<versão> publicada,
+# para a primeira sessão na nuvem já ter o /wstack:bootstrap; o GitHub é um repositório local, pelo insteadOf
+fresh=$(repo fresh); fresh2=$(repo fresh2 '.claude/settings.json={"model":"opus"}')
+out=$(HOME="$work/home-vazio" run "$fresh" --plan)
+has "$out" "plano: wstack: instalar o plugin da última tag" fresh-plano
+out=$(HOME="$work/home-vazio" run "$fresh2" --plan)
+has "$out" "plano: wstack: instalar o plugin da última tag" fresh-plano-settings-sem-plugin
+out=$(HOME="$work/home-vazio" run "$fresh" --check)
+has "$out" "plugin wstack (projeto sem bootstrap" fresh-check-falta
+out=$(HOME="$work/home-ok" run "$fresh" --check)
+hasnt "$out" "plugin wstack" fresh-check-ok
+mkdir -p "$work/ghroot"; gh="$work/ghroot/wstack"; git init -q --bare "$gh"; src="$work/gh-src"; git init -q "$src"
+git -C "$src" -c user.name=t -c user.email=t@t commit -q --allow-empty -m v && git -C "$src" push -q "$gh" HEAD:refs/heads/main 2> /dev/null
+for t in v0.0.9 v0.0.10 v0.0.11 'v9;x' v1.0.0-rc1; do git -C "$src" tag "$t" 2> /dev/null; done
+git -C "$src" push -q "$gh" --tags 2> /dev/null
+# prefixo mais curto que o do caso de config local abaixo: lá o insteadOf do projeto ganharia, se fosse lido
+printf '[url "%s/"]\n\tinsteadOf = https://github.com/wesllenm/\n' "$work/ghroot" > "$work/gitconfig-gh"
+cat "$work/gitconfig" >> "$work/gitconfig-gh" 2> /dev/null
+mkdir -p "$work/home-fresh"; : > "$work/fake.log"
+out=$(PATH="$fake:$PATH" FAKE_LOG="$work/fake.log" FAKE_FAIL=nada CASE_GITCONFIG="$work/gitconfig-gh" HOME="$work/home-fresh" run "$fresh")
+calls=$(tr '\n' '|' < "$work/fake.log")
+[ "$calls" = "plugin marketplace remove wstack|plugin marketplace add wesllenm/wstack#v0.0.11|plugin install wstack@wstack|" ] \
+  || { echo "FALHOU [fresh-run]: chamadas: $calls"; show "$out"; fails=$((fails + 1)); }
+# o .git/config do projeto não escolhe de onde vem o plugin (insteadOf local para um repositório com tag maior)
+falso="$work/gh-falso.git"; git init -q --bare "$falso"; git -C "$src" tag v99.0.0 && git -C "$src" push -q "$falso" v99.0.0 2> /dev/null
+git -C "$fresh" config url."$falso".insteadOf https://github.com/wesllenm/wstack
+rm -rf "$work/home-fresh"; mkdir -p "$work/home-fresh"; : > "$work/fake.log"
+out=$(PATH="$fake:$PATH" FAKE_LOG="$work/fake.log" FAKE_FAIL=nada CASE_GITCONFIG="$work/gitconfig-gh" HOME="$work/home-fresh" run "$fresh")
+grep -qx 'plugin marketplace add wesllenm/wstack#v0.0.11' "$work/fake.log" \
+  || { echo "FALHOU [fresh-config-local]: chamadas: $(tr '\n' '|' < "$work/fake.log")"; fails=$((fails + 1)); }
+git -C "$fresh" config --unset url."$falso".insteadOf
+git init -q --bare "$work/gh-vazio.git"
+printf '[url "%s"]\n\tinsteadOf = https://github.com/wesllenm/wstack\n' "$work/gh-vazio.git" > "$work/gitconfig-gh-vazio"
+: > "$work/fake.log"
+out=$(PATH="$fake:$PATH" FAKE_LOG="$work/fake.log" FAKE_FAIL=nada CASE_GITCONFIG="$work/gitconfig-gh-vazio" HOME="$work/home-fresh" run "$fresh")
+[ -s "$work/fake.log" ] && { echo "FALHOU [fresh-sem-tag]: chamou o claude: $(tr '\n' '|' < "$work/fake.log")"; fails=$((fails + 1)); }
+has "$out" "nenhuma tag" fresh-sem-tag-aviso
+# o projeto que cita o plugin sem ref (o próprio wstack) continua sem instalação pelo setup
+out=$(HOME="$work/home-vazio" run "$(repo semref2 '.claude/settings.json={"enabledPlugins":{"wstack@wstack":true}}')" --plan)
+hasnt "$out" "plano: wstack" fresh-nao-vale-sem-ref
 
 d=$(repo pinhosts ".claude/settings.json=$(pin wesllenm/wstack v0.0.11)"); withhosts "$d"
 out=$(HOME="$work/home-vazio" run "$d" --plan)

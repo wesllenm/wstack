@@ -6,7 +6,7 @@ aprovação e executa até a condição de parada: delega a subagentes, revisa e
 garantem o que não pode depender da boa vontade do modelo: travas de permissão, build e testes verdes antes de
 encerrar, e push só para branch de atividade.
 
-**Estado: versão 0.0.11.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.12.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -157,7 +157,9 @@ completa, com quem chama cada um, está em `docs/migracao.md`.
 
 ## Adotar num projeto
 
-1. Instalar o plugin numa sessão: `/plugin marketplace add wesllenm/wstack` e `/plugin install wstack@wstack`.
+1. Ter o plugin na sessão. **Na nuvem:** colar `plugin/cloud/setup.sh` no setup script do ambiente; já na primeira
+   sessão o plugin está instalado (ver Primeira vez na nuvem). **No Claude Code local:**
+   `/plugin marketplace add wesllenm/wstack` e `/plugin install wstack@wstack`.
 2. Rodar `/wstack:bootstrap`. Ele diagnostica o repositório (stacks, comandos de build e teste, branch padrão),
    propõe os arquivos e, com a aprovação, cria o que faltar, sem sobrescrever nada que já exista:
 
@@ -175,22 +177,19 @@ completa, com quem chama cada um, está em `docs/migracao.md`.
 3. Revisar e preencher o que o bootstrap deixa ao projeto: os `<...>` dos modelos (a skill preenche o que consegue
    detectar) e a receita da `verify-<app>`, que sai como esqueleto. Commitar na branch `chore/bootstrap-wstack` e
    fazer o merge.
-4. Na nuvem, colar `plugin/cloud/setup.sh` no setup script do ambiente. Ele instala as ferramentas das stacks
-   detectadas e o plugin na versão que o `.claude/settings.json` do projeto fixa. O `--check`, rodado a cada sessão,
-   aponta o que falta.
-
 ### Primeira vez na nuvem
 
 Na nuvem, o `.claude/settings.json` do projeto não instala o plugin sozinho (`docs/sonda.md`, fato 1): quem instala é o
-setup script. Antes do bootstrap o projeto ainda não fixou versão, e o setup não instala o plugin. Cada sessão nova
-começa num contêiner novo, então instalar à mão numa sessão não serve para a seguinte. Por isso:
+setup script, a cada contêiner novo. O projeto nasce na nuvem assim:
 
-- **Caminho recomendado:** fazer os passos 1 a 3 no Claude Code local (terminal, desktop ou IDE) e o merge na branch
-  padrão. Daí em diante, toda sessão na nuvem com o setup script já sobe com o plugin na versão fixada.
-- **Só na nuvem (não testado de ponta a ponta):** na primeira sessão, pedir ao Claude que clone o wstack na tag
-  (`git clone --branch v<versão> https://github.com/wesllenm/wstack` numa pasta temporária), rode o
-  `plugin/scripts/bootstrap.sh` de lá na raiz do projeto e siga o `plugin/skills/bootstrap/SKILL.md` lendo o arquivo.
-  O resultado é o mesmo commit do bootstrap; as sessões seguintes já instalam o plugin pelo setup.
+1. Criar o ambiente em claude.ai/code com o repositório do projeto (pode estar vazio) e colar `plugin/cloud/setup.sh`
+   no setup script. A rede do ambiente precisa alcançar `github.com`, de onde o plugin é clonado.
+2. Abrir a sessão. Como o projeto ainda não cita o plugin, o setup instala a maior tag `v<versão>` publicada do wstack,
+   e a sessão começa com "Projeto sem o wstack: ... /wstack:bootstrap".
+3. Rodar `/wstack:bootstrap`, aprovar a proposta e fazer o merge da `chore/bootstrap-wstack`. O `settings.json` gerado
+   fixa a mesma tag.
+4. Da sessão seguinte em diante, o setup instala a versão que o projeto fixou, e o `--check` de cada sessão aponta o
+   que falta (ferramentas da stack, plugin em outra versão).
 
 ### Cobertura por stack
 

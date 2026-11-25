@@ -88,7 +88,13 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - O `setup.sh` instala o plugin na ref do `.claude/settings.json` do projeto e o `--check` acusa versão diferente.
 - O gate de aprendizado do Stop passou a contar `docs/gotchas/` e `docs/review-rubric.md` como aprendizado.
 - Não conferido no Claude Code real: uma sessão num projeto que passou pelo bootstrap, com `"agent": "wstack:lead"`
-  delegando aos agentes; e a tag `v0.0.11`, que só existe depois do merge.
+  delegando aos agentes; e a tag `v0.0.11`, que só existe depois do merge (publicada depois, no commit do merge).
+
+## Depois da 2.4
+
+- 0.0.12: o projeto nasce na nuvem. No projeto que ainda não cita o plugin, o `setup.sh` instala a maior tag
+  `v<versão>` publicada, e o `session-start` do projeto sem `risk.conf` indica o `/wstack:bootstrap`
+  (`docs/decisions.md`, plugin antes do bootstrap na nuvem). Antes disso, adotar exigia um passo no Claude Code local.
 
 ## Hooks
 

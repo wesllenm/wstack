@@ -1,7 +1,7 @@
 {
   "name": "wstack",
-  "version": "0.0.11",
-  "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação. Versão 0.0.11: hooks, scripts, skills e agentes do harness, e o /wstack:bootstrap com os modelos do projeto.",
+  "version": "0.0.12",
+  "description": "Workflow de desenvolvimento com agentes: revisão proporcional ao risco, travas de permissão e portões de aprovação. Versão 0.0.12: hooks, scripts, skills e agentes do harness, o /wstack:bootstrap com os modelos do projeto e o plugin na nuvem desde a primeira sessão.",
   "author": {
     "name": "wesllenm"
   }

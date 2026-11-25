@@ -19,7 +19,10 @@ if ! git_ge_238 || [ "$(git config --global --get safe.bareRepository 2> /dev/nu
 fi
 
 # Projeto sem o wstack (risk-conf.mjs --absent sai 10; a regra mora lá): daqui para baixo é workflow, não trava; nada é gravado.
-if [ ! -e .claude/risk.conf ]; then node "$plugin/hooks/risk-conf.mjs" --absent; [ $? = 10 ] && exit 0; fi
+if [ ! -e .claude/risk.conf ]; then
+  node "$plugin/hooks/risk-conf.mjs" --absent
+  [ $? = 10 ] && { echo "Projeto sem o wstack: só as travas de segurança estão ativas. Para adotar o workflow, /wstack:bootstrap."; exit 0; }
+fi
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 [ -n "$sid" ] || exit 0

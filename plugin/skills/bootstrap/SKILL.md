@@ -12,7 +12,9 @@ disable-model-invocation: true
 
 Roda uma vez por repositório (e de novo para conferir um repositório que já adotou: o script lista o que falta). Os
 hooks, scripts, skills e agentes são do plugin e não são copiados; o projeto recebe só a configuração e os documentos
-que ele mantém. Sem `.claude/risk.conf`, o plugin fica inerte no repositório, salvo as travas de segurança.
+que ele mantém. Sem `.claude/risk.conf`, o plugin fica inerte no repositório, salvo as travas de segurança. Na nuvem,
+num projeto que ainda não adotou o wstack, o `setup.sh` do plugin já instalou a maior tag publicada: é a versão deste
+plugin, e a mesma que o modelo fixa, então a sessão seguinte ao merge não troca de versão.
 
 ## 1. Diagnóstico (somente leitura)
 
