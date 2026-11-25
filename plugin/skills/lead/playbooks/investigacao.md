@@ -1,6 +1,6 @@
 # Playbook: investigação
 
-Para pergunta sobre o sistema sem pedido de mudança: "por que isso acontece", "isso é seguro", "quanto custa", "onde está o gargalo", "o que quebra se eu mudar X". A resposta é o entregável; nada no repositório muda, salvo o aprendizado. Se a resposta levar a uma mudança, a mudança é uma tarefa nova, com tipo, classificação e plano próprios.
+Para pergunta sobre o sistema sem pedido de mudança: "por que isso acontece", "isso é seguro", "quanto custa", "onde está o gargalo", "o que quebra se eu mudar X". A resposta é o entregável; nada no repositório muda, salvo o aprendizado. Se a resposta levar a uma mudança, a mudança é uma tarefa nova, com tipo, classificação e plano próprios. Pergunta que se responde só lendo o código ("como funciona") ou o histórico ("por que está assim") é das skills `how` e `why`, sem este playbook.
 
 Sem diff não há classificação, plano formal, aprovação, revisão nem commit de código. As travas continuam valendo: leitura de banco só pelo `database-helper`, experimento só na pasta temporária da sessão, nenhuma edição no repositório para "testar uma ideia".
 
@@ -8,7 +8,7 @@ Sem diff não há classificação, plano formal, aprovação, revisão nem commi
 2. **Hipóteses.** Listar as explicações plausíveis e, para cada uma, a evidência que a separa das outras. Pergunta com um fato observável como resposta se decide rodando algo, não opinando (seção Aprovação única do núcleo).
 3. **Coletar evidência sem editar o repositório:**
    - leitura com o `explore`, ou com o `planner` em código desconhecido;
-   - histórico: `git log`, `git blame`, `docs/decisions.md`, ADRs e a skill `recall`;
+   - histórico: os passos da skill `why` (`git log -L`, PR, `docs/decisions.md`, ADRs) e a skill `recall`;
    - experimento ou protótipo descartável na pasta temporária;
    - banco real pelo `database-helper`;
    - medição pelo `performance-agent` ou pelas camadas da skill `performance`.

@@ -84,7 +84,8 @@ Depois de classificar, escolher o tipo pelo sinal no pedido, ler o playbook dele
 |---|---|---|
 | feature | comportamento novo, ou mudado de propósito | o Pipeline do nível, sem playbook |
 | bug | comportamento errado que já existe: relato, issue, teste falhando, erro de produção | `bug.md`: reproduzir, achar a causa, corrigir |
-| investigação | pergunta sem pedido de mudança | `investigacao.md`: sem classificação, plano, revisão nem commit; a resposta substitui o relatório |
+| pergunta sobre o código | como funciona, ou por que está assim | skill `how` ou `why`: só leitura, fora deste pipeline (sem classificação, plano nem Registro) |
+| investigação | pergunta sem pedido de mudança que precisa de experimento, medição ou várias fontes | `investigacao.md`: sem classificação, plano, revisão nem commit; a resposta substitui o relatório |
 | performance | mais rápido, mais leve, mais barato, ou regressão de performance | `performance.md`: medir, mudar, medir de novo |
 | refatoração | mudar a estrutura sem mudar o comportamento | skill `refactoring` com o Pipeline do nível |
 | auditoria de testes | pedida como tal | Pipeline, item Auditoria de testes |

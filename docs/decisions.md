@@ -421,3 +421,19 @@ muda decisão; skill que nem aparece é candidata a sair.
 **O que muda:** as skills de engenharia continuam como estão (já eram skills separadas e curtas). O `principles.mjs`
 pede aprovação, como o `permission-asks.mjs`, porque lê a transcrição. Que a regra citada tenha de fato mudado a
 decisão continua sendo palavra do relatório: o script só garante que ela foi lida.
+
+## 2026-11-25: skills de entender código (`how` e `why`)
+
+**Decisão:** duas skills só de leitura, fora do pipeline de risco do `lead` (sem classificação, plano, aprovação nem
+Registro), invocáveis por `/wstack:how` e `/wstack:why` ou pela `description`, e válidas em repositório sem o wstack
+adotado. A `how` segue o caminho da entrada ao efeito lendo o código, com `arquivo:linha` em cada passo e o que foi
+deduzido sem abrir separado em Não verificado. A `why` acha no histórico o commit que mudou o significado do trecho
+(`git log -L` e `git log -S`, que o `git-read-allow` aprova; `git blame` pediria permissão), o PR e a revisão, as
+decisões e os gotchas, e separa motivo registrado de inferido.
+
+**Por quê:** perguntar algo sobre o código exigia passar pelo `lead` ou chamar o `explore` à mão, e o `explore` devolve
+localização, não explicação nem motivo. Em projeto de cliente, entender antes de mudar é a maior parte do trabalho.
+Separar registrado de inferido importa porque a pergunta "por que isso está aqui" costuma preceder "posso tirar?".
+
+**O que não faz:** não decide se o código pode sair, não roda experimento (isso é o playbook de investigação) e não
+reescreve o histórico de onde a resposta vem: em clone raso, diz que o histórico acaba ali.
