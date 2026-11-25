@@ -38,6 +38,8 @@ const SCRIPTS = {
   'check-findings.mjs': ['node'],
   // o envio ao fornecedor externo foi consentido ao pôr interrogate_cmd no risk.conf, que é trava (ask/deny)
   'interrogate.mjs': ['node'],
+  // só imprime linha e padrão, nunca o texto: não serve para ler arquivo protegido por tabela
+  'slop-check.mjs': ['node'],
   'diff-smells.mjs': ['node'],
   'map-staleness.mjs': ['node'],
   'pr-risk-gate.mjs': ['node'],

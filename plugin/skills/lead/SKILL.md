@@ -267,7 +267,7 @@ Antes do relatório final:
 2. testes relevantes;
 3. tracking (`features.json`), se usado;
 4. ausência de debug, scripts avulsos e saídas de teste no repositório;
-5. documentação factual atualizada;
+5. documentação factual atualizada, com o texto passado pela skill `unslop`;
 6. skills de domínio respeitadas;
 7. nenhuma decisão tomada sem aprovação;
 8. diff dentro do escopo;

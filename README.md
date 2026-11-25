@@ -190,7 +190,8 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 
 - **Workflow:** `lead` (o processo acima), `commit`, `review-rubric` (régua comum de severidade, evidência e formato
   dos achados), `test-audit` (gate de autoria de testes e auditoria), `recall` (sessões anteriores), `how` e `why` (como o código funciona e por que
-  está assim, só leitura e fora do pipeline de risco), `correct`
+  está assim, só leitura e fora do pipeline de risco), `unslop` (texto técnico em PT-BR sem enfeite, com o
+  `slop-check.mjs` conferindo commit e PR), `correct`
   (correção do desenvolvedor registrada na hora, com o degrau da escada), `bootstrap` (adoção num projeto).
 - **Engenharia:** `tdd`, `testing-strategy`, `clean-code`, `refactoring`, `clean-architecture`, `vertical-slice`,
   `domain-modeling`, `api-design`, `concurrency`, `resilience`, `event-driven`, `observability`, `security`,

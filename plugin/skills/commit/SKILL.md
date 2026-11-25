@@ -70,7 +70,7 @@ Quando o plano prevê PR, a descrição é um resumo de um minuto para quem tem 
 
 Logs, tabelas de achados e listas de arquivos vão para o relatório, não para o PR.
 
-Abrir com `gh pr create --title "<título do commit principal>" --body-file <arquivo na pasta temporária>` e rotular com o nível de risco do `classify-diff.sh` (`--label risco:<trivial|simples|complexa|critica>`): o rótulo decide quantas aprovações humanas o PR exige e se ele pode entrar sozinho quando os checks ficarem verdes (workflow `merge-por-risco`).
+Conferir o corpo com `node ${CLAUDE_PLUGIN_ROOT}/scripts/slop-check.mjs <arquivo>` (skill `unslop`) e abrir com `gh pr create --title "<título do commit principal>" --body-file <arquivo na pasta temporária>` e rotular com o nível de risco do `classify-diff.sh` (`--label risco:<trivial|simples|complexa|critica>`): o rótulo decide quantas aprovações humanas o PR exige e se ele pode entrar sozinho quando os checks ficarem verdes (workflow `merge-por-risco`).
 
 Antes de abrir, conferir se a branch já tem PR aberto (`gh pr list --head <branch> --state open`): se tiver, atualizar a descrição dele em vez de abrir outro. Depois de abrir, conferir o que o GitHub recebeu (`gh pr view <branch> --json url,headRefOid,baseRefName`): o `headRefOid` precisa ser o SHA verificado, e a base, a pretendida; divergência é reportada, não corrigida às cegas. O resultado da CI do GitHub é reportado separado das checagens locais.
 
@@ -82,7 +82,9 @@ Antes de abrir, conferir se a branch já tem PR aberto (`gh pr list --head <bran
 
 ## Como executar
 
-Mensagem multilinha via heredoc, sem editor interativo:
+A mensagem é escrita com o Write num arquivo da pasta temporária da sessão (por exemplo `<pasta>/commit.txt`) e conferida antes do commit com `node ${CLAUDE_PLUGIN_ROOT}/scripts/slop-check.mjs <arquivo>` (skill `unslop`): erro sai sempre; aviso fica só se disser algo concreto. Depois, `git commit -F <arquivo>`, sozinho na chamada.
+
+Sem pasta temporária, a mesma mensagem vai num heredoc, sem editor interativo:
 
 ```bash
 git commit -F - <<'EOF'
@@ -136,5 +138,6 @@ Não se aplica: se o projeto mudar de convenção, registrar em `docs/decisions.
 - [ ] sem segredo, debug, temporário ou arquivo fora do escopo;
 - [ ] título no infinitivo, específico e com até 72 caracteres;
 - [ ] corpo explica o porquê quando a mudança não é trivial;
+- [ ] `slop-check.mjs` sem erro na mensagem (e na descrição do PR);
 - [ ] quebra de compatibilidade e referências no rodapé;
 - [ ] build e testes relevantes passando no estado commitado.

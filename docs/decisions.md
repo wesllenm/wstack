@@ -437,3 +437,20 @@ Separar registrado de inferido importa porque a pergunta "por que isso está aqu
 
 **O que não faz:** não decide se o código pode sair, não roda experimento (isso é o playbook de investigação) e não
 reescreve o histórico de onde a resposta vem: em clone raso, diz que o histórico acaba ali.
+
+## 2026-11-25: texto técnico em PT-BR sem enfeite (skill `unslop`)
+
+**Decisão:** a skill `unslop` reúne as regras de escrita para commit, PR, documentação, relatório e comentário de
+revisão em português: o que cortar, o que trocar, formato e a gramática que texto gerado erra. O que dá para checar por
+padrão foi para o `slop-check.mjs`. **Erro** é o que sempre sai: abertura e fecho vazios, "este commit", muleta de
+ênfase, gerundismo, "a nível de", "o mesmo" como pronome e emoji. **Aviso** é palavra suspeita, que só fica se disser
+algo concreto. A skill `commit` passa a escrever a mensagem num arquivo da pasta temporária, rodar o script e commitar
+com `git commit -F <arquivo>`. O corpo do PR passa pelo mesmo script antes do `gh pr create`.
+
+**Por quê:** os commits são em português, e as listas de anti-slop que existem são de inglês. Erro e aviso ficaram
+separados porque palavras como "otimizar" e "através de" têm uso legítimo. Nos commits desta branch, o script deu um
+aviso e nenhum erro; em `docs/decisions.md`, dois avisos legítimos.
+
+**O que não faz:** não julga clareza nem estrutura, que continuam com a skill. Não é hook: rodar antes do commit é
+orientação da skill `commit`. O script imprime só a linha e o padrão, nunca o texto, porque o `script-allow` o aprova
+sem pedido e ele não pode servir para ler um arquivo protegido por tabela.
