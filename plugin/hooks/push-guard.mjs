@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { foreignRepo, git, left, projectRepo } from './git-repo.mjs';
 import { commitOf, defaultBranches, exactRefCommit, list, protectedChanged } from './protected-paths.mjs';
-import { confValues } from './risk-conf.mjs';
+import { confAbsent, confValues } from './risk-conf.mjs';
 
 let d = '';
 process.stdin.on('data', (c) => (d += c)).on('end', () => {
@@ -31,9 +31,26 @@ function out(v) { process.stdout.write(v); }
 const PREFIX = /^([A-Za-z0-9][A-Za-z0-9._-]*)\/$/;
 const GIT_NAMESPACE = /^(?:refs|heads|tags|remotes)$/i;
 const prefixes = confValues('activity_branch').map((v) => PREFIX.exec(v)).filter((m) => m && !GIT_NAMESPACE.test(m[1])).map((m) => m[1].replace(/\./g, '\\.'));
-const ACTIVITY = [...(prefixes.length ? [`(?:${prefixes.join('|')})/[A-Za-z0-9._/-]+`] : []), 'ccr-[a-z0-9]+-[a-z0-9]+'].join('|');
-const ACT = new RegExp(`^(?:${ACTIVITY})$`);
-const NEVER = new Set(['main', 'master', ...defaultBranches()]); // recusadas para push, nem com aprovação
+// Projeto sem risk.conf (não adotou o wstack, confAbsent): toda branch que não é a padrão conta como de atividade. O hook
+// só deixa de forçar o pedido; o resto (padrão recusada, force, o que o push publica em caminho protegido) continua. Nome
+// que começa por espaço de nome do git (refs/, heads/, tags/, remotes/, em qualquer caixa) não é branch: tag, nota e ref de
+// rastreio continuam pedindo, como o GIT_NAMESPACE faz com os prefixos declarados.
+// Calculado só quando o comando tem push: o confAbsent roda git, e o hook roda em todo comando Bash.
+let rules;
+function R() {
+  if (rules) return rules;
+  const ACTIVITY = confAbsent()
+    ? '(?![Rr][Ee][Ff][Ss]/|[Hh][Ee][Aa][Dd][Ss]/|[Tt][Aa][Gg][Ss]/|[Rr][Ee][Mm][Oo][Tt][Ee][Ss]/)[A-Za-z0-9][A-Za-z0-9._/-]*'
+    : [...(prefixes.length ? [`(?:${prefixes.join('|')})/[A-Za-z0-9._/-]+`] : []), 'ccr-[a-z0-9]+-[a-z0-9]+'].join('|');
+  const DST = `(?:refs/heads/)?(?:${ACTIVITY})`;
+  const SPEC = `(?:(?:${P}:)?${DST}|${P}:refs/heads/wip/[A-Za-z0-9._-]+)`;
+  rules = {
+    ACT: new RegExp(`^(?:${ACTIVITY})$`),
+    NEVER: new Set(['main', 'master', ...defaultBranches()]), // recusadas para push, nem com aprovação
+    STRICT: new RegExp(`^git(?: +-C +(${DIR}))? +push(?: +${FLAG})* +origin((?: +${SPEC})+)(?: +${REDIR})*(?: *\\| *tail +-n? *[0-9]+)?$`),
+  };
+  return rules;
+}
 const WIP = /^refs\/heads\/wip\/[A-Za-z0-9._-]+$/;
 const SAFE = /^[A-Za-z0-9._\/:-]+$/; // nenhum caractere que o shell expanda
 const OKFLAGS = new Set(['-u', '--set-upstream', '-q', '--quiet', '-v', '--verbose', '--porcelain', '--dry-run', '-n']);
@@ -46,13 +63,10 @@ const ASKFLAGS = /^--force-with-lease(=.*)?$|^--force-if-includes$/;
 // Só espaço literal (o \\s do JS aceita quebra de linha, que o bash trata como outro comando); nenhum token do
 // refspec começa por "-" (-fo:x seria lido pelo git como -f -o); redirecionamento só para /dev/null ou /tmp/.
 const P = '[A-Za-z0-9._][A-Za-z0-9._/-]*';
-const DST = `(?:refs/heads/)?(?:${ACTIVITY})`;
-const SPEC = `(?:(?:${P}:)?${DST}|${P}:refs/heads/wip/[A-Za-z0-9._-]+)`;
 const FLAG = '(?:-u|--set-upstream|-q|--quiet|-v|--verbose|--porcelain|--dry-run|-n)';
 const SINK = '(?:/dev/null|/tmp/[A-Za-z0-9._/-]+)';
 const REDIR = `(?:[12]?>&[12]|&>>? *${SINK}|[12]?>>? *${SINK})`;
 const DIR = '[A-Za-z0-9._/][A-Za-z0-9._/-]*';
-const STRICT = new RegExp(`^git(?: +-C +(${DIR}))? +push(?: +${FLAG})* +origin((?: +${SPEC})+)(?: +${REDIR})*(?: *\\| *tail +-n? *[0-9]+)?$`);
 
 function verdict(cmd, cwd) {
   // o bash junta barra + quebra de linha antes de ler o comando: "pu\<LF>sh" é push, e "git \<LF>push" escaparia do
@@ -62,7 +76,7 @@ function verdict(cmd, cwd) {
   const v = scan(cmd, cwd);
   if (v.startsWith('DENY')) return v;
   if (joined !== cmd) return 'ASK barra no fim de linha num comando com push';
-  const m = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? STRICT.exec(cmd.trim()) : null;
+  const m = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? R().STRICT.exec(cmd.trim()) : null;
   if (m) {
     const specs = m[2].trim().split(/ +/);
     if (specs.some((x) => x.includes('..'))) return 'DENY destino com ..';
@@ -294,11 +308,11 @@ function checkPush(args, envs) {
     if (idx === 0) return `DENY refspec que apaga a ref remota: ${spec}`;
     const dst = idx >= 0 ? spec.slice(idx + 1) : spec;
     const name = dst.replace(/^(?:refs\/)?heads\//, ''); // o git casa heads/main com refs/heads/main do remoto
-    if (NEVER.has(name) || dst === 'HEAD' && idx >= 0) return `DENY push para ${dst}`;
+    if (R().NEVER.has(name) || dst === 'HEAD' && idx >= 0) return `DENY push para ${dst}`;
     if (idx < 0 && spec === 'HEAD') { ask = ask ?? 'ASK git push de HEAD sem destino explícito'; continue; }
     if (name.includes('..')) return `DENY destino com ..: ${dst}`;
     if (WIP.test(dst)) continue;
-    if (!ACT.test(name)) ask = ask ?? `ASK destino fora dos branches de atividade: ${dst}`;
+    if (!R().ACT.test(name)) ask = ask ?? `ASK destino fora dos branches de atividade: ${dst}`;
   }
   return ask ?? 'OK';
 }

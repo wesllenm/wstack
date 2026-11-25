@@ -12,7 +12,9 @@ const DEADLINE = Date.now() + 5000; // folga até os 10 s para a partida do bash
 export const left = () => Math.max(1, DEADLINE - Date.now());
 
 // LC_ALL=C: a mensagem de "fora de repositório" é lida em foreignRepo e muda com o idioma do sistema.
-export const git = (d, ...a) => execFileSync('git', ['-C', d, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: left(), env: { ...process.env, LC_ALL: 'C' } }).trim();
+// GIT_NO_REPLACE_OBJECTS: um git replace (que não cita trava) trocaria o commit que o hook lê, e o push manda o real.
+export const GIT_ENV = { ...process.env, LC_ALL: 'C', GIT_NO_REPLACE_OBJECTS: '1' };
+export const git = (d, ...a) => execFileSync('git', ['-C', d, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: left(), env: GIT_ENV }).trim();
 
 // Uma linha só, caminho absoluto: o git anterior ao 2.31 ecoa o --path-format desconhecido e devolve caminho relativo.
 function abs(d, what) {

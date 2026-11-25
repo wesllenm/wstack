@@ -8,6 +8,8 @@ input=$(cat)
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 git rev-parse --is-inside-work-tree > /dev/null 2>&1 || exit 0
+# Projeto sem o wstack (risk-conf.mjs --absent sai 10; a regra mora lá): inerte.
+if [ ! -e .claude/risk.conf ]; then node "$(dirname "$0")/risk-conf.mjs" --absent; [ $? = 10 ] && exit 0; fi
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 [ -n "$sid" ] || exit 0
