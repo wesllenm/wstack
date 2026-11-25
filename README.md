@@ -197,7 +197,10 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 - **Banco:** `db-evolution` (migrations e schema), `query-plan` (plano de execução no banco real).
 
 As referências por stack ficam em `reference/*.md`: .NET, Node, Bash e frontend web em `performance` e
-`review-rubric` (esta também tem regras por caminho), e EF Core e PostgreSQL em `query-plan`.
+`review-rubric` (esta também tem regras por caminho), e EF Core e PostgreSQL em `query-plan`. A skill `lead` tem um
+núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (revisão, delegação,
+limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, manutenção do aprendizado), lido no momento que a tabela
+Leitura sob demanda do núcleo indica.
 
 ### Hooks
 

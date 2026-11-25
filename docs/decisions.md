@@ -322,3 +322,24 @@ passam a ler os modelos no lugar das fixtures da 2.2, e os dois casos fracos ano
 arquivo dentro do projeto, então os checklists de `review-rubric/reference/paths/` do plugin não podem ser citados ali
 (follow-up). O gate de aprendizado do Stop passa a tratar `docs/gotchas/` e `docs/review-rubric.md` como arquivos de
 aprendizado, onde a escada da skill lead grava desde a 2.3.
+
+## 2026-11-25: skill lead em núcleo e leitura sob demanda
+
+**Decisão:** o `SKILL.md` da skill `lead` fica só com o que vale em toda tarefa (classificar, planejar, aprovação
+única, roteamento, testes, as duas velocidades da revisão, commits, pipeline, interrupções, stop condition, aprendizado
+e relatório). O detalhe que só parte das tarefas usa vai para `plugin/skills/lead/reference/`: `revisao.md`,
+`delegacao.md`, `limpeza.md`, `sessao.md`, `paralelo.md`, `nuvem.md`, `lote.md` e `aprendizado.md`. A tabela Leitura sob
+demanda do núcleo diz quando ler cada um, e cada seção que saiu deixa no núcleo um parágrafo com o gatilho e o que não
+muda em nenhum caso. O texto foi movido sem reescrita; só mudaram as referências cruzadas e `${CLAUDE_PLUGIN_ROOT}`,
+que em `reference/` vira `<plugin>`. A primeira mensagem de toda tarefa passa a trazer as linhas Objetivo e Menor
+mudança, e o plano parte delas.
+
+**Por quê:** com 76 KB carregados em toda tarefa, as regras do meio do arquivo eram as que mais se perdiam. O núcleo
+ficou com cerca de 43 KB, e o detalhe passa a ser lido no momento em que é usado, mais perto da ação. A linha de menor
+mudança segura o escopo antes de o processo crescer em volta dele.
+
+**O que muda:** o relatório ganha os campos Objetivo e menor mudança e Referências lidas; arquivo que o momento pedia e
+não foi lido conta como passo pulado. O `test-skills-agents.sh` passa a conferir os caminhos `${CLAUDE_PLUGIN_ROOT}/skills/…`,
+os scripts na forma `<plugin>/scripts/<x>` de `reference/` e que todo `reference/<x>.md` seja citado no `SKILL.md` da
+skill. Que o modelo leia o arquivo no momento certo é orientação, sem hook que confira: o campo Referências lidas e a
+calibração mostram se falha.

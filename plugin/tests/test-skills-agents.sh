@@ -7,7 +7,9 @@
 # - comando de script do plugin escrito numa skill usa um interpretador que o script-allow aceita para ele;
 # - agente sem memory:, mcpServers:, hooks:, permissionMode: (docs/decisions.md, agentes do plugin sem memory:) e sem
 #   TodoWrite; Agent(...) só com wstack:<nome> de agente que existe; skills: só com skill que existe;
-# - cada skill tem SKILL.md com name: igual à pasta, e cada agente tem name: igual ao arquivo.
+# - cada skill tem SKILL.md com name: igual à pasta, e cada agente tem name: igual ao arquivo;
+# - todo ${CLAUDE_PLUGIN_ROOT}/skills/<caminho> citado existe; em reference/*.md, <plugin>/scripts/<x> passa pelas mesmas
+#   conferências de ${CLAUDE_PLUGIN_ROOT}/scripts/<x>; todo reference/<x>.md de uma skill é citado no SKILL.md dela.
 # Uso: test-skills-agents.sh [<pasta do plugin>]
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
@@ -82,8 +84,18 @@ for (const f of files) {
     for (const m of line.matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/(scripts|cloud|hooks)\/([A-Za-z0-9_.-]+)/g)) {
       if (!fs.existsSync(path.join(plugin, m[1], m[2]))) fail(`${at}: ${m[1]}/${m[2]} não existe no plugin`);
     }
-    // Comando entre crases: [bash |node ]${CLAUDE_PLUGIN_ROOT}/scripts/<x>
-    for (const m of line.matchAll(/`(?:(bash|node) )?\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/([A-Za-z0-9_.-]+)[^`]*`/g)) {
+    // Arquivo de skill citado pelo caminho inteiro (as referências sob demanda da skill lead)
+    for (const m of line.matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/(skills\/[A-Za-z0-9_.\/-]*[A-Za-z0-9_-])/g)) {
+      if (!fs.existsSync(path.join(plugin, m[1]))) fail(`${at}: ${m[1]} não existe no plugin`);
+    }
+    // Em reference/*.md o script aparece como <plugin>/scripts/<x> (o Read não troca a variável): mesmas conferências
+    if (/\/reference\//.test(r)) {
+      for (const m of line.matchAll(/<plugin>\/(scripts|cloud|hooks)\/([A-Za-z0-9_.-]+)/g)) {
+        if (!fs.existsSync(path.join(plugin, m[1], m[2]))) fail(`${at}: ${m[1]}/${m[2]} não existe no plugin`);
+      }
+    }
+    // Comando entre crases: [bash |node ](${CLAUDE_PLUGIN_ROOT}|<plugin>)/scripts/<x>
+    for (const m of line.matchAll(/`(?:(bash|node) )?(?:\$\{CLAUDE_PLUGIN_ROOT\}|<plugin>)\/scripts\/([A-Za-z0-9_.-]+)[^`]*`/g)) {
       const interp = m[1] || '';
       const ok = allowed[m[2]];
       if (ok && !ok.includes(interp)) {
@@ -120,6 +132,18 @@ for (const f of files) {
     const pre = field(fm, 'skills');
     for (const s of Array.isArray(pre) ? pre : pre ? pre.split(',').map((x) => x.trim()) : []) {
       if (!skills.has(s.replace(/^wstack:/, ''))) fail(`${r}: skills: ${s} não existe no plugin`);
+    }
+  }
+}
+
+// Todo arquivo direto de skills/<skill>/reference/ é citado pelo nome no SKILL.md da skill (senão ninguém o lê)
+for (const s of skills) {
+  const ref = path.join(plugin, 'skills', s, 'reference');
+  if (!fs.existsSync(ref)) continue;
+  const main = fs.readFileSync(path.join(plugin, 'skills', s, 'SKILL.md'), 'utf8');
+  for (const e of fs.readdirSync(ref, { withFileTypes: true })) {
+    if (e.isFile() && e.name.endsWith('.md') && !main.includes(e.name)) {
+      fail(`skills/${s}/reference/${e.name}: não citado no SKILL.md da skill`);
     }
   }
 }
