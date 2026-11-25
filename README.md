@@ -6,6 +6,11 @@ aprovação e executa até a condição de parada: delega a subagentes, revisa e
 garantem o que não pode depender da boa vontade do modelo: travas de permissão, build e testes verdes antes de
 encerrar, e push só para branch de atividade.
 
+**Feito para a nuvem.** Tudo roda no Claude Code na nuvem (claude.ai/code): o ambiente, o setup das ferramentas, a
+instalação do plugin, as sessões, os subagentes e os testes. Você acompanha e aprova pelo navegador ou pelo app, e o
+que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
+zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
+
 **Estado: versão 0.0.12.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
@@ -14,7 +19,63 @@ encerrar, e push só para branch de atividade.
 - a conferência num projeto real: uma sessão com `"agent": "wstack:lead"` num projeto que passou pelo bootstrap,
   delegando aos agentes reais, e as provas `plugin/tests/prove-*.sh`, que usam o Claude Code real e rodam à mão.
 
+## Tudo roda na nuvem
+
+Cada coluna é um lugar. Uma sessão é sempre um contêiner novo, criado pela nuvem do Claude Code a partir do ambiente;
+o setup script do ambiente (o `plugin/cloud/setup.sh`) prepara o contêiner antes de a sessão começar.
+
+```mermaid
+sequenceDiagram
+    participant V as Você<br/>(navegador ou app)
+    participant N as Nuvem do Claude Code<br/>(ambiente)
+    participant C as Contêiner da sessão
+    participant G as GitHub
+    V->>N: abre uma sessão em claude.ai/code
+    N->>C: cria um contêiner novo e clona o repositório
+    Note over C: setup.sh do ambiente: ferramentas da stack
+    C->>G: setup.sh baixa o plugin wstack na versão (tag)
+    Note over C: sessão como wstack:lead<br/>hooks, skills e subagentes
+    V->>C: pedido
+    C-->>V: plano
+    V->>C: aprovação única
+    Note over C: execução, revisão e commit<br/>(subagentes no mesmo contêiner)
+    C->>G: push da branch e PR
+    C-->>V: relatório
+    V->>G: merge do PR
+```
+
+| Onde | O que fica lá |
+|---|---|
+| Você (navegador ou app) | o pedido, a aprovação do plano e o merge dos PRs |
+| Ambiente da nuvem | o repositório, a rede liberada e o setup script (configurados uma vez) |
+| Contêiner da sessão | ferramentas da stack, plugin wstack, a sessão `wstack:lead` e os subagentes; descartado ao fim |
+| GitHub | o código do projeto (branches, PRs, `main`) e as versões do plugin (tags do `wesllenm/wstack`) |
+
+Como o contêiner é descartável, o que precisa durar vai para o repositório: a configuração do workflow
+(`.claude/settings.json`, `.claude/risk.conf`), o aprendizado (`docs/gotchas.md`, `docs/review-calibration.md`) e as
+decisões (`docs/decisions.md`). É por isso que o `/wstack:bootstrap` gera esses arquivos e os commita.
+
+### Do repositório vazio ao dia a dia
+
+```mermaid
+flowchart TD
+    A["<b>1. Criar o ambiente</b> em claude.ai/code<br/>repositório (pode estar vazio)<br/>e setup.sh no setup script"] --> B
+    B["<b>2. Primeira sessão</b><br/>o setup instala a última tag<br/>e a sessão indica o bootstrap"] --> C
+    C["<b>3. /wstack:bootstrap</b><br/>diagnóstico e proposta"] --> C2{{"Aprovação<br/>(você)"}}
+    C2 --> D{{"<b>4. Merge do bootstrap</b><br/>o projeto fixa a versão"}}
+    D --> E["<b>5. Sessões do dia a dia</b><br/>o setup instala a versão fixada<br/>pedido → plano → PR"]
+    E --> F{{"Merge do PR<br/>(você)"}}
+    F -->|próxima tarefa| E
+
+    classDef humano fill:#fde68a,stroke:#b45309,color:#000
+    class C2,D,F humano
+```
+
+O passo a passo está em [Começar um projeto na nuvem](#começar-um-projeto-na-nuvem).
+
 ## Como uma tarefa anda
+
+Dentro de cada sessão na nuvem, o `lead` leva o pedido até o PR assim:
 
 ```mermaid
 flowchart TD
@@ -28,7 +89,7 @@ flowchart TD
     H -->|revisa só o delta| G
     G -->|sem achado pendente| I["<b>6. Commit</b><br/>skill commit, branch de atividade"]
     I --> J["<b>7. Limpeza e aprendizado</b><br/>gotchas e calibração da revisão"]
-    J --> K([Relatório])
+    J --> K(["Relatório na sessão<br/>branch e PR no GitHub"])
 
     classDef humano fill:#fde68a,stroke:#b45309,color:#000
     class E humano
@@ -71,6 +132,63 @@ build, formato e testes verdes antes de a sessão encerrar.
 O **caminho rápido** é a camada determinística (build, formato, testes, garantidos pelo hook `Stop`) mais o
 `review-agent` e o `review-verifier`. O **caminho pesado** soma benchmark nas áreas quentes, sinais de qualidade,
 `review-simplicity`, as lentes condicionais e os especialistas. Sem `risk.conf`, o classificador devolve CRITICA.
+
+## Começar um projeto na nuvem
+
+1. **Criar o ambiente** em claude.ai/code com o repositório do projeto, que pode estar vazio. No setup script, colar
+   o conteúdo de `plugin/cloud/setup.sh`. A rede do ambiente precisa alcançar `github.com`, de onde o plugin é
+   baixado. Isso se faz uma vez por projeto.
+2. **Abrir a primeira sessão.** O setup instala as ferramentas das stacks que detectar e, como o projeto ainda não
+   adotou o wstack, a maior tag publicada do plugin. A sessão começa com "Projeto sem o wstack: ...
+   /wstack:bootstrap". Nesse estado o plugin fica inerte: só as travas de segurança valem.
+3. **Rodar `/wstack:bootstrap`.** Ele diagnostica o repositório (stacks, comandos de build e teste, branch padrão),
+   propõe os arquivos e, com a sua aprovação, cria o que faltar, sem sobrescrever nada que já exista:
+
+   | Arquivo | Para quê |
+   |---|---|
+   | `.claude/settings.json` | agente `wstack:lead`, plugin fixado em `v<versão>`, permissões (`deny`, `ask`, `allow`) |
+   | `.claude/risk.conf` | globs de risco, comandos de verificação (`verify_*`), prefixos de branch, caminhos protegidos |
+   | `CLAUDE.md` | regras do projeto, comandos e o que o código não mostra |
+   | `.claude/project.md`, `.claude/architecture.md` | produto, domínios (com a skill de cada um) e arquitetura |
+   | `.claude/cloud/hosts.conf` | hosts que a nuvem precisa por stack |
+   | `docs/review-rubric.md` | complemento da rubrica: Sempre verificar, Não reportar, Projeto |
+   | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto |
+   | `.claude/skills/verify-<app>/` | esqueleto da skill que sobe a aplicação e prova comportamento (só com aplicação) |
+
+4. **Revisar e fazer o merge.** O bootstrap preenche o que consegue detectar nos `<...>` dos modelos; o resto, e a
+   receita da `verify-<app>` (que sai como esqueleto), você completa na mesma sessão. O commit vai para a branch
+   `chore/bootstrap-wstack`; o merge na branch padrão fixa a versão do plugin no projeto.
+5. **Trabalhar.** Da sessão seguinte em diante, o setup instala a versão fixada e a sessão já começa como
+   `wstack:lead`: você faz o pedido, aprova o plano e faz o merge do PR. O `--check` do setup, rodado no início de
+   cada sessão, aponta o que faltar (ferramenta da stack, plugin em outra versão).
+
+Por que o setup script: na nuvem, o `.claude/settings.json` do projeto não instala plugin sozinho (`docs/sonda.md`,
+fato 1), e cada sessão começa num contêiner novo; o setup roda a cada contêiner e instala o plugin de novo.
+
+### No Claude Code local
+
+Também funciona no terminal, no desktop ou na IDE: instalar o plugin com `/plugin marketplace add wesllenm/wstack` e
+`/plugin install wstack@wstack`, e seguir do passo 3. O setup script é só da nuvem; localmente, as ferramentas da stack
+são as da sua máquina.
+
+### Cobertura por stack
+
+O workflow, as travas, a classificação de risco e a revisão não dependem de linguagem: valem para qualquer
+repositório git. O que depende da stack:
+- **Ferramentas na nuvem:** o `setup.sh` instala .NET (SDK do `global.json`), Node (dependências de cada pasta com
+  lockfile), Rust, Go e Python (`.venv` com os `requirements*.txt`). Outra stack (Java, por exemplo) entra no setup
+  script do ambiente à mão.
+- **Referências específicas** de revisão e performance: .NET, Node, Bash e frontend web; de plano de execução: EF Core
+  e PostgreSQL. Nas outras stacks, as skills de engenharia valem do mesmo jeito, com orientação genérica.
+- **Comandos de build, formato e teste:** são do projeto, declarados nas chaves `verify_*` do `.claude/risk.conf`; o
+  hook `Stop` roda os que estiverem ali.
+
+O projeto mantém os próprios arquivos. Uma mudança em skill, agente ou hook do plugin vira proposta aqui no wstack,
+não edição no projeto.
+
+**Repositório sem bootstrap.** Com o plugin instalado no escopo do usuário, ele roda em todo repositório. Sem
+`.claude/risk.conf` (fora da árvore e de todo commit apontado), os hooks de workflow ficam inertes e só as travas de
+segurança continuam (`docs/decisions.md`, plugin inerte sem risk.conf).
 
 ## O que tem no plugin
 
@@ -154,61 +272,6 @@ Os principais: `classify-diff.sh` (nível de risco), `review-dispatch.mjs`, `dif
 `nova-atividade.sh` e `worktree-env.sh` (sessões em paralelo, cada uma numa worktree), `checkpoint.sh` (checkpoint da
 sessão na nuvem), `prune-merged.sh` (limpa branches de PR mesclado), `bootstrap.sh` (modelos do projeto). A lista
 completa, com quem chama cada um, está em `docs/migracao.md`.
-
-## Adotar num projeto
-
-1. Ter o plugin na sessão. **Na nuvem:** colar `plugin/cloud/setup.sh` no setup script do ambiente; já na primeira
-   sessão o plugin está instalado (ver Primeira vez na nuvem). **No Claude Code local:**
-   `/plugin marketplace add wesllenm/wstack` e `/plugin install wstack@wstack`.
-2. Rodar `/wstack:bootstrap`. Ele diagnostica o repositório (stacks, comandos de build e teste, branch padrão),
-   propõe os arquivos e, com a aprovação, cria o que faltar, sem sobrescrever nada que já exista:
-
-   | Arquivo | Para quê |
-   |---|---|
-   | `.claude/settings.json` | agente `wstack:lead`, plugin fixado em `v<versão>`, permissões (`deny`, `ask`, `allow`) |
-   | `.claude/risk.conf` | globs de risco, comandos de verificação (`verify_*`), prefixos de branch, caminhos protegidos |
-   | `CLAUDE.md` | regras do projeto, comandos e o que o código não mostra |
-   | `.claude/project.md`, `.claude/architecture.md` | produto, domínios (com a skill de cada um) e arquitetura |
-   | `.claude/cloud/hosts.conf` | hosts que a nuvem precisa por stack |
-   | `docs/review-rubric.md` | complemento da rubrica: Sempre verificar, Não reportar, Projeto |
-   | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto |
-   | `.claude/skills/verify-<app>/` | esqueleto da skill que sobe a aplicação e prova comportamento (só com aplicação) |
-
-3. Revisar e preencher o que o bootstrap deixa ao projeto: os `<...>` dos modelos (a skill preenche o que consegue
-   detectar) e a receita da `verify-<app>`, que sai como esqueleto. Commitar na branch `chore/bootstrap-wstack` e
-   fazer o merge.
-### Primeira vez na nuvem
-
-Na nuvem, o `.claude/settings.json` do projeto não instala o plugin sozinho (`docs/sonda.md`, fato 1): quem instala é o
-setup script, a cada contêiner novo. O projeto nasce na nuvem assim:
-
-1. Criar o ambiente em claude.ai/code com o repositório do projeto (pode estar vazio) e colar `plugin/cloud/setup.sh`
-   no setup script. A rede do ambiente precisa alcançar `github.com`, de onde o plugin é clonado.
-2. Abrir a sessão. Como o projeto ainda não cita o plugin, o setup instala a maior tag `v<versão>` publicada do wstack,
-   e a sessão começa com "Projeto sem o wstack: ... /wstack:bootstrap".
-3. Rodar `/wstack:bootstrap`, aprovar a proposta e fazer o merge da `chore/bootstrap-wstack`. O `settings.json` gerado
-   fixa a mesma tag.
-4. Da sessão seguinte em diante, o setup instala a versão que o projeto fixou, e o `--check` de cada sessão aponta o
-   que falta (ferramentas da stack, plugin em outra versão).
-
-### Cobertura por stack
-
-O workflow, as travas, a classificação de risco e a revisão não dependem de linguagem: valem para qualquer
-repositório git. O que depende da stack:
-- **Ferramentas na nuvem:** o `setup.sh` instala .NET (SDK do `global.json`), Node (dependências de cada pasta com
-  lockfile), Rust, Go e Python (`.venv` com os `requirements*.txt`). Outra stack (Java, por exemplo) entra no setup
-  script do ambiente à mão.
-- **Referências específicas** de revisão e performance: .NET, Node, Bash e frontend web; de plano de execução: EF Core
-  e PostgreSQL. Nas outras stacks, as skills de engenharia valem do mesmo jeito, com orientação genérica.
-- **Comandos de build, formato e teste:** são do projeto, declarados nas chaves `verify_*` do `.claude/risk.conf`; o
-  hook `Stop` roda os que estiverem ali.
-
-O projeto mantém os próprios arquivos. Uma mudança em skill, agente ou hook do plugin vira proposta aqui no wstack,
-não edição no projeto.
-
-**Repositório sem bootstrap.** Com o plugin instalado no escopo do usuário, ele roda em todo repositório. Sem
-`.claude/risk.conf` (fora da árvore e de todo commit apontado), os hooks de workflow ficam inertes e só as travas de
-segurança continuam (`docs/decisions.md`, plugin inerte sem risk.conf).
 
 ## Versões
 
