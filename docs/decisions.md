@@ -226,8 +226,9 @@ inertes e só as travas de segurança continuam. "Não adotou" é `.claude/risk.
 commit que o repositório aponta: HEAD, branches locais, refs remotas, tags e os reflogs, lidos sem objetos de troca
 (`confAbsent` em `risk-conf.mjs`; os hooks de shell perguntam a ele com `node risk-conf.mjs --absent`, que sai 10, a regra
 mora num lugar só). Na dúvida (git sem resposta, ref quebrada, node que falha), o projeto conta como adotado.
-- Inertes: o `session-start` deixa de gravar `.claude/.session/` (continua dizendo a versão e o aviso do
-  `safe.bareRepository`), o `iteration-guard` não conta, o `sessions.sh` não registra a sessão. O `verify-on-stop`, o
+- Inertes: o `session-start` deixa de gravar `.claude/.session/` (continua dizendo a versão, a indicação do
+  `/wstack:bootstrap` e o aviso do `safe.bareRepository`), o `iteration-guard` não conta, o `sessions.sh` não registra a
+  sessão. O `verify-on-stop`, o
   `edit-check`, o `checkpoint-tests` e o `map-staleness` já não faziam nada sem as chaves.
 - Travas que continuam: write-guard, path-guard, redirect-guard, git-read-allow, script-allow e, no push-guard, a
   branch padrão recusada (`main`, `master` e a do `origin/HEAD`, que faz as vezes do `default_branch`), o force e o
@@ -278,6 +279,30 @@ mexe no plugin (é o caso do ambiente do próprio wstack, que instala do clone).
 **O que muda:** container restaurado do guardado não roda o setup (decisão de 2026-11-24); a versão nova chega na
 montagem seguinte ou rodando o `setup.sh` na sessão, que o aviso do `--check` manda fazer. Até a tag `v0.0.11` existir
 no GitHub, o bootstrap fixa no commit (`--ref <sha>`, a skill confere com `git ls-remote --tags`).
+
+## 2026-11-25: plugin antes do bootstrap na nuvem
+
+**Contexto:** o setup só instalava o plugin com a versão fixada no `.claude/settings.json` do projeto, que só existe
+depois do `/wstack:bootstrap`. A primeira sessão de um projeto novo na nuvem subia sem o plugin, então sem o bootstrap;
+e cada sessão começa num contêiner novo, então instalar à mão numa sessão não vale para a seguinte. Adotar exigia um
+passo no Claude Code local.
+
+**Decisão** (do desenvolvedor, no plano da unidade seguinte à 2.4: "a ideia era já nascer na nuvem"): o projeto cujo
+`settings.json` não cita `wstack@wstack` (ou que não tem `settings.json`) recebe do setup a maior tag
+`v<maior>.<menor>.<correção>` do wstack no GitHub (`git ls-remote --tags`, ordenada por versão; pré-release e tag fora
+desse formato ficam de fora), instalada como a versão fixada. O projeto que cita o plugin sem `ref` continua sem
+instalação pelo setup (o ambiente do próprio wstack). Sem rede ou sem tag, só aviso. O `session-start` do projeto sem
+`risk.conf` passa a indicar o `/wstack:bootstrap`.
+
+**Por quê:** a tag é versão publicada e é a mesma que o bootstrap vai fixar, então a troca para a versão fixada não
+reinstala nada. Instalar a `main` levaria código não publicado a toda máquina; embutir a versão no `setup.sh`
+envelheceria no texto colado no ambiente. Sem `risk.conf` o plugin fica inerte, salvo as travas (plugin inerte sem
+risk.conf), então ele ligado num repositório que não vai adotar o wstack não grava nada nem pede aprovação a mais.
+
+**Evidência:** `test-cloud-setup.sh` (tags `v0.0.9`, `v0.0.10`, `v0.0.11` e duas fora do formato num repositório local
+visto como o GitHub pelo `insteadOf`: instala a `v0.0.11`; sem tag, só aviso; projeto sem `ref` não muda);
+`test-inert.sh` (a indicação do bootstrap só sem `risk.conf`); o `setup.sh` real num repositório vazio, `HOME`
+isolado, clonou a `v0.0.11` do GitHub e instalou o commit `b5488ba`, e o `--check` saiu 0.
 
 ## 2026-11-25: modelos do projeto e bootstrap determinístico
 
