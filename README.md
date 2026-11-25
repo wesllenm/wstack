@@ -50,27 +50,36 @@ flowchart LR
 Os hooks valem em todos os passos, sem depender do modelo: travas de escrita, de comando e de push na execução, e
 build, formato e testes verdes antes de a sessão encerrar.
 
-1. **Início.** Lê o contexto do projeto (`CLAUDE.md`, `.claude/project.md`, decisões), confere sessões
-   paralelas no mesmo repositório (`sessions.sh`) e recupera histórico de sessões anteriores quando a área já foi
-   trabalhada (skill `recall`).
+1. **Início.** A primeira mensagem repete o objetivo do pedido e a menor mudança que o atende, e o plano parte dela.
+   Lê o contexto do projeto (`CLAUDE.md`, `.claude/project.md`, decisões), confere sessões paralelas no mesmo
+   repositório (`sessions.sh`) e recupera histórico de sessões anteriores quando a área já foi trabalhada (skill
+   `recall`).
 2. **Classificação.** O nível de risco não é opinião do modelo. Ele vem de `scripts/classify-diff.sh`, calculado pelos
    caminhos tocados, pelo tamanho do diff e pelos globs `critical`, `complex` e `domain` do `.claude/risk.conf`. O
-   `lead` pode subir o nível, nunca descer. A classificação roda no plano e de novo no diff real.
+   `lead` pode subir o nível, nunca descer. A classificação roda no plano e de novo no diff real. Depois dela, o
+   `lead` escolhe o tipo da tarefa (feature, bug, investigação, performance, refatoração) e segue o playbook do tipo:
+   o risco decide os gates, o tipo decide os passos. Pergunta sobre o código vai para as skills `how` e `why`, fora
+   desse fluxo.
 3. **Plano e aprovação única.** Escopo, exclusões, testes, agentes e uma condição de parada verificável (comando e
-   resultado esperado). O desenvolvedor aprova uma vez. Dali em diante o `lead` lê, edita, testa, delega, corrige e
+   resultado esperado). Decisão de design cara de reverter passa antes pela arena: propostas paralelas comparadas
+   pelos mesmos critérios. O desenvolvedor aprova uma vez. Dali em diante o `lead` lê, edita, testa, delega, corrige e
    commita sem pedir confirmação a cada passo. Push, PR e afrouxar testes só entram se o plano disser.
 4. **Execução.** O `implementer` recebe um sprint contract delimitado e trabalha com TDD. O `planner` e o `explore`
    levantam contexto em código desconhecido.
 5. **Revisão**, em quatro etapas:
    - preparar: `diff-smells.mjs` limpa código comentado e marcadores, e `review-dispatch.mjs` agrupa os arquivos e
      indica a regra de cada caminho;
-   - achar: as lentes rodam em paralelo;
+   - achar: as lentes rodam em paralelo e, em COMPLEXA e CRITICA, modelos de outro fornecedor tentam quebrar o diff
+     quando o projeto os configura (`interrogate.mjs`);
    - verificar: `check-findings.mjs` descarta o achado cujo trecho não existe no código, e o `review-verifier` tenta
      refutar cada candidato;
    - corrigir: só o confirmado é corrigido, e o delta é revisto de novo (no máximo duas rodadas).
-6. **Commit** pela skill `commit` (Conventional Commits, em português), numa branch de atividade.
+6. **Commit** pela skill `commit` (Conventional Commits, em português), numa branch de atividade, com a mensagem
+   conferida pelo `slop-check.mjs` (skill `unslop`).
 7. **Limpeza e aprendizado.** Remove o que a sessão criou (worktrees, branches temporárias, contêineres) e registra o
-   que aprendeu em `docs/gotchas/` e em `docs/review-calibration.md`, que calibra a revisão ao longo do tempo.
+   que aprendeu em `docs/gotchas/` e em `docs/review-calibration.md`, que calibra a revisão ao longo do tempo. A
+   correção que você faz no meio da sessão é registrada na hora (skill `correct`) e sobe na escada de correção no fim.
+   O relatório diz qual regra de qual skill mudou qual decisão, e o `principles.mjs` confere que a skill foi lida.
 
 ### Níveis de risco
 
@@ -154,7 +163,7 @@ segurança continuam (`docs/decisions.md`, plugin inerte sem risk.conf).
 plugin/
   .claude-plugin/plugin.json      nome e versão
   agents/       18 subagentes (wstack:<nome>)
-  skills/       25 skills (/wstack:<nome>)
+  skills/       29 skills (/wstack:<nome>)
   hooks/        hooks.json e as travas e verificações
   scripts/      scripts que as skills, os agentes e os hooks chamam
   cloud/        setup.sh do ambiente da nuvem
@@ -189,10 +198,10 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 ### Skills
 
 - **Workflow:** `lead` (o processo acima), `commit`, `review-rubric` (régua comum de severidade, evidência e formato
-  dos achados), `test-audit` (gate de autoria de testes e auditoria), `recall` (sessões anteriores), `how` e `why` (como o código funciona e por que
-  está assim, só leitura e fora do pipeline de risco), `unslop` (texto técnico em PT-BR sem enfeite, com o
-  `slop-check.mjs` conferindo commit e PR), `correct`
-  (correção do desenvolvedor registrada na hora, com o degrau da escada), `bootstrap` (adoção num projeto).
+  dos achados), `test-audit` (gate de autoria de testes e auditoria), `recall` (sessões anteriores), `correct`
+  (correção do desenvolvedor registrada na hora, com o degrau da escada), `unslop` (texto técnico em PT-BR sem
+  enfeite), `bootstrap` (adoção num projeto).
+- **Entender o código:** `how` (como funciona) e `why` (por que está assim), só leitura e fora do pipeline de risco.
 - **Engenharia:** `tdd`, `testing-strategy`, `clean-code`, `refactoring`, `clean-architecture`, `vertical-slice`,
   `domain-modeling`, `api-design`, `concurrency`, `resilience`, `event-driven`, `observability`, `security`,
   `performance`, `continuous-delivery`, `frontend`, `ux`.
@@ -237,8 +246,10 @@ garante e o teste que prova estão em `docs/harness-capabilities.md`.
 Os principais: `classify-diff.sh` (nível de risco), `review-dispatch.mjs`, `diff-smells.mjs` e `check-findings.mjs`
 (revisão), `quality-signals.sh` e `bench-compare.sh` (sinais de qualidade e benchmark), `sessions.sh`,
 `nova-atividade.sh` e `worktree-env.sh` (sessões em paralelo, cada uma numa worktree), `checkpoint.sh` (checkpoint da
-sessão na nuvem), `prune-merged.sh` (limpa branches de PR mesclado), `bootstrap.sh` (modelos do projeto). A lista
-completa, com quem chama cada um, está em `docs/migracao.md`.
+sessão na nuvem), `prune-merged.sh` (limpa branches de PR mesclado), `bootstrap.sh` (modelos do projeto),
+`interrogate.mjs` (revisão por outro fornecedor), `principles.mjs` (princípios citados contra os lidos) e
+`slop-check.mjs` (texto de commit e PR). Os que vieram do harness de origem estão no inventário de `docs/migracao.md`,
+com quem chama cada um; os criados depois, em `docs/decisions.md`.
 
 ## Versões
 
