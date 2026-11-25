@@ -14,7 +14,7 @@ O `lead` é o coordenador técnico. Ele não é sinônimo de `implementer`.
 
 ## Scripts do plugin
 
-Os scripts citados pelo nome nesta skill (`classify-diff.sh`, `quality-signals.sh`, `bench-compare.sh`, `sessions.sh`, `diff-smells.mjs`, `review-dispatch.mjs`, `check-findings.mjs` e os demais) ficam em `${CLAUDE_PLUGIN_ROOT}/scripts/`, e os hooks em `${CLAUDE_PLUGIN_ROOT}/hooks/`; nenhum fica no `.claude/` do projeto. Chamar sempre pelo caminho inteiro, sozinho na chamada e a partir da raiz do projeto, com o interpretador do script: `bash` para `.sh` (o `classify-diff.sh`, o `bench-compare.sh`, o `sessions.sh` e o `worktree-env.sh` também rodam direto) e `node` para `.mjs`. Nessa forma o hook `script-allow` do plugin aprova sem pedido; o `nova-atividade.sh`, o `enviar-nuvem.sh`, o `recall.mjs` e o `permission-asks.mjs` pedem aprovação de propósito.
+Os scripts citados pelo nome nesta skill (`classify-diff.sh`, `quality-signals.sh`, `bench-compare.sh`, `sessions.sh`, `diff-smells.mjs`, `review-dispatch.mjs`, `check-findings.mjs` e os demais) ficam em `${CLAUDE_PLUGIN_ROOT}/scripts/`, e os hooks em `${CLAUDE_PLUGIN_ROOT}/hooks/`; nenhum fica no `.claude/` do projeto. Chamar sempre pelo caminho inteiro, sozinho na chamada e a partir da raiz do projeto, com o interpretador do script: `bash` para `.sh` (o `classify-diff.sh`, o `bench-compare.sh`, o `sessions.sh` e o `worktree-env.sh` também rodam direto) e `node` para `.mjs`. Nessa forma o hook `script-allow` do plugin aprova sem pedido; o `nova-atividade.sh`, o `enviar-nuvem.sh`, o `recall.mjs`, o `permission-asks.mjs` e o `principles.mjs` pedem aprovação de propósito.
 
 ## Leitura sob demanda
 
@@ -318,6 +318,8 @@ Toda tarefa termina com uma linha na seção Registro de `docs/review-calibratio
 
 Ao fechar a tarefa, rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/permission-asks.mjs <transcrição da sessão em ~/.claude/projects/<projeto>/<sessão>.jsonl> [<pasta subagents da sessão>]` e acrescentar `— pedidos: N (hooks)` ao fim da linha; pedido novo (hook que perguntou onde não devia) vira correção do mecanismo na escada, não aprovação repetida.
 
+Na mesma hora, gravar o relatório num arquivo da pasta temporária e rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/principles.mjs <transcrição> [<pasta subagents>] --report <relatório>`. Ele lista as skills carregadas de fato (ferramenta Skill, `/comando` e pré-carga dos agentes) e as referências lidas, e sai 3 quando o relatório cita princípio ou referência sem leitura: tirar a citação, nunca ler a skill depois só para citá-la. Acrescentar `— princípios: <citadas, separadas por vírgula | nenhum> (carregadas: N)` ao fim da linha. Uma skill carregada e nunca citada, e uma citada e nunca carregada, são os dois sinais que a manutenção usa.
+
 Ela custa uma linha e prova que o passo aconteceu. O hook `Stop` (gate de aprendizado, `verify-on-stop.sh` do plugin) exige essa linha depois de commit de código na sessão, e libera mudança só em arquivos de aprendizado sem rodar build. Não contornar o gate escrevendo a linha sem fazer a verificação acima.
 
 ### Interrupção
@@ -329,6 +331,8 @@ Ao interromper, registrar antes de encerrar: o que bloqueou, o que foi tentado e
 Na primeira tarefa de cada sessão, ler `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/aprendizado.md` (Feedback externo) e seguir: leitura do feedback humano dos PRs desde a última leitura e classificação de cada comentário. Ao fechar a tarefa, conferir no mesmo arquivo os critérios de Quando sugerir manutenção. A tarefa de manutenção do aprendizado segue o mesmo arquivo.
 
 ## Relatório
+
+**Princípios aplicados.** O campo diz qual regra de qual skill mudou qual decisão: `skill — regra (seção ou item) — decisão que mudou (item do plano, arquivo:linha ou achado)`, um por linha. Só vale skill carregada nesta sessão (ferramenta Skill, `/comando` ou pré-carga de agente) e regra que fez o plano ou o código sair diferente do que sairia sem ela; skill carregada que não mudou nada não entra, e `nenhum` é resposta válida. O `principles.mjs` confere no fechamento (seção Aprendizado, Registro). Isso deixa o raciocínio auditável e mostra quais regras nunca mudam decisão.
 
 ```text
 ## Resultado
@@ -343,8 +347,8 @@ Testes e verificações: comando — resultado
 Testes existentes alterados: nenhum | teste — motivo — autorização
 Commits: <hash curto> <título>
 Agentes utilizados: agente (modelo) — finalidade — resultado
-Skills usadas:
-Referências lidas: nenhuma | arquivo de reference/ ou playbooks/ — momento
+Princípios aplicados: nenhum | skill — regra (seção ou item) — decisão que mudou (item do plano, arquivo:linha ou achado)
+Referências lidas: nenhuma | reference/<arquivo> | playbooks/<arquivo> — momento
 Performance: camada 2 (testes de contagem) — quais | camada 3: não aplicável (sem `quente:`) ou categorias — linha por benchmark (OK | NOVO | TEMPO | ALOCAÇÃO | ESCALA | ORÇAMENTO | EXCEÇÃO | TAMANHO | REMOVIDO) — destino de cada achado | pontos de melhoria do perfil de CPU: método — % do tempo — proposta — aplicado e medido | follow-up | camada 3b: não aplicável ou anomalias — destino (achado | descartada: motivo) | camada 4: não executada | pergunta — antes — depois
 Camada determinística: build com analisadores, formato, arquitetura — resultado; dependências vulneráveis e segredos — resultado ou não aplicável; mutação — mutantes sobreviventes no diff: N (mortos com teste | código morto removido | equivalentes) ou não aplicável (sem ferramenta local); qualidade — `CRAP`: N (testado | dividido | preexistente, follow-up), `DUPLICADO`: N (reusado | extraído | acidental) ou não aplicável
 Classificação: nível (TRIVIAL | SIMPLES | COMPLEXA | CRITICA) — motivos do classificador — subiu durante a execução: não | de X para Y

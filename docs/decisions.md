@@ -404,3 +404,20 @@ escritos antes das propostas, e protótipo em worktree por `implementer` só par
 comparação vai ao plano, e a aprovação única decide. Arena de N implementações completas para juntar as melhores partes
 ficou de fora: juntar partes que tocam o mesmo invariante é uma proposta nova, e o custo de integrar e revisar N
 implementações não se paga onde a decisão difícil é de design.
+
+## 2026-11-25: princípios citados na decisão
+
+**Decisão:** o campo Skills usadas do relatório vira Princípios aplicados, `skill — regra — decisão que mudou`, um por
+linha, e só vale skill carregada na sessão e regra que fez o plano ou o código sair diferente; `nenhum` é resposta
+válida. No fechamento, o `principles.mjs` lê a transcrição da sessão e dos subagentes, lista o que foi carregado
+(ferramenta Skill, `/comando`, pré-carga dos agentes chamados) e lido (`reference/`, `playbooks/`), e recusa citação sem
+leitura. A linha de Registro ganha `— princípios: <citadas> (carregadas: N)`, que o `summarize-runs.mjs` conta.
+
+**Por quê:** "Skills usadas" listava o que foi carregado, não o que mudou alguma coisa, e não havia como conferir. Com a
+citação presa a uma decisão e a leitura conferida na transcrição, o raciocínio fica auditável e a manutenção de 90 dias
+ganha o dado que o orçamento de complexidade pedia: skill carregada e nunca citada tem gatilho largo ou texto que não
+muda decisão; skill que nem aparece é candidata a sair.
+
+**O que muda:** as skills de engenharia continuam como estão (já eram skills separadas e curtas). O `principles.mjs`
+pede aprovação, como o `permission-asks.mjs`, porque lê a transcrição. Que a regra citada tenha de fato mudado a
+decisão continua sendo palavra do relatório: o script só garante que ela foi lida.

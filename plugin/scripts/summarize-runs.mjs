@@ -51,7 +51,7 @@ for (const e of jsonl(HOOKS).filter((r) => inRange(r.timestamp))) {
 }
 
 // Registro: uma linha por tarefa, no formato da skill lead.
-const tasks = { total: 0, byLevel: {}, confirmed: 0, refuted: 0, rejected: 0, escaped: 0 };
+const tasks = { total: 0, byLevel: {}, confirmed: 0, refuted: 0, rejected: 0, escaped: 0, principles: {} };
 if (existsSync(REG)) {
   for (const line of readFileSync(REG, "utf8").split("\n")) {
     const m = line.match(/^-?\s*(\d{4}-\d{2}-\d{2}) — .+? — (TRIVIAL|SIMPLES|COMPLEXA|CRITICA|interrompida|investigação)(?![\p{L}\d_])(.*)$/u);
@@ -61,6 +61,11 @@ if (existsSync(REG)) {
     const n = (re) => Number((m[3].match(re) ?? [0, 0])[1]);
     tasks.confirmed += n(/(\d+) confirmados/); tasks.refuted += n(/(\d+) refutados/);
     tasks.rejected += n(/(\d+) recusados/); tasks.escaped += n(/(\d+) escaparam/);
+    // "— princípios: tdd, query-plan (carregadas: 5)": quantas tarefas citaram cada skill
+    const p = /— princípios: ([^—(]*)/u.exec(m[3]);
+    for (const s of p ? p[1].split(',').map((x) => x.trim()).filter((x) => x && x !== 'nenhum') : []) {
+      tasks.principles[s] = (tasks.principles[s] ?? 0) + 1;
+    }
   }
 }
 
@@ -98,6 +103,8 @@ console.log(`Tokens: entrada ${fmt(summary.tokens.input)}, saída ${fmt(summary.
 console.log(`Gates: verificação falhou ${fmt(summary.gates.verification_failed)}x, aprendizado bloqueou ${fmt(summary.gates.learning_blocked)}x, exceção de verificação ${fmt(summary.gates.verification_exception)}x, limite de iteração ${fmt(summary.gates.iteration_limit)}x`);
 console.log(`Cache de prompt: ${summary.cache_hit === null ? "n/d" : (summary.cache_hit * 100).toFixed(0) + "%"}`);
 console.log(`Tarefas no Registro: ${tasks.total} ${JSON.stringify(tasks.byLevel)}; achados: ${tasks.confirmed} confirmados, ${tasks.refuted} refutados, ${tasks.rejected} recusados, ${tasks.escaped} escaparam`);
+const cited = Object.entries(tasks.principles).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+console.log(`Princípios citados no Registro: ${cited.length ? cited.map(([s, n]) => `${s} ${n}`).join(', ') : 'nenhum'}`);
 for (const w of summary.warnings) console.log(`AVISO: ${w}`);
 console.log("\nÚltimas sessões:");
 console.log("início                 sessão    custo US$  entrada   saída     req  falhas  bloq.aprend.");

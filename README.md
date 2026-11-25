@@ -204,7 +204,8 @@ Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por 
 performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos. A arena
 (`reference/arena.md`) compara propostas paralelas de `planner` em decisão de design cara de reverter, e o
 `interrogate.mjs` manda o diff de COMPLEXA e CRITICA para modelos de outro fornecedor que o projeto configure no
-`risk.conf`, com os achados passando pelo `review-verifier`.
+`risk.conf`, com os achados passando pelo `review-verifier`. O relatório diz qual regra de qual skill mudou qual decisão
+(Princípios aplicados), e o `principles.mjs` recusa citação de skill que a sessão não carregou.
 
 ### Hooks
 
