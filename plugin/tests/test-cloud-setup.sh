@@ -64,11 +64,16 @@ out=$(run "$d" --plan)
 has "$out" "playwright (dotnet) 1.64.1" playwright-dotnet
 
 d=$(repo vazio 'README.md=nada')
-out=$(run "$d" --plan); rc=$?
+# HOME com o plugin já instalado no escopo do usuário: sem ele, o --check acusa o plugin (projeto sem bootstrap, caso
+# fresh adiante), e o resultado dependeria de a máquina que roda o teste ter o wstack instalado
+mkdir -p "$work/home-vazio-ok/.claude/plugins"
+printf '{"version":2,"plugins":{"wstack@wstack":[{"scope":"user","version":"0.0.11","gitCommitSha":"0"}]}}' \
+  > "$work/home-vazio-ok/.claude/plugins/installed_plugins.json"
+out=$(HOME="$work/home-vazio-ok" run "$d" --plan); rc=$?
 [ "$rc" = 0 ] || { echo "FALHOU [vazio]: código $rc"; fails=$((fails + 1)); }
 # sem stack, o único plano é o do plugin wstack (projeto sem bootstrap)
 hasnt "$(grep -v '^plano: wstack:' <<< "$out")" "plano:" vazio-sem-plano
-run "$d" --check > /dev/null || { echo "FALHOU [vazio-check]: --check sem stack precisa sair 0"; fails=$((fails + 1)); }
+HOME="$work/home-vazio-ok" run "$d" --check > /dev/null || { echo "FALHOU [vazio-check]: --check sem stack precisa sair 0"; fails=$((fails + 1)); }
 
 # safe.bareRepository=explicit: sem a chave, --plan a mostra e --check acusa a falta
 : > "$work/gitconfig-sem"
