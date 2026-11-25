@@ -215,3 +215,85 @@ era toda do produto, e Sempre verificar e Não reportar cresciam com a calibraç
 
 **O que muda:** a 2.4 cria o modelo do arquivo no bootstrap. Mudança no texto de skill, agente ou hook do plugin, vinda
 do aprendizado de um projeto, vira proposta no wstack. Sem o arquivo, vale só a rubrica do plugin.
+
+## 2026-11-25: plugin inerte sem risk.conf
+
+Fecha a pendência de 2026-11-24 "gates do Stop configurados pelo projeto" (o resto do comportamento num repositório sem
+bootstrap).
+
+**Decisão** (do desenvolvedor, no plano da 2.4): no repositório que não adotou o wstack os hooks de workflow ficam
+inertes e só as travas de segurança continuam. "Não adotou" é `.claude/risk.conf` ausente na árvore **e** em todo
+commit que o repositório aponta: HEAD, branches locais, refs remotas, tags e os reflogs, lidos sem objetos de troca
+(`confAbsent` em `risk-conf.mjs`; os hooks de shell perguntam a ele com `node risk-conf.mjs --absent`, que sai 10, a regra
+mora num lugar só). Na dúvida (git sem resposta, ref quebrada, node que falha), o projeto conta como adotado.
+- Inertes: o `session-start` deixa de gravar `.claude/.session/` (continua dizendo a versão e o aviso do
+  `safe.bareRepository`), o `iteration-guard` não conta, o `sessions.sh` não registra a sessão. O `verify-on-stop`, o
+  `edit-check`, o `checkpoint-tests` e o `map-staleness` já não faziam nada sem as chaves.
+- Travas que continuam: write-guard, path-guard, redirect-guard, git-read-allow, script-allow e, no push-guard, a
+  branch padrão recusada (`main`, `master` e a do `origin/HEAD`, que faz as vezes do `default_branch`), o force e o
+  núcleo de caminhos protegidos. O que deixa de acontecer é o pedido forçado para toda branch fora dos prefixos de
+  atividade: sem `risk.conf` não há prefixos, e a decisão volta para as regras e o modo da sessão.
+
+**Por quê:** o setup da nuvem instala o plugin no escopo do usuário, e ele roda em todo repositório do ambiente. Gravar
+`.claude/` num projeto alheio e pedir aprovação para todo push é atrito sem proteção; as travas de segurança não
+dependem de o projeto ter adotado o workflow.
+
+**Risco aceito e o que o fecha:** apagar o arquivo da árvore, ou pôr o HEAD num commit anterior ao bootstrap (um
+checkout que não cita a trava), não liga o modo inerte enquanto o arquivo estiver em alguma branch ou ref remota: o hook
+continua na falha fechada de antes. A primeira versão olhava só o HEAD, e a revisão CRITICA da 2.4 mostrou o checkout
+afrouxando o push-guard (achado bloqueante, corrigido antes do commit). A revisão do delta achou mais dois caminhos, também
+corrigidos: um `git replace` que troca a ponta (ou a subárvore `.claude`) por uma sem o arquivo, fechado lendo o git com
+`GIT_NO_REPLACE_OBJECTS=1` (também no push-guard e no protected-paths, que o mesmo replace cegava antes da 2.4); e
+`git branch -d` com `-d -r`, que apagam as branches e as refs de rastreio sem citar a trava, fechado pelos reflogs (lidos também com o HEAD numa branch órfã).
+Sobra limpar também os reflogs (`git reflog expire`), uma sequência de comandos que um a um não citam a trava: o hook é
+cinto de segurança, não fronteira (Riscos aceitos em `docs/harness-capabilities.md`). Um commit que apaga o arquivo é
+mudança em caminho protegido, e publicá-lo pede aprovação. No modo inerte, destino em
+espaço de nome do git (`refs/tags/...`, `tags/...`) continua pedindo: tag não é branch. Provas: `test-inert.sh`,
+`test-push-guard.sh` (projeto sem `risk.conf`, tag, arquivo apagado da árvore, HEAD num commit anterior ao bootstrap),
+`test-risk-conf.sh` (inclui ref quebrada, replace, reflog, branch órfã e 20 mil refs); os três reprovam o código anterior.
+
+## 2026-11-25: versão do plugin fixada por tag, instalada pelo setup da nuvem
+
+Fecha as pendências de 2026-11-24 "destinos do inventário" (conferir a versão fixada na 2.4) e "no ambiente do wstack, o
+plugin vem do clone" (como o ambiente de outro projeto se atualiza).
+
+**Decisão** (do desenvolvedor, no plano da 2.4): o `settings.json` modelo declara o marketplace `wstack` com
+`"ref": "v<versão>"`, a tag do wstack para aquela versão do `plugin.json`. Cada versão publicada ganha a tag na `main`,
+depois do merge. O `cloud/setup.sh` lê essa referência do `.claude/settings.json` do projeto (só com `enabledPlugins`
+ligado, fonte `github` e repositório e ref no alfabeto fechado) e instala o plugin nela, no escopo do usuário; o
+`--check` (que o `cloud-services.sh` põe no contexto) acusa plugin ausente ou em outra versão. Sem `ref`, o setup não
+mexe no plugin (é o caso do ambiente do próprio wstack, que instala do clone).
+
+**Evidência** (Claude Code 2.1.332, HOME isolado):
+- `claude plugin marketplace add "wesllenm/wstack#<sha>" --scope project` gravou `"ref": "<sha>"` na fonte do
+  marketplace, e o `install` trouxe a versão daquele commit (0.0.10), registrada com `version` e `gitCommitSha` em
+  `installed_plugins.json`.
+- Com a entrada já declarada nas configurações do usuário, `marketplace add` com outra ref é recusado ("its source
+  doesn't match its extraKnownMarketplaces entry"); `marketplace remove`, `add` com a ref nova e `install` levam à
+  versão nova. O setup faz essa sequência só quando o instalado não confere.
+- A instalação real pelo `setup.sh` num repositório sintético instalou o commit fixado; o `--check` saiu 0 e a segunda
+  rodada reconheceu a versão instalada.
+- `claude plugin validate plugin` e `claude plugin validate .` passaram.
+
+**O que muda:** container restaurado do guardado não roda o setup (decisão de 2026-11-24); a versão nova chega na
+montagem seguinte ou rodando o `setup.sh` na sessão, que o aviso do `--check` manda fazer. Até a tag `v0.0.11` existir
+no GitHub, o bootstrap fixa no commit (`--ref <sha>`, a skill confere com `git ls-remote --tags`).
+
+## 2026-11-25: modelos do projeto e bootstrap determinístico
+
+**Decisão:** os arquivos que o projeto mantém ficam em `plugin/templates/` e o `/wstack:bootstrap` os copia por um
+script (`scripts/bootstrap.sh`) que nunca sobrescreve, nunca grava através de link e só troca marcadores de alfabeto
+fechado; o resto (comandos, globs, domínios) a skill preenche depois da aprovação única. Entram também
+`.claude/project.md` e `.claude/architecture.md`, que o inventário não listava mas a skill lead e o planner citam (a
+tabela Domínios), e `docs/gotchas.md` e `docs/decisions.md`, que o `CLAUDE.md` modelo importa ou cita. A `verify-<app>`
+entra como esqueleto, só com `--app`, e é escrita e provada pela skill. O script pede aprovação de propósito (grava no
+projeto): fica fora do `script-allow`.
+
+**Por quê:** a cópia é a parte em que um erro custa caro (apagar a configuração que o projeto já tem) e é
+determinística; o preenchimento depende do diagnóstico e fica com o modelo, na aprovação única. Os testes do plugin
+passam a ler os modelos no lugar das fixtures da 2.2, e os dois casos fracos anotados ali deixam de ser triviais.
+
+**O que muda:** as `review_rule` do modelo apontam para checklist do próprio projeto: o `review-dispatch.mjs` exige o
+arquivo dentro do projeto, então os checklists de `review-rubric/reference/paths/` do plugin não podem ser citados ali
+(follow-up). O gate de aprendizado do Stop passa a tratar `docs/gotchas/` e `docs/review-rubric.md` como arquivos de
+aprendizado, onde a escada da skill lead grava desde a 2.3.

@@ -1,7 +1,7 @@
 # Migração do harness para o plugin
 
-Inventário da unidade 2.1: para onde vai cada arquivo do harness genérico (121 arquivos). Nada foi movido ainda; as
-unidades 2.2 a 2.4 fazem a mudança e esta tabela é a lista de conferência delas.
+Inventário da unidade 2.1: para onde vai cada arquivo do harness genérico (121 arquivos). As unidades 2.2 a 2.4 fizeram
+a mudança (ver o Estado de cada uma) e esta tabela é a lista de conferência delas.
 
 Destinos:
 - **plugin:** vai para `plugin/<pasta>/` e é igual em todo projeto. Hooks entram em `plugin/hooks/hooks.json`; scripts
@@ -65,6 +65,30 @@ Diferenças em relação às tabelas abaixo:
 - Saíram as peças da sonda 3 (agentes e skills `sonda-*`).
 - Não conferido no Claude Code real: uma sessão com `"agent": "wstack:lead"` (é da 2.4, com o `settings.json` modelo)
   delegando aos agentes reais.
+
+## Estado da 2.4
+
+Feita (versão 0.0.11). Modelos do projeto em `plugin/templates/` (a pasta espelha o destino no projeto), copiados por
+`plugin/scripts/bootstrap.sh` e preenchidos pela skill `/wstack:bootstrap`; testes em `test-bootstrap.sh` e
+`test-inert.sh`. Decisões em `docs/decisions.md` (2026-11-25: plugin inerte sem risk.conf, versão fixada por tag,
+modelos e bootstrap determinístico). Diferenças em relação às tabelas abaixo:
+- Entraram como modelo, sem estar no inventário: `.claude/project.md` e `.claude/architecture.md` (a skill lead e o
+  planner os citam), `docs/gotchas.md` (o `CLAUDE.md` o importa) e `docs/decisions.md`.
+- `settings.json`: `agent` `wstack:lead`, marketplace fixado por `ref` e `enabledPlugins`; saíram as regras de
+  `.claude/scripts/` e as de stack (a skill põe as da stack do projeto); `TodoWrite` virou `TaskCreate`, `TaskUpdate`
+  e `TaskList`. As regras de `Edit` são as da fixture da 2.2, que o `test-path-guard.sh` confere contra o hook.
+- `risk.conf`: chaves `verify_*`; o `critical` de `.claude/hooks`, `.claude/scripts` e da rubrica antiga virou
+  `.github/workflows/*` e `docs/review-rubric.md`; as `review_rule` apontam para checklist do projeto (follow-up para
+  citar os do plugin). A linha `default_branch = main` é literal (os testes copiam o modelo); o script troca pela
+  branch detectada.
+- `hosts.conf` ganhou a stack `wstack` (`github.com`, de onde o `claude plugin` clona o marketplace).
+- A `verify-<app>` é esqueleto em `templates/verify-app/`, criada só com `--app`; a receita e a prova são da skill.
+- As fixtures `risk.conf`, `settings.json` e `hosts.conf` saíram; os testes leem os modelos. Os dois casos fracos da
+  2.2 deixaram de ser triviais: o modelo tem `allow`, e a classificação de `.claude/cloud/` vem do `risk.conf` modelo.
+- O `setup.sh` instala o plugin na ref do `.claude/settings.json` do projeto e o `--check` acusa versão diferente.
+- O gate de aprendizado do Stop passou a contar `docs/gotchas/` e `docs/review-rubric.md` como aprendizado.
+- Não conferido no Claude Code real: uma sessão num projeto que passou pelo bootstrap, com `"agent": "wstack:lead"`
+  delegando aos agentes; e a tag `v0.0.11`, que só existe depois do merge.
 
 ## Hooks
 
