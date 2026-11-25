@@ -200,7 +200,8 @@ As referências por stack ficam em `reference/*.md`: .NET, Node, Bash e frontend
 `review-rubric` (esta também tem regras por caminho), e EF Core e PostgreSQL em `query-plan`. A skill `lead` tem um
 núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (revisão, delegação,
 limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, manutenção do aprendizado), lido no momento que a tabela
-Leitura sob demanda do núcleo indica.
+Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação e
+performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos.
 
 ### Hooks
 

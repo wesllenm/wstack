@@ -9,7 +9,8 @@
 #   TodoWrite; Agent(...) só com wstack:<nome> de agente que existe; skills: só com skill que existe;
 # - cada skill tem SKILL.md com name: igual à pasta, e cada agente tem name: igual ao arquivo;
 # - todo ${CLAUDE_PLUGIN_ROOT}/skills/<caminho> citado existe; em reference/*.md, <plugin>/scripts/<x> passa pelas mesmas
-#   conferências de ${CLAUDE_PLUGIN_ROOT}/scripts/<x>; todo reference/<x>.md de uma skill é citado no SKILL.md dela.
+#   conferências de ${CLAUDE_PLUGIN_ROOT}/scripts/<x>; todo reference/<x>.md e playbooks/<x>.md de uma skill é
+#   citado no SKILL.md dela (playbooks/ segue as regras de reference/).
 # Uso: test-skills-agents.sh [<pasta do plugin>]
 # Código: 0 todos passaram, 1 algum falhou, 2 uso errado.
 set -uo pipefail
@@ -78,8 +79,8 @@ for (const f of files) {
     if (/\.claude\/(scripts|hooks)\/|\.claude\/cloud\/setup\.sh/.test(line)) fail(`${at}: caminho do harness no projeto`);
     if (line.includes('§')) fail(`${at}: citação § do documento de origem`);
     if (/squad ?os/i.test(line)) fail(`${at}: nome do projeto de origem`);
-    if (/\/reference\//.test(r) && line.includes('${CLAUDE_PLUGIN_ROOT}')) {
-      fail(`${at}: \${CLAUDE_PLUGIN_ROOT} em reference/ (o Read não troca a variável)`);
+    if (/\/(reference|playbooks)\//.test(r) && line.includes('${CLAUDE_PLUGIN_ROOT}')) {
+      fail(`${at}: \${CLAUDE_PLUGIN_ROOT} em reference/ ou playbooks/ (o Read não troca a variável)`);
     }
     for (const m of line.matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/(scripts|cloud|hooks)\/([A-Za-z0-9_.-]+)/g)) {
       if (!fs.existsSync(path.join(plugin, m[1], m[2]))) fail(`${at}: ${m[1]}/${m[2]} não existe no plugin`);
@@ -89,7 +90,7 @@ for (const f of files) {
       if (!fs.existsSync(path.join(plugin, m[1]))) fail(`${at}: ${m[1]} não existe no plugin`);
     }
     // Em reference/*.md o script aparece como <plugin>/scripts/<x> (o Read não troca a variável): mesmas conferências
-    if (/\/reference\//.test(r)) {
+    if (/\/(reference|playbooks)\//.test(r)) {
       for (const m of line.matchAll(/<plugin>\/(scripts|cloud|hooks)\/([A-Za-z0-9_.-]+)/g)) {
         if (!fs.existsSync(path.join(plugin, m[1], m[2]))) fail(`${at}: ${m[1]}/${m[2]} não existe no plugin`);
       }
@@ -136,14 +137,14 @@ for (const f of files) {
   }
 }
 
-// Todo arquivo direto de skills/<skill>/reference/ é citado pelo nome no SKILL.md da skill (senão ninguém o lê)
-for (const s of skills) {
-  const ref = path.join(plugin, 'skills', s, 'reference');
+// Todo arquivo direto de skills/<skill>/reference/ e playbooks/ é citado pelo nome no SKILL.md da skill (senão ninguém o lê)
+for (const s of skills) for (const sub of ['reference', 'playbooks']) {
+  const ref = path.join(plugin, 'skills', s, sub);
   if (!fs.existsSync(ref)) continue;
   const main = fs.readFileSync(path.join(plugin, 'skills', s, 'SKILL.md'), 'utf8');
   for (const e of fs.readdirSync(ref, { withFileTypes: true })) {
     if (e.isFile() && e.name.endsWith('.md') && !main.includes(e.name)) {
-      fail(`skills/${s}/reference/${e.name}: não citado no SKILL.md da skill`);
+      fail(`skills/${s}/${sub}/${e.name}: não citado no SKILL.md da skill`);
     }
   }
 }

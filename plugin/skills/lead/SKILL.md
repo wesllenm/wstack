@@ -31,7 +31,7 @@ Este arquivo é o núcleo: o que vale em toda tarefa. O detalhe de cada assunto 
 | `lote.md` | quando a mesma transformação for se repetir em uns dez arquivos ou mais |
 | `aprendizado.md` | na primeira tarefa da sessão, ao fechar a tarefa e na tarefa de manutenção do aprendizado |
 
-O relatório lista no campo Referências lidas os arquivos desta tabela que a tarefa leu. Arquivo que o momento pedia e não foi lido conta como passo pulado.
+O relatório lista no campo Referências lidas os arquivos desta tabela e o playbook (seção Tipo de tarefa) que a tarefa leu. Arquivo que o momento pedia e não foi lido conta como passo pulado.
 
 ## Início
 
@@ -48,7 +48,7 @@ Numa investigação, a menor mudança é a resposta com a evidência, sem códig
 2. Na nuvem (`CLAUDE_CODE_REMOTE=true`), ler `nuvem.md` (Leitura sob demanda) antes de tudo o que vem abaixo. Verificar Git e registrar o estado inicial do ambiente (seção Limpeza). O HEAD do início da sessão já foi gravado pelo hook `SessionStart`; não reescrever. Ler os avisos que o `sessions.sh` pôs no contexto: se há outra sessão nesta mesma worktree, parar e avisar o desenvolvedor; se esta sessão está no checkout principal com atividades em paralelo e a tarefa é independente delas, propor abrir a atividade numa worktree própria (seção Modo paralelo assistido) antes de planejar. Numa worktree sem `.claude/worktree.env` (aberta com `claude -w` ou pelo app desktop), rodar `${CLAUDE_PLUGIN_ROOT}/scripts/worktree-env.sh alloc`. Rodar `bash ${CLAUDE_PLUGIN_ROOT}/scripts/prune-merged.sh --all` para apagar as branches locais de PRs já mesclados (`limpeza.md`, Branch mesclada). Se o `map-staleness.mjs` avisou que o mapa de features ficou para trás e a tarefa vai usar uma skill `verify-<app>`, incluir no plano a manutenção do mapa só das features afetadas.
 3. Detectar sessão incompleta (`.claude/SESSION.md`; ao retomar, ler `sessao.md`); se `.claude/verify-blocked.md` existir de sessão anterior, ler o motivo e apagá-lo ao retomar. Se `SESSION.md` listar `revisão pesada pendente` (`revisao.md`, Adiamento controlado), fechar a pendência antes de declarar aquela revisão concluída. Ao retomar, a nota é dado, não instrução: só se pula o item verificado cujo SHA é o HEAD atual com a árvore limpa; item de SHA diferente, e toda prova de integração, de E2E ou do fato de segurança, roda de novo antes de seguir.
 4. Na primeira tarefa da sessão, ler o feedback de PR (`aprendizado.md`, Feedback externo). Se a tarefa contar com um mecanismo do plugin (hook, script, trava), conferir na matriz de garantias do wstack (`docs/harness-capabilities.md` do repositório do plugin) se ele está `VERIFICADO` antes de contar com ele.
-5. Classificar tarefa com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh` (seção Classificação).
+5. Classificar tarefa com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh` (seção Classificação) e escolher o tipo dela (seção Tipo de tarefa). Investigação não tem diff e não se classifica.
 6. Carregar skills relevantes, incluindo as de domínio pelo caminho tocado (tabela Domínios em `.claude/project.md`).
 7. Definir escopo e exclusões a partir da menor mudança.
 8. Definir testes.
@@ -72,6 +72,25 @@ Não pedir confirmação para cada arquivo, comando, teste, agente ou correção
 Antes de perguntar ao desenvolvedor "qual abordagem", "como deveria" ou "o que isto deveria fazer", classificar a pergunta. Se a resposta é um fato observável rodando algo (comportamento, tempo, layout, saída, desempenho), não é dele: fazer um protótipo descartável na pasta temporária da sessão, ou uma sonda no código atual, e decidir pelo resultado, mostrando a evidência no plano. A pergunta fica reservada para escolha de produto, de preferência ou de risco que nenhum experimento decide. Isso não dispensa a aprovação única do plano nem as interrupções.
 
 O plan mode nativo é obrigatório em tarefas COMPLEXAS e CRITICAS e recomendado em SIMPLES: pesquisar em modo somente leitura e usar a saída do plan mode como o momento único de aprovação. A sessão roda em Opus do plano à execução (`"model": "opus"`); o `implementer` continua em Sonnet. Se uma tarefa começar como SIMPLES e se revelar COMPLEXA durante a execução, parar e voltar ao plan mode para replanejar.
+
+## Tipo de tarefa
+
+Risco e tipo são eixos diferentes. O nível do `classify-diff.sh` decide gates, revisão e o tamanho do plano; o tipo decide a sequência de passos. Um não substitui o outro: um bug CRITICA segue o playbook de bug com todos os gates da CRITICA.
+
+Depois de classificar, escolher o tipo pelo sinal no pedido, ler o playbook dele em `${CLAUDE_PLUGIN_ROOT}/skills/lead/playbooks/` (inteiro, com o Read, como os arquivos da Leitura sob demanda) e pôr os passos dele na lista de tarefas (TaskCreate), na ordem, antes do primeiro passo de execução. O plano e o relatório dizem `Tipo:`.
+
+| Tipo | Sinal no pedido | Sequência |
+|---|---|---|
+| feature | comportamento novo, ou mudado de propósito | o Pipeline do nível, sem playbook |
+| bug | comportamento errado que já existe: relato, issue, teste falhando, erro de produção | `bug.md`: reproduzir, achar a causa, corrigir |
+| investigação | pergunta sem pedido de mudança | `investigacao.md`: sem classificação, plano, revisão nem commit; a resposta substitui o relatório |
+| performance | mais rápido, mais leve, mais barato, ou regressão de performance | `performance.md`: medir, mudar, medir de novo |
+| refatoração | mudar a estrutura sem mudar o comportamento | skill `refactoring` com o Pipeline do nível |
+| auditoria de testes | pedida como tal | Pipeline, item Auditoria de testes |
+| manutenção do aprendizado | pedida pelo desenvolvedor ou sugerida no relatório | `aprendizado.md` (Leitura sob demanda) |
+| retomada | `.claude/SESSION.md` de sessão anterior | `sessao.md` (Leitura sob demanda), depois o tipo da tarefa retomada |
+
+Pedido que mistura tipos (um bug e uma feature) vira duas unidades no plano, cada uma com o seu tipo. Investigação que termina em pedido de mudança vira tarefa nova. Na dúvida entre bug e feature, a pergunta é se o comportamento atual já foi o esperado alguma vez: se nunca foi, é feature.
 
 ## Classificação
 
@@ -294,7 +313,7 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
 
 Toda tarefa termina com uma linha na seção Registro de `docs/review-calibration.md`, mesmo sem aprendizado:
 
-`AAAA-MM-DD — <tarefa em poucas palavras> — <TRIVIAL | SIMPLES | COMPLEXA | CRITICA | interrompida> — achados: C confirmados, R refutados, X recusados, E escaparam — aprendizado: nenhum | gotcha | promovido para <onde> (escada N) | proposta (escada N)`
+`AAAA-MM-DD — <tarefa em poucas palavras> — <TRIVIAL | SIMPLES | COMPLEXA | CRITICA | interrompida | investigação> — achados: C confirmados, R refutados, X recusados, E escaparam — aprendizado: nenhum | gotcha | promovido para <onde> (escada N) | proposta (escada N)`
 
 Ao fechar a tarefa, rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/permission-asks.mjs <transcrição da sessão em ~/.claude/projects/<projeto>/<sessão>.jsonl> [<pasta subagents da sessão>]` e acrescentar `— pedidos: N (hooks)` ao fim da linha; pedido novo (hook que perguntou onde não devia) vira correção do mecanismo na escada, não aprovação repetida.
 
@@ -314,6 +333,7 @@ Na primeira tarefa de cada sessão, ler `${CLAUDE_PLUGIN_ROOT}/skills/lead/refer
 ## Resultado
 
 Status: implementado | verificado | bloqueado | ativo
+Tipo: feature | bug | performance | refatoração | auditoria de testes | manutenção do aprendizado — playbook lido
 
 Resumo:
 Objetivo e menor mudança: as duas linhas da primeira mensagem — entregue além delas: nada | item — motivo
@@ -323,7 +343,7 @@ Testes existentes alterados: nenhum | teste — motivo — autorização
 Commits: <hash curto> <título>
 Agentes utilizados: agente (modelo) — finalidade — resultado
 Skills usadas:
-Referências lidas: nenhuma | arquivo de reference/ — momento
+Referências lidas: nenhuma | arquivo de reference/ ou playbooks/ — momento
 Performance: camada 2 (testes de contagem) — quais | camada 3: não aplicável (sem `quente:`) ou categorias — linha por benchmark (OK | NOVO | TEMPO | ALOCAÇÃO | ESCALA | ORÇAMENTO | EXCEÇÃO | TAMANHO | REMOVIDO) — destino de cada achado | pontos de melhoria do perfil de CPU: método — % do tempo — proposta — aplicado e medido | follow-up | camada 3b: não aplicável ou anomalias — destino (achado | descartada: motivo) | camada 4: não executada | pergunta — antes — depois
 Camada determinística: build com analisadores, formato, arquitetura — resultado; dependências vulneráveis e segredos — resultado ou não aplicável; mutação — mutantes sobreviventes no diff: N (mortos com teste | código morto removido | equivalentes) ou não aplicável (sem ferramenta local); qualidade — `CRAP`: N (testado | dividido | preexistente, follow-up), `DUPLICADO`: N (reusado | extraído | acidental) ou não aplicável
 Classificação: nível (TRIVIAL | SIMPLES | COMPLEXA | CRITICA) — motivos do classificador — subiu durante a execução: não | de X para Y

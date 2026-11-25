@@ -54,7 +54,7 @@ for (const e of jsonl(HOOKS).filter((r) => inRange(r.timestamp))) {
 const tasks = { total: 0, byLevel: {}, confirmed: 0, refuted: 0, rejected: 0, escaped: 0 };
 if (existsSync(REG)) {
   for (const line of readFileSync(REG, "utf8").split("\n")) {
-    const m = line.match(/^-?\s*(\d{4}-\d{2}-\d{2}) — .+? — (TRIVIAL|SIMPLES|COMPLEXA|CRITICA|interrompida)\b(.*)$/);
+    const m = line.match(/^-?\s*(\d{4}-\d{2}-\d{2}) — .+? — (TRIVIAL|SIMPLES|COMPLEXA|CRITICA|interrompida|investigação)(?![\p{L}\d_])(.*)$/u);
     if (!m || !inRange(m[1])) continue;
     tasks.total++;
     tasks.byLevel[m[2]] = (tasks.byLevel[m[2]] ?? 0) + 1;

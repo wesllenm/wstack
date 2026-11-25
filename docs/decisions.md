@@ -360,3 +360,21 @@ gate do Stop (gravar nele não dispara build) e já é lido no Início e no Apre
 **O que não faz:** nenhum hook detecta a correção. Que a skill seja carregada depende do gatilho da `description` e da
 linha na seção Aprendizado do `lead`; o `/wstack:correct` cobre o caso em que o modelo não percebe. Um `UserPromptSubmit`
 que reconheça correção por texto fica para quando a calibração mostrar correções perdidas.
+
+## 2026-11-25: playbooks por tipo de tarefa na skill lead
+
+**Decisão:** depois de classificar o risco, o `lead` escolhe o tipo da tarefa pela tabela Tipo de tarefa do núcleo e
+põe os passos do playbook na lista de tarefas. Só três tipos ganham playbook, em `plugin/skills/lead/playbooks/`, porque
+só eles mudam a sequência de passos: `bug.md` (reproduzir, achar a causa, corrigir), `investigacao.md` (hipóteses e
+evidência, sem diff nem commit; a resposta substitui o relatório) e `performance.md` (alvo, linha de base, uma mudança
+por vez medida de novo, ganho preso por teste). Feature segue o Pipeline do nível; refatoração, auditoria de testes,
+manutenção do aprendizado e retomada apontam para o que já existia (skill `refactoring`, Pipeline, `aprendizado.md`,
+`sessao.md`).
+
+**Por quê:** o nível de risco decidia quanto processo aplicar, mas tratava toda tarefa como "implementar uma mudança".
+Um bug corrigido sem reprodução e sem causa, ou uma otimização sem linha de base, passam por todos os gates e continuam
+errados. Risco e tipo são eixos separados: um bug CRITICA segue o playbook de bug com os gates da CRITICA.
+
+**O que muda:** o Registro aceita `investigação` no lugar do nível (o `summarize-runs.mjs` a conta) e o relatório ganha
+o campo Tipo. O `test-skills-agents.sh` aplica a `playbooks/` as mesmas regras de `reference/`. Que o tipo seja escolhido
+e o playbook lido é orientação; o campo Referências lidas do relatório mostra quando não foi.
