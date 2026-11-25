@@ -19,80 +19,32 @@ zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-co
 - a conferência num projeto real: uma sessão com `"agent": "wstack:lead"` num projeto que passou pelo bootstrap,
   delegando aos agentes reais, e as provas `plugin/tests/prove-*.sh`, que usam o Claude Code real e rodam à mão.
 
-## Tudo roda na nuvem
-
-Cada coluna é um lugar. Uma sessão é sempre um contêiner novo, criado pela nuvem do Claude Code a partir do ambiente;
-o setup script do ambiente (o `plugin/cloud/setup.sh`) prepara o contêiner antes de a sessão começar.
+## Como funciona
 
 ```mermaid
-sequenceDiagram
-    participant V as Você<br/>(navegador ou app)
-    participant N as Nuvem do Claude Code<br/>(ambiente)
-    participant C as Contêiner da sessão
-    participant G as GitHub
-    V->>N: abre uma sessão em claude.ai/code
-    N->>C: cria um contêiner novo e clona o repositório
-    Note over C: setup.sh do ambiente: ferramentas da stack
-    C->>G: setup.sh baixa o plugin wstack na versão (tag)
-    Note over C: sessão como wstack:lead<br/>hooks, skills e subagentes
-    V->>C: pedido
-    C-->>V: plano
-    V->>C: aprovação única
-    Note over C: execução, revisão e commit<br/>(subagentes no mesmo contêiner)
-    C->>G: push da branch e PR
-    C-->>V: relatório
-    V->>G: merge do PR
+flowchart LR
+    A["Você pede<br/>a tarefa"] --> B["Claude planeja<br/><i>na nuvem</i>"] --> C{{"Você aprova<br/>o plano"}} --> D["Claude codifica,<br/>testa e revisa<br/><i>na nuvem</i>"] --> E["PR no<br/>GitHub"] --> F{{"Você faz<br/>o merge"}}
+
+    classDef voce fill:#fde68a,stroke:#b45309,color:#000
+    class A,C,F voce
 ```
 
-| Onde | O que fica lá |
-|---|---|
-| Você (navegador ou app) | o pedido, a aprovação do plano e o merge dos PRs |
-| Ambiente da nuvem | o repositório, a rede liberada e o setup script (configurados uma vez) |
-| Contêiner da sessão | ferramentas da stack, plugin wstack, a sessão `wstack:lead` e os subagentes; descartado ao fim |
-| GitHub | o código do projeto (branches, PRs, `main`) e as versões do plugin (tags do `wesllenm/wstack`) |
-
-Como o contêiner é descartável, o que precisa durar vai para o repositório: a configuração do workflow
-(`.claude/settings.json`, `.claude/risk.conf`), o aprendizado (`docs/gotchas.md`, `docs/review-calibration.md`) e as
-decisões (`docs/decisions.md`). É por isso que o `/wstack:bootstrap` gera esses arquivos e os commita.
-
-### Do repositório vazio ao dia a dia
-
-```mermaid
-flowchart TD
-    A["<b>1. Criar o ambiente</b> em claude.ai/code<br/>repositório (pode estar vazio)<br/>e setup.sh no setup script"] --> B
-    B["<b>2. Primeira sessão</b><br/>o setup instala a última tag<br/>e a sessão indica o bootstrap"] --> C
-    C["<b>3. /wstack:bootstrap</b><br/>diagnóstico e proposta"] --> C2{{"Aprovação<br/>(você)"}}
-    C2 --> D{{"<b>4. Merge do bootstrap</b><br/>o projeto fixa a versão"}}
-    D --> E["<b>5. Sessões do dia a dia</b><br/>o setup instala a versão fixada<br/>pedido → plano → PR"]
-    E --> F{{"Merge do PR<br/>(você)"}}
-    F -->|próxima tarefa| E
-
-    classDef humano fill:#fde68a,stroke:#b45309,color:#000
-    class C2,D,F humano
-```
-
-O passo a passo está em [Começar um projeto na nuvem](#começar-um-projeto-na-nuvem).
+Em amarelo, o que é seu; o resto o Claude faz numa sessão em claude.ai/code. Cada sessão roda num contêiner novo na
+nuvem, que o setup script do ambiente prepara com as ferramentas do projeto e o plugin. O contêiner é descartado ao
+fim; o que precisa durar (código, configuração do workflow, aprendizado, decisões) vai para o repositório no GitHub.
 
 ## Como uma tarefa anda
 
-Dentro de cada sessão na nuvem, o `lead` leva o pedido até o PR assim:
+Dentro de cada sessão, o Claude (o agente `lead`) leva o pedido até o PR assim:
 
 ```mermaid
-flowchart TD
-    A([Pedido do desenvolvedor]) --> B["<b>1. Início</b><br/>contexto do projeto<br/>sessões paralelas e recall"]
-    B --> C["<b>2. Classificação</b><br/>classify-diff.sh + risk.conf<br/>TRIVIAL · SIMPLES · COMPLEXA · CRITICA"]
-    C --> D["<b>3. Plano</b><br/>escopo, testes, agentes<br/>e condição de parada"]
-    D --> E{{"Aprovação única<br/>(desenvolvedor)"}}
-    E -->|aprovado| F["<b>4. Execução</b><br/>implementer com TDD<br/>planner e explore quando precisa"]
-    F --> G["<b>5. Revisão</b><br/>lentes em paralelo<br/>check-findings + review-verifier"]
-    G -->|achado confirmado| H["Correção<br/>(no máximo 2 rodadas)"]
-    H -->|revisa só o delta| G
-    G -->|sem achado pendente| I["<b>6. Commit</b><br/>skill commit, branch de atividade"]
-    I --> J["<b>7. Limpeza e aprendizado</b><br/>gotchas e calibração da revisão"]
-    J --> K(["Relatório na sessão<br/>branch e PR no GitHub"])
+flowchart LR
+    A["Classifica<br/>o risco"] --> B["Planeja"] --> C{{"Você aprova"}} --> D["Implementa<br/>com testes"] --> E["Revisa"]
+    E -->|achou problema| D
+    E --> F["Commit<br/>e PR"]
 
-    classDef humano fill:#fde68a,stroke:#b45309,color:#000
-    class E humano
+    classDef voce fill:#fde68a,stroke:#b45309,color:#000
+    class C voce
 ```
 
 Os hooks valem em todos os passos, sem depender do modelo: travas de escrita, de comando e de push na execução, e
@@ -134,6 +86,11 @@ O **caminho rápido** é a camada determinística (build, formato, testes, garan
 `review-simplicity`, as lentes condicionais e os especialistas. Sem `risk.conf`, o classificador devolve CRITICA.
 
 ## Começar um projeto na nuvem
+
+```mermaid
+flowchart LR
+    A["<b>1. Criar o ambiente</b><br/>com o repositório<br/>e o setup.sh"] --> B["<b>2. /wstack:bootstrap</b><br/>na primeira sessão<br/>e merge"] --> C["<b>3. Pedir tarefas</b><br/>em cada sessão"]
+```
 
 1. **Criar o ambiente** em claude.ai/code com o repositório do projeto, que pode estar vazio. No setup script, colar
    o conteúdo de `plugin/cloud/setup.sh`. A rede do ambiente precisa alcançar `github.com`, de onde o plugin é
