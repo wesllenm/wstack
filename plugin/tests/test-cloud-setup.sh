@@ -268,8 +268,8 @@ fi
 
 # hosts para liberar na rede: só os das stacks detectadas, da lista .claude/cloud/hosts.conf do repositório, mais os
 # domínios do WebFetch do settings.json; texto fora do alfabeto de host nunca é impresso
-# o hosts.conf é do projeto (modelo gerado pelo bootstrap); os casos usam a versão base, a fixture dos testes
-hosts=$here/fixtures/hosts.conf
+# o hosts.conf é do projeto; os casos usam o modelo que o bootstrap copia
+hosts=$here/../templates/.claude/cloud/hosts.conf
 withhosts() { mkdir -p "$1/.claude/cloud" && cp "$hosts" "$1/.claude/cloud/hosts.conf"; }
 d=$(repo hostsdotnet 'global.json={"sdk":{"version":"10.0.100"}}' 'A.csproj=<Project />'); withhosts "$d"
 out=$(run "$d" --plan)
@@ -357,15 +357,81 @@ FALSO
 fi
 
 # o setup roda como root a cada sessão e lê .claude/cloud/ do projeto: mudar essa pasta é CRITICA no classificador
-# do projeto (o risk.conf de referência, como o modelo)
+# do projeto (o risk.conf modelo do bootstrap)
 classify=$(dirname "$setup")/../scripts/classify-diff.sh
 if [ -f "$classify" ]; then
-  cproj=$(repo classificacao) && mkdir -p "$cproj/.claude" && cp "$here/fixtures/risk.conf" "$cproj/.claude/risk.conf"
+  cproj=$(repo classificacao) && mkdir -p "$cproj/.claude" && cp "$here/../templates/.claude/risk.conf" "$cproj/.claude/risk.conf"
   for p in .claude/cloud/setup.sh .claude/cloud/hosts.conf; do
     nivel=$(CLAUDE_PROJECT_DIR=$cproj bash "$classify" --paths "$p" 2> /dev/null | head -1)
     [ "$nivel" = CRITICA ] || { echo "FALHOU [classificacao]: $p saiu $nivel"; fails=$((fails + 1)); }
   done
 fi
+
+# plugin wstack na versão que o projeto fixa no .claude/settings.json (marketplace com ref + enabledPlugins): o --plan
+# diz o que instala, o --check acusa a falta e a versão diferente; ref ou repositório fora do alfabeto nunca vira comando
+pin() { printf '{"extraKnownMarketplaces":{"wstack":{"source":{"source":"github","repo":"%s","ref":"%s"}}},"enabledPlugins":{"wstack@wstack":%s}}' "$1" "$2" "${3:-true}"; }
+inst() { # inst <home> <ref> <versão> <commit>: registro de instalação como o claude plugin deixa
+  mkdir -p "$1/.claude/plugins"
+  printf '{"wstack":{"source":{"source":"github","repo":"wesllenm/wstack","ref":"%s"}}}' "$2" > "$1/.claude/plugins/known_marketplaces.json"
+  printf '{"version":2,"plugins":{"wstack@wstack":[{"scope":"user","version":"%s","gitCommitSha":"%s"}]}}' "$3" "$4" > "$1/.claude/plugins/installed_plugins.json"
+}
+mkdir -p "$work/home-vazio"
+d=$(repo pinado ".claude/settings.json=$(pin wesllenm/wstack v0.0.11)")
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+has "$out" "plano: wstack: instalar o plugin de wesllenm/wstack#v0.0.11" pin-plano
+out=$(HOME="$work/home-vazio" run "$d" --check)
+has "$out" "plugin wstack na versão fixada" pin-check-falta
+inst "$work/home-ok" v0.0.11 0.0.11 0123456789abcdef0123456789abcdef01234567
+out=$(HOME="$work/home-ok" run "$d" --check)
+hasnt "$out" "plugin wstack" pin-check-ok
+inst "$work/home-velho" v0.0.10 0.0.10 0123456789abcdef0123456789abcdef01234567
+out=$(HOME="$work/home-velho" run "$d" --check)
+has "$out" "plugin wstack na versão fixada" pin-check-velho
+d=$(repo pinsha ".claude/settings.json=$(pin wesllenm/wstack 0b9b120e3995db3eb3270df4a86fad897196ba1d)")
+inst "$work/home-sha" 0b9b120e3995db3eb3270df4a86fad897196ba1d 0.0.10 0b9b120e3995db3eb3270df4a86fad897196ba1d
+out=$(HOME="$work/home-sha" run "$d" --check)
+hasnt "$out" "plugin wstack" pin-sha-ok
+d=$(repo semref '.claude/settings.json={"extraKnownMarketplaces":{"wstack":{"source":{"source":"github","repo":"wesllenm/wstack"}}},"enabledPlugins":{"wstack@wstack":true}}')
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+hasnt "$out" "plano: wstack" pin-sem-ref
+d=$(repo desligado ".claude/settings.json=$(pin wesllenm/wstack v0.0.11 false)")
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+hasnt "$out" "plano: wstack" pin-desligado
+d=$(repo pinhostil ".claude/settings.json=$(pin 'wesllenm/wstack' 'v1;touch '"$marker")")
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+hasnt "$out" "plano: wstack" pin-ref-hostil
+d=$(repo pinhostil2 ".claude/settings.json=$(pin '../x/y' v1)")
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+hasnt "$out" "plano: wstack" pin-repo-hostil
+# plugin ligado com ref inválida ou settings.json ilegível: acusado (sem ecoar o texto do repositório), nunca silêncio
+d=$(repo pinruim ".claude/settings.json=$(pin wesllenm/wstack 'feat/x')")
+out=$(HOME="$work/home-vazio" run "$d" --check)
+has "$out" "referência do plugin wstack no .claude/settings.json" pin-ref-invalida
+hasnt "$out" "feat/x" pin-ref-invalida-sem-eco
+d=$(repo pinjson '.claude/settings.json={"enabledPlugins":{"wstack@wstack":true},}')
+out=$(HOME="$work/home-vazio" run "$d" --check)
+has "$out" "referência do plugin wstack no .claude/settings.json" pin-json-invalido
+# instalação (modo run) com um claude falso no PATH, que registra as chamadas: ref nova que falha volta à anterior
+fake="$work/fakebin"; mkdir -p "$fake"
+cat > "$fake/claude" << 'EOS'
+#!/usr/bin/env bash
+echo "$*" >> "$FAKE_LOG"
+[ "$*" = "plugin marketplace add $FAKE_FAIL" ] && exit 1
+exit 0
+EOS
+chmod +x "$fake/claude"
+inst "$work/home-rb" v0.0.10 0.0.10 0123456789abcdef0123456789abcdef01234567
+d=$(repo pinrb ".claude/settings.json=$(pin wesllenm/wstack v9.9.9)")
+: > "$work/fake.log"
+out=$(PATH="$fake:$PATH" FAKE_LOG="$work/fake.log" FAKE_FAIL="wesllenm/wstack#v9.9.9" HOME="$work/home-rb" run "$d")
+calls=$(tr '\n' '|' < "$work/fake.log")
+[ "$calls" = "plugin marketplace remove wstack|plugin marketplace add wesllenm/wstack#v9.9.9|plugin marketplace remove wstack|plugin marketplace add wesllenm/wstack#v0.0.10|plugin install wstack@wstack|" ] \
+  || { echo "FALHOU [pin-rollback]: chamadas: $calls"; fails=$((fails + 1)); }
+has "$out" "mantido o anterior" pin-rollback-aviso
+
+d=$(repo pinhosts ".claude/settings.json=$(pin wesllenm/wstack v0.0.11)"); withhosts "$d"
+out=$(HOME="$work/home-vazio" run "$d" --plan)
+has "$out" "- github.com (wstack)" pin-hosts
 
 out=$(bash "$setup" --nada 2>&1); rc=$?
 [ "$rc" = 2 ] || { echo "FALHOU [uso]: opção desconhecida deu $rc"; fails=$((fails + 1)); }

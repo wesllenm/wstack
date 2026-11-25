@@ -235,7 +235,7 @@ cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
 rm -f "$proj/.claude/risk.conf"
 
 # cada glob de Edit do ask e do deny do settings.json modelo cai numa regra do hook
-settings=$here/fixtures/settings.json
+settings=$here/../templates/.claude/settings.json
 globs=$(jq -r '.permissions.ask[], .permissions.deny[] | select(startswith("Edit(")) | sub("^Edit\\(";"") | sub("\\)$";"")' "$settings")
 [ -n "$globs" ] || { echo "FALHOU: nenhum glob de Edit no settings.json"; fails=$((fails + 1)); }
 while IFS= read -r g; do

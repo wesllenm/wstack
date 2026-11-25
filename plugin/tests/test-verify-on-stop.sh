@@ -62,6 +62,15 @@ printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
 expect 2 aprendizado-bloqueia 'Aprendizado não registrado'
 printf -- '- registro\n' >> "$proj/docs/review-calibration.md" && gitc commit -qam registro
 expect 0 aprendizado-registrado
+# os arquivos que a escada de aprendizado grava (gotchas por área, complemento da rubrica) não contam como código:
+# commitados depois do registro não pedem outro, e pendentes não rodam o build
+mkdir -p "$proj/docs/gotchas" && printf -- '- fato\n' > "$proj/docs/gotchas/area.md" && printf '## Projeto\n' > "$proj/docs/review-rubric.md"
+gitc add -A && gitc commit -qm gotcha
+expect 0 aprendizado-arquivos-de-area
+printf 'verify_solution = a.txt\nverify_build = false\nverify_test = false\n' >> "$proj/.claude/risk.conf" && gitc commit -qam conf
+printf 'registro\n' >> "$proj/docs/review-calibration.md" && gitc commit -qam registro2
+printf -- '- outro\n' >> "$proj/docs/gotchas/area.md" && printf -- '- item\n' >> "$proj/docs/review-rubric.md"
+expect 0 aprendizado-pendente-sem-build
 # sem o arquivo de calibração (projeto que não adotou o workflow), o gate de aprendizado não bloqueia
 novo '# sem verificação'
 printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
