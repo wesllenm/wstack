@@ -30,6 +30,7 @@ hooks "$cru"
 [ -e "$cru/.claude" ] && fail "projeto sem risk.conf ganhou .claude/: $(find "$cru/.claude" | tr '\n' ' ')"
 [ -e "$cru/.git/claude-sessions" ] && fail "projeto sem risk.conf ganhou registro de sessão no diretório do git"
 grep -q '^wstack .* carregado\.$' "$work/start.out" || fail "session-start sem risk.conf não disse a versão: $(cat "$work/start.out")"
+grep -q '/wstack:bootstrap' "$work/start.out" || fail "session-start sem risk.conf não indicou o bootstrap: $(cat "$work/start.out")"
 [ -z "$(git -C "$cru" status --porcelain)" ] || fail "projeto sem risk.conf ficou com mudança: $(git -C "$cru" status --porcelain)"
 # repositório ainda sem commit também
 vazio="$work/vazio"; mkdir -p "$vazio" && git init -q "$vazio"
@@ -41,6 +42,7 @@ ativo="$work/ativo"; mkdir -p "$ativo/.claude" && git init -q "$ativo" && printf
 hooks "$ativo"
 [ -f "$ativo/.claude/.session/s-inerte.base" ] || fail "projeto com risk.conf sem a base da sessão"
 [ -f "$ativo/.claude/.session/s-inerte.iter" ] || fail "projeto com risk.conf sem a contagem de edições"
+grep -q '/wstack:bootstrap' "$work/start.out" && fail "session-start com risk.conf indicou o bootstrap"
 ls "$ativo/.git/claude-sessions/"*.session > /dev/null 2>&1 || fail "projeto com risk.conf sem registro de sessão"
 # apagado da árvore, com o arquivo no HEAD: continua ativo (apagar não desliga o workflow)
 rm -rf "$ativo/.claude" "$ativo/.git/claude-sessions"
