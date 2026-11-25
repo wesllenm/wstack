@@ -201,7 +201,10 @@ As referências por stack ficam em `reference/*.md`: .NET, Node, Bash e frontend
 núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (revisão, delegação,
 limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, manutenção do aprendizado), lido no momento que a tabela
 Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação e
-performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos.
+performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos. A arena
+(`reference/arena.md`) compara propostas paralelas de `planner` em decisão de design cara de reverter, e o
+`interrogate.mjs` manda o diff de COMPLEXA e CRITICA para modelos de outro fornecedor que o projeto configure no
+`risk.conf`, com os achados passando pelo `review-verifier`.
 
 ### Hooks
 

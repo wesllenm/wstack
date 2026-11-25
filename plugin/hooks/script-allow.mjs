@@ -36,6 +36,8 @@ const SCRIPTS = {
   'summarize-runs.mjs': ['node'],
   'review-dispatch.mjs': ['node'],
   'check-findings.mjs': ['node'],
+  // o envio ao fornecedor externo foi consentido ao pôr interrogate_cmd no risk.conf, que é trava (ask/deny)
+  'interrogate.mjs': ['node'],
   'diff-smells.mjs': ['node'],
   'map-staleness.mjs': ['node'],
   'pr-risk-gate.mjs': ['node'],

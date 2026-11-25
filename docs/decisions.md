@@ -378,3 +378,29 @@ errados. Risco e tipo são eixos separados: um bug CRITICA segue o playbook de b
 **O que muda:** o Registro aceita `investigação` no lugar do nível (o `summarize-runs.mjs` a conta) e o relatório ganha
 o campo Tipo. O `test-skills-agents.sh` aplica a `playbooks/` as mesmas regras de `reference/`. Que o tipo seja escolhido
 e o playbook lido é orientação; o campo Referências lidas do relatório mostra quando não foi.
+
+## 2026-11-25: interrogatório por outro fornecedor e arena de design
+
+**Decisão (interrogatório):** o `interrogate.mjs` manda o pacote de revisão de COMPLEXA e CRITICA para os modelos que
+o projeto declara em `interrogate_cmd` no `risk.conf` (`<nome> <comando>`, um por modelo; o comando lê o pedido da
+entrada padrão). Cada modelo tenta quebrar o diff e devolve candidatos no formato da `review-rubric`, que passam pela
+ancoragem do `check-findings.mjs` e pelo `review-verifier` como os das lentes: um ataca, o outro confirma. Desligado
+por padrão. O `script-allow` o aprova sem pedido porque o consentimento é o `interrogate_cmd`, num arquivo que já é
+trava (ask/deny).
+
+**Por quê:** as lentes, o verificador e o `review-critical` são todos do mesmo fornecedor, e erram parecido. Um modelo
+de outro fornecedor tende a errar diferente. O plugin não escolhe fornecedor nem guarda chave: o comando é do projeto,
+como os `verify_*`.
+
+**Riscos aceitos:** o pacote sai da máquina para o fornecedor, então ligar é decisão registrada no `docs/decisions.md`
+do projeto (em projeto de cliente, decisão do cliente). O diff pode trazer texto hostil para o modelo externo: a CLI
+deve ser configurada sem ferramentas de escrita nem de execução, e a saída dele só vira correção depois do verificador.
+O ganho ainda não foi medido: o relatório conta por modelo os candidatos, os descartados na ancoragem e os
+confirmados, e a manutenção do aprendizado decide se o interrogatório fica.
+
+**Decisão (arena):** em decisão de design cara de reverter (modelagem de domínio, contrato público, forma do dado
+persistido), no plano de COMPLEXA ou CRITICA, dois ou três `planner` em paralelo com posturas diferentes, critérios
+escritos antes das propostas, e protótipo em worktree por `implementer` só para critério que só se decide rodando. A
+comparação vai ao plano, e a aprovação única decide. Arena de N implementações completas para juntar as melhores partes
+ficou de fora: juntar partes que tocam o mesmo invariante é uma proposta nova, e o custo de integrar e revisar N
+implementações não se paga onde a decisão difícil é de design.
