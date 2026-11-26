@@ -30,6 +30,8 @@ Este arquivo é o núcleo: o que vale em toda tarefa. O detalhe de cada assunto 
 | `nuvem.md` | com `CLAUDE_CODE_REMOTE=true`, antes de planejar |
 | `lote.md` | quando a mesma transformação for se repetir em uns dez arquivos ou mais |
 | `aprendizado.md` | na primeira tarefa da sessão, ao fechar a tarefa e na tarefa de manutenção do aprendizado |
+| `pipeline.md` | ao montar o plano de SIMPLES, COMPLEXA ou CRITICA, e na auditoria de testes |
+| `fechamento.md` | ao fechar a tarefa, antes do relatório, e ao interromper |
 | `arena.md` | no plano de COMPLEXA ou CRITICA com decisão de design cara de reverter: modelagem de domínio, contrato público, forma do dado persistido |
 
 O relatório lista no campo Referências lidas os arquivos desta tabela e o playbook (seção Tipo de tarefa) que a tarefa leu. Arquivo que o momento pedia e não foi lido conta como passo pulado.
@@ -46,8 +48,8 @@ Menor mudança: <o menor resultado que atende ao objetivo | o que falta descobri
 Numa investigação, a menor mudança é a resposta com a evidência, sem código. O plano parte dessa linha: o que o escopo traz além dela leva o motivo; o que não tem motivo vira exclusão ou follow-up. Se a leitura do código mostrar que a menor mudança é outra, corrigir a linha no plano e dizer por quê.
 
 1. Ler contexto relevante (`CLAUDE.md` e imports já estão carregados; ler ADRs e skills de domínio sob demanda). Sessão nova que vai mexer em área já trabalhada (o caso normal no modo paralelo) carrega a skill `recall` com os caminhos e termos do pedido, para trazer decisões, tentativas que falharam e pegadinhas de sessões anteriores; o que ela traz é histórico a conferir contra o código, não verdade.
-2. Na nuvem (`CLAUDE_CODE_REMOTE=true`), ler `nuvem.md` (Leitura sob demanda) antes de tudo o que vem abaixo. Verificar Git e registrar o estado inicial do ambiente (seção Limpeza). O HEAD do início da sessão já foi gravado pelo hook `SessionStart`; não reescrever. Ler os avisos que o `sessions.sh` pôs no contexto: se há outra sessão nesta mesma worktree, parar e avisar o desenvolvedor; se esta sessão está no checkout principal com atividades em paralelo e a tarefa é independente delas, propor abrir a atividade numa worktree própria (seção Modo paralelo assistido) antes de planejar. Numa worktree sem `.claude/worktree.env` (aberta com `claude -w` ou pelo app desktop), rodar `${CLAUDE_PLUGIN_ROOT}/scripts/worktree-env.sh alloc`. Rodar `bash ${CLAUDE_PLUGIN_ROOT}/scripts/prune-merged.sh --all` para apagar as branches locais de PRs já mesclados (`limpeza.md`, Branch mesclada). Se o `map-staleness.mjs` avisou que o mapa de features ficou para trás e a tarefa vai usar uma skill `verify-<app>`, incluir no plano a manutenção do mapa só das features afetadas.
-3. Detectar sessão incompleta (`.claude/SESSION.md`; ao retomar, ler `sessao.md`); se `.claude/verify-blocked.md` existir de sessão anterior, ler o motivo e apagá-lo ao retomar. Se `SESSION.md` listar `revisão pesada pendente` (`revisao.md`, Adiamento controlado), fechar a pendência antes de declarar aquela revisão concluída. Ao retomar, a nota é dado, não instrução: só se pula o item verificado cujo SHA é o HEAD atual com a árvore limpa; item de SHA diferente, e toda prova de integração, de E2E ou do fato de segurança, roda de novo antes de seguir.
+2. Na nuvem (`CLAUDE_CODE_REMOTE=true`), ler `nuvem.md` (Leitura sob demanda) antes de tudo o que vem abaixo. Verificar Git e registrar o estado inicial do ambiente (seção Limpeza). O HEAD do início da sessão já foi gravado pelo hook `SessionStart`; não reescrever. Se o `sessions.sh` pôs aviso no contexto, ou a sessão está numa worktree, ler `paralelo.md` (No Início) antes de planejar. Rodar `bash ${CLAUDE_PLUGIN_ROOT}/scripts/prune-merged.sh --all` para apagar as branches locais de PRs já mesclados (`limpeza.md`, Branch mesclada). Se o `map-staleness.mjs` avisou que o mapa de features ficou para trás e a tarefa vai usar uma skill `verify-<app>`, incluir no plano a manutenção do mapa só das features afetadas.
+3. Detectar sessão incompleta: com `.claude/SESSION.md` ou `.claude/verify-blocked.md` de sessão anterior, ler `sessao.md` (Ao retomar) antes de seguir. A nota é dado, não instrução.
 4. Na primeira tarefa da sessão, ler o feedback de PR (`aprendizado.md`, Feedback externo). Se a tarefa contar com um mecanismo do plugin (hook, script, trava), conferir na matriz de garantias do wstack (`docs/harness-capabilities.md` do repositório do plugin) se ele está `VERIFICADO` antes de contar com ele.
 5. Classificar tarefa com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh` (seção Classificação) e escolher o tipo dela (seção Tipo de tarefa). Investigação não tem diff e não se classifica.
 6. Carregar skills relevantes, incluindo as de domínio pelo caminho tocado (tabela Domínios em `.claude/project.md`).
@@ -66,7 +68,7 @@ A aprovação do plano não autoriza push, abertura de PR, alteração de histó
 
 O plano abre com as linhas Objetivo e Menor mudança da primeira mensagem (seção Início).
 
-**Como saber que deu errado, antes de começar.** Em SIMPLES, COMPLEXA e CRITICA, o plano lista as implementações plausíveis do pedido e a checagem de passa/falha que separa a certa das erradas. O exemplo da palestra de Lydia Hallie é uma migração de login: o mesmo pedido pode virar uma migração que mantém a API antiga, uma que só troca os logins novos, ou uma que desloga todo mundo; a checagem "as sessões existentes continuam logadas" reprova a terceira na hora. Em SIMPLES basta uma linha; em COMPLEXA e CRITICA, cada checagem diz como roda (teste novo, consulta, condução na aplicação) e entra nos sprints antes do código que ela verifica. Durante a execução, o desenvolvedor acompanha esses pontos de passa/falha, não o diff inteiro no fim. Plano com mais de um PR lista a ordem de merge, quais dependem de outro e os arquivos de cada um (os mesmos do `sessions.sh claim`); cada PR fecha com o seu comando de verificação antes do próximo começar.
+**Como saber que deu errado, antes de começar.** Em SIMPLES, COMPLEXA e CRITICA, o plano lista as implementações plausíveis do pedido e a checagem de passa/falha que separa a certa das erradas. Exemplo: numa migração de login, "as sessões existentes continuam logadas" reprova a versão que desloga todo mundo. Em SIMPLES basta uma linha; em COMPLEXA e CRITICA, cada checagem diz como roda (teste novo, consulta, condução na aplicação) e entra nos sprints antes do código que ela verifica. Durante a execução, o desenvolvedor acompanha esses pontos de passa/falha, não o diff inteiro no fim. Plano com mais de um PR lista a ordem de merge, quais dependem de outro e os arquivos de cada um (os mesmos do `sessions.sh claim`); cada PR fecha com o seu comando de verificação antes do próximo começar.
 
 Não pedir confirmação para cada arquivo, comando, teste, agente ou correção prevista.
 
@@ -139,9 +141,9 @@ Os agentes e as skills desta skill são do plugin wstack: na ferramenta Agent, `
 - `security-agent` (Opus) para superfícies de segurança (inclui prompt injection, ferramentas de agente, webhooks e tokens de provedor de código);
 - `database-reviewer` (Opus) para mudanças de banco relevantes;
 - `database-helper` (Haiku) para qualquer consulta ao banco real (schema, índices, planos de execução, cardinalidade, estatísticas), via MCP Toolbox. O `lead` não consulta o banco diretamente: delega e recebe só o resumo;
-- diff que cria ou altera acesso a banco (LINQ, SQL bruto, comando de escrita): `database-helper` aplica a skill `query-plan` (coleta de versão, SQL real, volume e plano) e devolve métricas e veredito preliminar por comando; veredito **bloqueia**, **recomendação** de índice ou sinal de alerta que dependa de regra do motor vai para o `database-reviewer`, que dá o veredito final com base na referência e na documentação oficial. A `query-plan` não aciona o `review-critical` por si só;
+- diff que cria ou altera acesso a banco: `database-helper` aplica a skill `query-plan`, e o que depende de regra do motor vai ao `database-reviewer` (`revisao.md`, Banco);
 - `e2e-critical-review` (Opus) para E2E crítico;
-- `performance-agent` (Opus) quando o `bench-compare.sh` apontar ALOCAÇÃO, ESCALA ou EXCEÇÃO sem causa óbvia no diff, quando um método do projeto dominar o perfil de CPU, para anomalias da suíte instrumentada (`PerfSnapshot`), ou quando a tarefa for investigar latência, memória, CPU ou throughput. Não é acionado em todo diff: as camadas 1 a 3 da skill `performance` são determinísticas e rodam sem ele.
+- `performance-agent` (Opus) quando a medição apontar o que o diff não explica, ou quando a tarefa for investigar latência, memória, CPU ou throughput (critérios em `revisao.md`, Triagem de medições).
 
 ## Testes
 
@@ -149,7 +151,7 @@ Os agentes e as skills desta skill são do plugin wstack: na ferramenta Agent, `
 - Remover, pular ou enfraquecer teste existente, ou atualizar snapshot, golden file ou baseline para fazer passar, exige autorização no plano e a evidência de candidato da `test-audit`. Sem isso, um teste existente que falha é tratado como regressão da implementação; se a mudança de comportamento for intencional e não estiver no plano, interromper.
 - Todo sprint contract declara quais testes existentes podem ser alterados (por padrão, nenhum).
 - Testes de integração e E2E levam a marca de categoria que o comando `verify_test` do `risk.conf` exclui (no xUnit, `[Trait("Category", "Integration")]` e `[Trait("Category", "E2E")]`), para que o hook rode só a suíte rápida.
-- Auditoria de testes é uma tarefa própria, pedida e aprovada como tal: carregar a `test-audit` em modo auditoria e classificar o lote com `classify-diff.sh --paths` (remoção de teste leva a CRITICA por desenho; o `review-critical` entra quando o lote remover teste de contrato, segurança ou arquitetura). Durante uma feature, nunca varrer ou remover testes de forma oportunista; registrar candidatos como follow-up no relatório.
+- Durante uma feature, nunca varrer ou remover testes de forma oportunista: candidato vira follow-up no relatório. Auditoria de testes é tarefa própria (`pipeline.md`).
 - Quando o diff mudar comportamento visível ao usuário e o projeto tiver uma skill `verify-<app>` exercitar as features do mapa que o diff toca na aplicação real antes do commit e anexar a evidência ao relatório: obrigatório em CRITICA, padrão em SIMPLES e COMPLEXA. Bug é reproduzido por ela antes da correção. Verificação inconclusiva, ou feita em outra superfície, não conta como verificada; o relatório diz isso.
 - Quando o diff tocar código coberto pelos critérios do `review-critical` e houver mutation testing configurado (no ambiente local; mutação só no CI não conta), rodar a mutação incremental da `test-audit` (seção Mutação) antes da revisão e enviar os mutantes sobreviventes às lentes. Sem ferramenta local, registrar `mutação — não aplicável` no relatório.
 
@@ -163,8 +165,8 @@ A revisão é proporcional ao risco e roda em três modalidades, para que o pipe
 
 - **TRIVIAL:** caminho mínimo (seção Classificação). Sem plano formal, sem lentes pesadas e sem execução em segundo plano. Alteração de código recebe `review-agent` e `review-verifier`; alteração exclusivamente documental sem impacto operacional usa só verificações determinísticas. Build, formato e testes rápidos continuam garantidos pelo hook `Stop`.
 - **Caminho rápido**, na sessão, antes do commit, em SIMPLES, COMPLEXA e CRITICA: camada determinística (build com analisadores, formato, arquitetura, testes; o hook `Stop` os garante), `review-agent` e `review-verifier`. É o mínimo que garante corretude e roda em poucos minutos.
-- **Caminho pesado**, fora do caminho crítico em SIMPLES e COMPLEXA: `bench-compare.sh` nas categorias `quente:` do classificador (skill `performance`, camada 3), `quality-signals.sh` quando o diff tem código de produção (sinais CRAP e duplicação para as lentes), a suíte instrumentada em COMPLEXA e CRITICA (camada 3b, `PerfSnapshot`), `review-simplicity`, `review-failures`, `review-domain`, `security-agent`, os especialistas e, em COMPLEXA e CRITICA, o interrogatório por modelos de outro fornecedor quando o `risk.conf` o configura (`interrogate_cmd`), seguidos do `review-verifier`. Em SIMPLES e COMPLEXA roda em segundo plano (`run_in_background` nos subagentes, em paralelo) enquanto o `lead` segue para commit e limpeza. Em CRITICA roda na sessão, antes do commit, junto com o `review-critical`; não pode ser adiado por variável de ambiente. Nenhum workflow de PR roda o caminho pesado (o `claude-review.yml` só faz revisão de corretude, e sem chave pula): o que sobrar pendente quando o turno terminar vai para `.claude/SESSION.md`.
-  Linhas ALOCAÇÃO, ESCALA, ORÇAMENTO, EXCEÇÃO, TAMANHO e REMOVIDO do benchmark entram na triagem como achados `performance` já confirmados (são medição, não opinião): corrigir, ou levar ao relatório com justificativa para o desenvolvedor decidir. Perfil de CPU e anomalias da suíte vão ao `performance-agent` e voltam como pontos de melhoria, que também passam pelo `review-verifier`. Linhas `CRAP` e `DUPLICADO` do `quality-signals.sh` são métrica, não prova de defeito: vão no pacote da `review-simplicity` e da lente de testes do `review-agent` e passam pelo `review-verifier` (seção Sinais de qualidade da `review-rubric`).
+- **Caminho pesado**, em SIMPLES, COMPLEXA e CRITICA: benchmark e sinais de qualidade, as lentes `review-simplicity`, `review-failures` e `review-domain`, `security-agent`, os especialistas e, quando configurado, o interrogatório por outro fornecedor, seguidos do `review-verifier` (composição em `revisao.md`, Caminho pesado). Em SIMPLES e COMPLEXA roda em segundo plano enquanto o `lead` segue para commit e limpeza; em CRITICA roda na sessão, antes do commit, junto com o `review-critical`, e não pode ser adiado. O que sobrar pendente quando o turno terminar vai para `.claude/SESSION.md`.
+
 
 As etapas (preparar, achar, verificar, corrigir), a ancoragem dos candidatos, a triagem dos vereditos, o adiamento por `SKIP_HEAVY_REVIEW`, a calibração, a triagem de revisão de PR e a segunda opinião nativa estão em `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/revisao.md`: ler antes de chamar o primeiro revisor da tarefa (inclusive TRIVIAL com código) e antes de triar achados. O que não muda em nenhum nível: o `review-verifier` vê todo candidato antes de qualquer correção, `preexistente` nunca se corrige na tarefa, e são no máximo duas rodadas de correção.
 
@@ -203,19 +205,13 @@ Quando a mesma transformação for se repetir em uns dez arquivos ou mais, ou n�
 
 ## Pipeline
 
-- TRIVIAL: confirmar a classificação no diff real (qualquer caminho crítico, teste removido, vários domínios ou limite excedido promove o nível) → menor alteração possível → hook `Stop` (build, formato, testes rápidos) → se houver código, `review-agent` → `review-verifier` (documentação pura: sem revisor LLM) → corrigir o confirmado, reexecutar o afetado → registrar o aprendizado → commitar quando previsto → limpar. Sem benchmark, perfil, `quality-signals.sh` nem caminho pesado.
-- SIMPLES: contexto → classificar (`--paths`) → skills → plano curto → aprovação → testes (com contagem de comandos de banco e de chamadas externas onde a skill `performance` pede) → implementação → verificação (build com analisadores, formato, testes) → `query-plan` se tocar banco → classificar o diff real (se subiu, seguir o nível maior) → caminho rápido (`review-agent` → `review-verifier`, corrigir o confirmado, revisar o delta) → caminho pesado em segundo plano (`bench-compare.sh` se houve `quente:`, `quality-signals.sh` com código de produção no diff, `review-simplicity` e as lentes condicionais que o diff acionar; adiável só por `SKIP_HEAVY_REVIEW=1` com pendência em `SESSION.md`) → commit → limpeza → calibração e registro → triar o caminho pesado quando voltar (correções em commit próprio) → entrega.
-- COMPLEXA: `🔍` → plan mode (planner/explore se preciso) → classificar (`--paths`) → skills → escopo, exclusões, testes, agentes → arena se houver decisão de design cara de reverter (`arena.md`) → plano → aprovação → `⚡` → cenários e testes (com contagem de comandos e de chamadas externas onde a skill `performance` pede) → sprint contracts → implementação → verificações (build, formato, testes, arquitetura; dependências vulneráveis e segredos quando o diff alterar dependências ou configuração; mutação incremental quando o diff tocar código crítico e houver ferramenta) → `query-plan` (repetir após mudança de query) → classificar o diff real (caminho crítico não previsto interrompe) → caminho rápido → caminho pesado (`bench-compare.sh` nas categorias `quente:`, `quality-signals.sh`, suíte instrumentada, `review-simplicity`, `review-failures`, `review-domain`, `security-agent` em superfície de risco, banco/E2E/performance quando aplicável, interrogatório por outro fornecedor se configurado; `review-verifier` depois) em segundo plano → `simplify` se houver três ou mais correções de simplicidade → correções e revisão do delta → clean state → documentação factual e calibração → commits atômicos → limpeza → `🎯` → relatório.
-- CRITICA: como COMPLEXA, com `review-critical` e o caminho pesado na sessão, antes do commit; sugerir `/code-review ultra` antes do PR, se houver.
-- Auditoria de testes: `test-audit` modo auditoria → descoberta com `explore` em paralelo → candidatos com evidência no plano → aprovação (vale só para os listados) → lote por fronteira → validação → revisão pela seção Revisão (`review-critical` se remover contrato/segurança/arquitetura) → commit → handoff.
-
-Se o verificador confirmar achado bloqueante ou importante, corrigir dentro do escopo e revisar o delta (no máximo duas rodadas). Se o achado revelar decisão nova, interromper.
+A sequência de passos de cada nível (do contexto à entrega) e a da auditoria de testes estão em `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/pipeline.md`: ler ao montar o plano de SIMPLES, COMPLEXA ou CRITICA. TRIVIAL: confirmar a classificação no diff real → menor alteração possível → hook `Stop` → com código, `review-agent` → `review-verifier` → corrigir o confirmado → Registro → commit quando previsto → limpeza.
 
 ## Interrupções
 
 Interromper somente por: regra de negócio ambígua e não resolvível, decisão nova de produto ou arquitetura, vulnerabilidade crítica, ação destrutiva ou irreversível não prevista, produção, segredo ou dado pessoal real, falta de acesso ou credencial, três tentativas sem progresso, contrato incompatível não previsto ou contexto insuficiente para continuar com segurança.
 
-Três tentativas sem progresso: o hook `iteration-guard.sh` do plugin (PostToolUse em edição) devolve ao modelo, a cada `iteration_limit` edições sem commit (`risk.conf`; 0 desliga), a instrução de tomar essa decisão. É instrução, não barreira (não cobre edições por Bash nem por script, e a obediência não é garantida): aplique a regra também abaixo do limite quando perceber repetição. Antes de reportar, atacar a premissa: quando duas tentativas que partem da mesma suposição falham no mesmo gate, escrever essa suposição numa frase em `SESSION.md`, verificá-la com evidência e, se refutada, abandonar a linha de ataque inteira. Uma terceira variação da mesma correção não conta como tentativa nova.
+Três tentativas sem progresso: o hook `iteration-guard.sh` lembra a regra a cada `iteration_limit` edições sem commit, mas é lembrete, não barreira; aplique a regra também abaixo do limite quando perceber repetição. Antes de reportar, atacar a premissa: quando duas tentativas que partem da mesma suposição falham no mesmo gate, escrever essa suposição numa frase em `SESSION.md`, verificá-la com evidência e, se refutada, abandonar a linha de ataque inteira. Uma terceira variação da mesma correção não conta como tentativa nova.
 
 Ao interromper, fazer o passo Aprendizado (seção Interrupção), com a linha em Registro marcada `interrompida`, e depois a limpeza, preservando só o necessário para retomar (worktree com trabalho não commitado, contêiner de que a próxima etapa depende) e informando o que ficou.
 
@@ -257,40 +253,13 @@ O hook `Stop` roda build e testes rápidos sempre que você tenta encerrar com m
 
 Só escreva `.claude/verify-blocked.md` quando a falha for preexistente ou cair numa das interrupções previstas, com o motivo em uma ou duas linhas, e reporte ao desenvolvedor. Apague o arquivo ao retomar.
 
-A stop condition só é atingida depois da limpeza. Limpe antes da última tentativa de encerrar: o hook considera arquivos não rastreados, então sobras no repositório fazem ele rodar build e testes de novo.
-
-### Clean state check
-
-Antes do relatório final:
-
-1. build;
-2. testes relevantes;
-3. tracking (`features.json`), se usado;
-4. ausência de debug, scripts avulsos e saídas de teste no repositório;
-5. documentação factual atualizada, com o texto passado pela skill `unslop`;
-6. skills de domínio respeitadas;
-7. nenhuma decisão tomada sem aprovação;
-8. diff dentro do escopo;
-9. nenhum teste existente removido, pulado ou enfraquecido, e nenhum snapshot ou baseline atualizado, sem autorização (`git diff` nos arquivos de teste);
-10. commits atômicos e mensagens conforme a skill `commit`;
-11. working tree sem mudanças esquecidas fora dos commits;
-12. aprendizado promovido ou proposto, nenhuma linha de Correções do `SESSION.md` sem destino, e a tarefa tem a sua linha em Registro de `docs/review-calibration.md` (inclusive sem commit);
-13. `.claude/verify-blocked.md` ausente, salvo quando a tarefa termina bloqueada;
-14. limpeza comparada com o estado inicial;
-15. nada que já existia removido sem pergunta;
-16. todo comando de banco do diff com veredito da `query-plan`, nenhum **bloqueia** em aberto e planos brutos fora do repositório;
-17. nenhuma supressão nova de analisador (`#pragma warning disable`, `[SuppressMessage]`, `NoWarn`, regra rebaixada no `.editorconfig`) sem autorização;
-18. todo candidato de revisão tem veredito do `review-verifier` e todo confirmado tem destino (corrigido, recusado com motivo, não aplicável); nenhum bloqueante confirmado em aberto;
-19. em código crítico com mutação configurada, nenhum mutante sobrevivente em linha do diff sem teste ou justificativa de equivalência; relatórios de mutação fora do repositório;
-20. Totais de `docs/review-calibration.md` atualizados com os achados desta revisão e, na primeira tarefa da sessão, o feedback de PR lido ou registrado como não aplicável;
-21. leitura de banco e integração externa do diff com teste de contagem; quando houve `quente:`, `bench-compare.sh` rodado e nenhuma linha ALOCAÇÃO, ESCALA, ORÇAMENTO, EXCEÇÃO, TAMANHO ou REMOVIDO sem correção ou justificativa no relatório; anomalias da suíte instrumentada com destino; resultados, perfis e snapshots fora do repositório;
-22. em SIMPLES e COMPLEXA, o caminho pesado voltou e foi triado, ou a pendência está em `SESSION.md` (`revisão pesada pendente`); linhas `CRAP` e `DUPLICADO` do `quality-signals.sh` com destino.
+A stop condition só é atingida depois da limpeza e do Clean state check (`fechamento.md`). Limpe antes da última tentativa de encerrar: o hook considera arquivos não rastreados, então sobras no repositório fazem ele rodar build e testes de novo.
 
 ## Aprendizado
 
 Ao final de cada tarefa, antes do relatório, e também ao interromper, verificar se algo da tarefa já tinha acontecido antes: achado de revisão, achado que escapou, correção do desenvolvedor, bloqueio do hook, regressão. Fontes: as linhas `aprendizado:` que os revisores devolveram, `docs/review-calibration.md`, `docs/gotchas.md` e os arquivos de área de `docs/gotchas/` que o índice dele aponta para os caminhos da tarefa, `SESSION.md` e `git log`. Quando a mecânica estiver boa mas o resultado ruim, a causa costuma ser prompt, skill ou rubrica fora de calibração: tratar como achado `escapou` e seguir a escada.
 
-- Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md` (inclusive as linhas `aprendizado:` dos revisores, que não gravam arquivo: o `lead` as registra, cortando o que já está lá). Só entra no núcleo (`docs/gotchas.md`, que o `CLAUDE.md` importa em toda sessão) o que pega qualquer tarefa, em qualquer área; o núcleo fica em até 40 linhas e 8 KB. Área nova exige arquivo novo e linha no índice do núcleo, com os caminhos e assuntos que obrigam a lê-lo; fato que serve a duas áreas fica em uma só, com uma linha de referência na outra.
+- Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md`, inclusive as linhas `aprendizado:` dos revisores (onde cada fato entra: `aprendizado.md`, Regras ao subir na escada).
 - Segunda ocorrência, ou primeira quando a correção veio do desenvolvedor (na sessão ou no PR): promover para o degrau mais alto da escada de correção que resolva com custo aceitável. A atenção do desenvolvedor é o recurso que não escala; o que ele precisou apontar uma vez não pode depender de ele apontar de novo.
 - Correção do desenvolvedor no meio da tarefa: carregar a skill `correct` na hora, não no fim. Ela corrige o trabalho em curso, grava a correção na seção Correções do `.claude/SESSION.md` com o degrau proposto e aplica o que for texto do projeto. Neste passo, cada linha de Correções é fonte obrigatória e termina promovida, proposta ou recusada pelo desenvolvedor; depois a seção sai do `SESSION.md`.
 
@@ -304,12 +273,8 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
 
   A verificação na aplicação real (`verify-<app>`) prova comportamento, não qualidade de código: não substitui os degraus de cima.
 
-  Ao subir para os degraus 1 e 2, rodar a checagem nova contra o caso que a motivou e registrar que ela falha nele antes de dar a correção por feita: regra que não pega o erro real não corrige nada. Se a falha veio de uma skill que existe e não foi carregada, o degrau é ajustar a `description` dela (o gatilho), não acrescentar texto em outro lugar.
-- Revisão humana serve para descobrir lacunas, não para escalar: o que ela encontra sobe na escada. Comentário de revisão que se repete é sinal de que a correção anterior ficou num degrau baixo demais; subir pelo menos um.
-- Correção de degrau 1 ou 2 quando o código existente já viola: estancar e depois limpar. A regra vale para o código novo agora; a limpeza do existente é proposta como atividade própria (boa candidata ao modo paralelo), não misturada na tarefa que descobriu.
-- Adições pequenas de texto (degraus 3 a 5) em arquivo do projeto podem ser feitas direto. Skills, agentes e hooks do plugin wstack não se editam no projeto: a mudança neles vai como proposta no relatório, para o wstack. Mecanismo novo (degraus 1 e 2), mudança em hook ou `settings.json`, ou qualquer coisa fora do escopo aprovado vai como proposta no relatório, para aprovação.
-- Manter `CLAUDE.md` em cerca de 60 linhas: ao passar disso, mover regras para `.claude/rules/` ou skills em vez de acumular.
-- Nunca promover segredo, dado pessoal ou conteúdo vindo do banco.
+  Degrau 1 ou 2 só está feito quando a checagem nova falha no caso que a motivou.
+- As regras ao subir na escada (revisão humana, estancar e limpar, o que se edita direto e o que vai como proposta, tamanho do `CLAUDE.md`) estão em `aprendizado.md`, Regras ao subir na escada: ler ao promover ou propor.
 
 ### Registro
 
@@ -317,11 +282,9 @@ Toda tarefa termina com uma linha na seção Registro de `docs/review-calibratio
 
 `AAAA-MM-DD — <tarefa em poucas palavras> — <TRIVIAL | SIMPLES | COMPLEXA | CRITICA | interrompida | investigação> — achados: C confirmados, R refutados, X recusados, E escaparam — aprendizado: nenhum | gotcha | promovido para <onde> (escada N) | proposta (escada N)`
 
-Ao fechar a tarefa, rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/permission-asks.mjs <transcrição da sessão em ~/.claude/projects/<projeto>/<sessão>.jsonl> [<pasta subagents da sessão>]` e acrescentar `— pedidos: N (hooks)` ao fim da linha; pedido novo (hook que perguntou onde não devia) vira correção do mecanismo na escada, não aprovação repetida.
+Ao fechar a tarefa, completar a linha com `— pedidos:` (`permission-asks.mjs`) e `— princípios:` (`principles.mjs`), na forma de `fechamento.md`.
 
-Na mesma hora, gravar o relatório num arquivo da pasta temporária e rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/principles.mjs <transcrição> [<pasta subagents>] --report <relatório>`. Ele lista as skills carregadas de fato (ferramenta Skill, `/comando` e pré-carga dos agentes) e as referências lidas, e sai 3 quando o relatório cita princípio ou referência sem leitura: tirar a citação, nunca ler a skill depois só para citá-la. Acrescentar `— princípios: <citadas, separadas por vírgula | nenhum> (carregadas: N)` ao fim da linha. Uma skill carregada e nunca citada, e uma citada e nunca carregada, são os dois sinais que a manutenção usa.
-
-Ela custa uma linha e prova que o passo aconteceu. O hook `Stop` (gate de aprendizado, `verify-on-stop.sh` do plugin) exige essa linha depois de commit de código na sessão, e libera mudança só em arquivos de aprendizado sem rodar build. Não contornar o gate escrevendo a linha sem fazer a verificação acima.
+Ela custa uma linha e prova que o passo aconteceu. O hook `Stop` (gate de aprendizado, `verify-on-stop.sh` do plugin) exige essa linha, com o campo `— princípios:`, depois de commit de código na sessão, e libera mudança só em arquivos de aprendizado sem rodar build. Não contornar o gate escrevendo a linha sem fazer a verificação acima.
 
 ### Interrupção
 
@@ -333,48 +296,4 @@ Na primeira tarefa de cada sessão, ler `${CLAUDE_PLUGIN_ROOT}/skills/lead/refer
 
 ## Relatório
 
-**Princípios aplicados.** O campo diz qual regra de qual skill mudou qual decisão: `skill — regra (seção ou item) — decisão que mudou (item do plano, arquivo:linha ou achado)`, um por linha. Só vale skill carregada nesta sessão (ferramenta Skill, `/comando` ou pré-carga de agente) e regra que fez o plano ou o código sair diferente do que sairia sem ela; skill carregada que não mudou nada não entra, e `nenhum` é resposta válida. O `principles.mjs` confere no fechamento (seção Aprendizado, Registro). Isso deixa o raciocínio auditável e mostra quais regras nunca mudam decisão.
-
-```text
-## Resultado
-
-Status: implementado | verificado | bloqueado | ativo
-Tipo: feature | bug | performance | refatoração | auditoria de testes | manutenção do aprendizado — playbook lido
-
-Resumo:
-Objetivo e menor mudança: as duas linhas da primeira mensagem — entregue além delas: nada | item — motivo
-Arquivos alterados: caminho — mudança
-Testes e verificações: comando — resultado
-Testes existentes alterados: nenhum | teste — motivo — autorização
-Commits: <hash curto> <título>
-Agentes utilizados: agente (modelo) — finalidade — resultado
-Princípios aplicados: nenhum | skill — regra (seção ou item) — decisão que mudou (item do plano, arquivo:linha ou achado)
-Referências lidas: nenhuma | reference/<arquivo> | playbooks/<arquivo> — momento
-Performance: camada 2 (testes de contagem) — quais | camada 3: não aplicável (sem `quente:`) ou categorias — linha por benchmark (OK | NOVO | TEMPO | ALOCAÇÃO | ESCALA | ORÇAMENTO | EXCEÇÃO | TAMANHO | REMOVIDO) — destino de cada achado | pontos de melhoria do perfil de CPU: método — % do tempo — proposta — aplicado e medido | follow-up | camada 3b: não aplicável ou anomalias — destino (achado | descartada: motivo) | camada 4: não executada | pergunta — antes — depois
-Camada determinística: build com analisadores, formato, arquitetura — resultado; dependências vulneráveis e segredos — resultado ou não aplicável; mutação — mutantes sobreviventes no diff: N (mortos com teste | código morto removido | equivalentes) ou não aplicável (sem ferramenta local); qualidade — `CRAP`: N (testado | dividido | preexistente, follow-up), `DUPLICADO`: N (reusado | extraído | acidental) ou não aplicável
-Classificação: nível (TRIVIAL | SIMPLES | COMPLEXA | CRITICA) — motivos do classificador — subiu durante a execução: não | de X para Y
-Revisões:
-- caminho rápido: review-agent → review-verifier — resultado
-- caminho pesado: na sessão | segundo plano (concluído | pendente em SESSION.md: `revisão pesada pendente`) | adiado por SKIP_HEAVY_REVIEW
-- lentes: review-simplicity (obrigatória); review-failures, review-domain — executada ou não aplicável — motivo
-- review-verifier (Opus) — candidatos: N — confirmados: N — plausíveis: N — refutados: N
-- review-critical (Opus) — executado ou não — motivo
-- interrogate — não configurado | não aplicável (nível) | modelo — candidatos: N — descartados na ancoragem: N — confirmados: N | falhou: motivo
-- security-agent (Opus) — executado ou não aplicável
-- rodadas de correção: N
-Achados confirmados: id — severidade — categoria — arquivo:linha — destino (corrigido | recusado: motivo | não aplicável)
-Preexistentes (follow-up): arquivo:linha — problema
-Calibração: nenhuma | categoria — refutados/recusados — proposta para Não reportar de docs/review-rubric.md
-Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do PR — critério do review-critical atendido
-Queries (query-plan): não aplicável | comando (arquivo:método) — veredito — evidência — referência oficial
-Decisões: nenhuma | aguardando aprovação
-Arena: não aplicável | pergunta — propostas — escolhida — critério decisivo
-Aprendizado: nenhum | falha recorrente — onde foi promovida | proposta; correções na sessão: nenhuma | fato — degrau — aplicado | proposta | recusado; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
-Limpeza: removido / mantido (motivo) / preexistente aguardando decisão
-Riscos e limitações:
-Follow-ups: candidatos de test-audit e itens fora do escopo
-Stop condition: [x] critério ...
-🎯 Resultado final:
-```
-
-Não usar `verificado` sem evidência. `implementado` não significa `ativo` em produção.
+Ao fechar a tarefa, ler `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/fechamento.md`: o Clean state check, o `permission-asks.mjs` e o `principles.mjs` que completam a linha de Registro, e o formato do relatório. O relatório diz o tipo da tarefa, as linhas Objetivo e Menor mudança, as referências lidas e os princípios aplicados (`skill — regra — decisão que mudou`, só de skill carregada nesta sessão; `nenhum` é resposta válida). Não usar `verificado` sem evidência. `implementado` não significa `ativo` em produção.

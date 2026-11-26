@@ -59,8 +59,8 @@ printf '%s\n' "$out" | grep -q '^citadas: query-plan, tdd$' || fail "relatório 
 printf '%s\n' 'Princípios aplicados: domain-modeling — invariantes — agregado novo' 'Referências lidas: reference/revisao.md — antes; reference/arena.md — no plano' > "$rel"
 out=$(node "$script" "$main" --report "$rel"); code=$?
 [ "$code" = 3 ] || fail "citação sem leitura: código $code"
-printf '%s\n' "$out" | grep -q '^SEM LEITURA: domain-modeling' || fail 'citação sem leitura: skill não acusada'
-printf '%s\n' "$out" | grep -q '^SEM LEITURA: .*reference/arena.md' || fail 'citação sem leitura: referência não acusada'
+printf '%s\n' "$out" | grep -q '^NÃO CARREGADA: domain-modeling' || fail 'citação sem leitura: skill não acusada'
+printf '%s\n' "$out" | grep -q '^NÃO LIDA: lead/reference/arena.md' || fail 'citação sem leitura: referência não acusada'
 
 # separador com meia-risca ou hífen no lugar do travessão: mesma skill, sem falso "sem leitura"
 for sep in '–' '-'; do
@@ -68,14 +68,35 @@ for sep in '–' '-'; do
   out=$(node "$script" "$main" --report "$rel"); code=$?
   [ "$code" = 0 ] || fail "separador '$sep': código $code ($out)"
 done
-# referência de outra skill sem o prefixo dela, e com o prefixo errado
+# referência de outra skill: vale com o prefixo dela; sem prefixo é do lead (a skill do --agent), e o arquivo lido de
+# uma skill não satisfaz a citação feita para outra
 use Read '{"file_path":"/h/.claude/plugins/cache/wstack/wstack/0.0.13/skills/performance/reference/dotnet.md"}' > "$work/perf.jsonl"
-printf 'Princípios aplicados: nenhum\nReferências lidas: reference/dotnet.md — antes do benchmark\n' > "$rel"
+printf 'Princípios aplicados: nenhum\nReferências lidas: performance/reference/dotnet.md — antes do benchmark\n' > "$rel"
 node "$script" "$work/perf.jsonl" --report "$rel" > /dev/null; code=$?
-[ "$code" = 0 ] || fail "referência de outra skill sem prefixo: código $code"
+[ "$code" = 0 ] || fail "referência de outra skill com o prefixo dela: código $code"
+printf 'Princípios aplicados: nenhum\nReferências lidas: reference/dotnet.md — antes\n' > "$rel"
+out=$(node "$script" "$work/perf.jsonl" --report "$rel"); code=$?
+[ "$code" = 3 ] || fail "referência de outra skill sem prefixo: código $code (lida da performance, citada como do lead)"
+printf '%s\n' "$out" | grep -q '^NÃO LIDA: lead/reference/dotnet.md' || fail "referência sem prefixo: não foi procurada no lead ($out)"
 printf 'Princípios aplicados: nenhum\nReferências lidas: query-plan/reference/dotnet.md — antes\n' > "$rel"
 node "$script" "$work/perf.jsonl" --report "$rel" > /dev/null; code=$?
 [ "$code" = 3 ] || fail "referência com prefixo de outra skill: código $code"
+# chamada que falhou (tool_result com is_error) não conta como carga nem como leitura
+{
+  jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"s1",name:"Skill",input:{skill:"wstack:security"}}]}}'
+  jq -cn '{type:"user",message:{role:"user",content:[{type:"tool_result",tool_use_id:"s1",is_error:true,content:"Unknown skill"}]}}'
+  jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"r1",name:"Read",input:{file_path:"/x/skills/lead/reference/nuvem.md"}}]}}'
+  jq -cn '{type:"user",message:{role:"user",content:[{type:"tool_result",tool_use_id:"r1",is_error:true,content:"File does not exist."}]}}'
+  jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"s2",name:"Skill",input:{skill:"wstack:tdd"}}]}}'
+  jq -cn '{type:"user",message:{role:"user",content:[{type:"tool_result",tool_use_id:"s2",content:"ok"}]}}'
+} > "$work/falha.jsonl"
+out=$(node "$script" "$work/falha.jsonl" --agent explore)
+printf '%s\n' "$out" | grep '^carregadas:' | grep -qw security && fail 'Skill que falhou contou como carregada'
+printf '%s\n' "$out" | grep '^carregadas:' | grep -qw tdd || fail 'Skill que deu certo não contou'
+printf '%s\n' "$out" | grep -q '^referências: nenhuma$' || fail "Read que falhou contou como leitura ($out)"
+# linha que não é JSON: aviso na saída, não silêncio
+out=$(node "$script" "$main")
+printf '%s\n' "$out" | grep -q '^AVISO: 1 linha(s) da transcrição não são JSON' || fail "linha ilegível sem aviso ($out)"
 # frontmatter de agente com CRLF: a pré-carga continua valendo (agente sintético numa cópia do plugin)
 plug=$work/plug; mkdir -p "$plug/scripts" "$plug/agents"; cp "$script" "$plug/scripts/"
 printf -- '---\r\nname: crlf\r\nskills:\r\n  - security\r\n---\r\n# x\r\n' > "$plug/agents/crlf.md"

@@ -61,6 +61,10 @@ gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
 printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
 expect 2 aprendizado-bloqueia 'Aprendizado não registrado'
 printf -- '- registro\n' >> "$proj/docs/review-calibration.md" && gitc commit -qam registro
+expect 2 aprendizado-sem-principios 'Registro sem o campo princípios'
+printf -- '- registro — princípios: nenhum (carregadas: 0)\n' >> "$proj/docs/review-calibration.md"
+expect 0 aprendizado-principios-pendente
+gitc commit -qam registro-principios
 expect 0 aprendizado-registrado
 # os arquivos que a escada de aprendizado grava (gotchas por área, complemento da rubrica) não contam como código:
 # commitados depois do registro não pedem outro, e pendentes não rodam o build

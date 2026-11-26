@@ -31,6 +31,9 @@ Antes de propor qualquer arquivo, responder pelo repositório, não pelo desenvo
 - Nuvem: `bash ${CLAUDE_PLUGIN_ROOT}/cloud/setup.sh --plan` mostra stacks detectadas, o que instalaria e os hosts.
 - O que o bootstrap criaria e os conflitos: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh --plan` (com `--app <nome>`
   se houver aplicação). Não grava nada.
+- Revisão por outro fornecedor (`interrogate_cmd`, revisão de COMPLEXA e CRITICA): quais CLIs de modelo de outro
+  fornecedor existem na máquina (`command -v` de cada uma) e se o repositório é de cliente, com contrato ou política
+  sobre mandar código para terceiros. O diagnóstico só levanta; ligar é decisão do desenvolvedor, na proposta.
 - Versão do plugin: o modelo fixa `v<versão deste plugin>`, a tag do wstack. Conferir que a tag existe com
   `git ls-remote --tags https://github.com/wesllenm/wstack v<versão>`; se não existir, fixar no commit do plugin
   instalado (`gitCommitSha` em `~/.claude/plugins/installed_plugins.json`) com `--ref <sha>`, e dizer isso na proposta.
@@ -51,6 +54,7 @@ Gates do Stop: verify_solution | verify_build | verify_lint | verify_test
 Travas: default_branch | activity_branch | protected além do núcleo | allow_module
 Permissões (.claude/settings.json): comandos exatos no allow; ask e deny da stack; WebFetch de documentação
 Plugin fixado: <tag ou commit>
+Revisão por outro fornecedor: ligar com <CLI> (o diff de COMPLEXA e CRITICA sai para <fornecedor>) | não ligar — motivo
 verify-<app>: gerar (superfície, como sobe) | não aplicável — motivo
 Arquivos a criar: (saída do bootstrap.sh --plan)
 Conflitos (já existem, não sobrescritos): arquivo — o que será mesclado à mão
@@ -58,6 +62,10 @@ Suposições e ambiguidades: ...
 
 Posso executar o bootstrap?
 ```
+
+A linha de revisão por outro fornecedor nunca fica de fora nem vem marcada por padrão: ela pergunta, com o custo dito
+por extenso (o diff sai da máquina para o fornecedor do modelo). Sem CLI disponível, a proposta diz isso e o que
+instalar, e a resposta padrão é não ligar.
 
 Esperar uma aprovação. Depois, executar tudo sem pedir confirmação arquivo por arquivo; interromper só por decisão
 de produto, arquitetura, segurança ou escopo que não dê para inferir.
@@ -75,6 +83,11 @@ de produto, arquitetura, segurança ou escopo que não dê para inferir.
      o `ask` e o `deny` da stack (aplicar migration, publicar pacote, deploy) e o `WebFetch(domain:...)` da documentação
      oficial dos motores em uso; cada glob de `Edit(...)` novo no `ask` ou `deny` precisa de regra no path-guard do
      plugin (pedir no wstack, não acrescentar só aqui);
+   - revisão por outro fornecedor: se aprovada, `interrogate_cmd = <nome> <comando>` no `.claude/risk.conf`, com a CLI
+     em modo não interativo, lendo da entrada padrão, sem ferramentas de escrita nem de execução, e a chave dela fora
+     do repositório (variável de ambiente; na nuvem, credencial do ambiente e o host do fornecedor liberado na rede).
+     Rodar uma vez com um pacote de teste (`node ${CLAUDE_PLUGIN_ROOT}/scripts/interrogate.mjs <pacote> <saída>`) e ver
+     sair 0. Aprovada ou não, a escolha vai para `docs/decisions.md` do projeto, com o motivo;
    - `.claude/project.md` (a tabela Domínios, que a skill `lead` lê) e `.claude/architecture.md`;
    - `verify-<app>`: escrever a receita real e prová-la de ponta a ponta uma vez antes de entregar.
 3. Arquivo que já existia: mesclar à mão o que o modelo traz e ele não tem (no `settings.json`: `agent`,
@@ -103,4 +116,5 @@ rodar `bash ${CLAUDE_PLUGIN_ROOT}/cloud/setup.sh` e abrir sessão nova. Localmen
 - [ ] Nenhum arquivo existente sobrescrito; conflitos mesclados à mão ou listados.
 - [ ] Nenhum `<...>` sobrando nos arquivos criados, salvo o que ficou explicitamente a definir no relatório.
 - [ ] Classificador devolve CRITICA para as defesas; gates do Stop rodam.
+- [ ] Revisão por outro fornecedor decidida na proposta e registrada em `docs/decisions.md`, ligada ou não.
 - [ ] Commit na branch de bootstrap; relatório com o plugin fixado e o que ficou para o desenvolvedor.

@@ -39,3 +39,15 @@ Classificada como SIMPLES, pedida pelo desenvolvedor ou sugerida pelo `lead`. O 
 9. Commitar pela skill `commit` (por exemplo `docs: consolida aprendizado do workflow`) e registrar a manutenção em Registro.
 
 Nunca apagar entrada de `docs/decisions.md` ou ADR: decisão revertida ganha entrada nova, não perde a antiga. Os agentes não guardam memória própria entre sessões: o que aprendem chega ao `lead` na linha `aprendizado:` e vai para os arquivos acima.
+
+## Regras ao subir na escada
+
+Lidas ao fechar a tarefa, quando o passo Aprendizado do núcleo promove ou propõe uma correção.
+
+- Revisão humana serve para descobrir lacunas, não para escalar: o que ela encontra sobe na escada. Comentário de revisão que se repete é sinal de que a correção anterior ficou num degrau baixo demais; subir pelo menos um.
+- Correção de degrau 1 ou 2 quando o código existente já viola: estancar e depois limpar. A regra vale para o código novo agora; a limpeza do existente é proposta como atividade própria (boa candidata ao modo paralelo), não misturada na tarefa que descobriu.
+- Adições pequenas de texto (degraus 3 a 5) em arquivo do projeto podem ser feitas direto. Skills, agentes e hooks do plugin wstack não se editam no projeto: a mudança neles vai como proposta no relatório, para o wstack. Mecanismo novo (degraus 1 e 2), mudança em hook ou `settings.json`, ou qualquer coisa fora do escopo aprovado vai como proposta no relatório, para aprovação.
+- Manter `CLAUDE.md` em cerca de 60 linhas: ao passar disso, mover regras para `.claude/rules/` ou skills em vez de acumular.
+- Nunca promover segredo, dado pessoal ou conteúdo vindo do banco.
+- Primeira ocorrência: registrar como fato curto, um por linha, no arquivo da área em `docs/gotchas/<área>.md` (inclusive as linhas `aprendizado:` dos revisores, que não gravam arquivo: o `lead` as registra, cortando o que já está lá). Só entra no núcleo (`docs/gotchas.md`, que o `CLAUDE.md` importa em toda sessão) o que pega qualquer tarefa, em qualquer área; o núcleo fica em até 40 linhas e 8 KB. Área nova exige arquivo novo e linha no índice do núcleo, com os caminhos e assuntos que obrigam a lê-lo; fato que serve a duas áreas fica em uma só, com uma linha de referência na outra.
+- Ao subir para os degraus 1 e 2, rodar a checagem nova contra o caso que a motivou e registrar que ela falha nele antes de dar a correção por feita: regra que não pega o erro real não corrige nada. Se a falha veio de uma skill que existe e não foi carregada, o degrau é ajustar a `description` dela (o gatilho), não acrescentar texto em outro lugar.

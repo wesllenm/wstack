@@ -454,3 +454,22 @@ aviso e nenhum erro; em `docs/decisions.md`, dois avisos legítimos.
 **O que não faz:** não julga clareza nem estrutura, que continuam com a skill. Não é hook: rodar antes do commit é
 orientação da skill `commit`. O script imprime só a linha e o padrão, nunca o texto, porque o `script-allow` o aprova
 sem pedido e ele não pode servir para ler um arquivo protegido por tabela.
+
+## 2026-11-26: núcleo do lead menor e Registro com princípios exigido no Stop
+
+**Decisão (núcleo):** saem do núcleo, sem reescrita, para `reference/`: a sequência por nível (`pipeline.md`), o Clean
+state check, os scripts que completam a linha de Registro e o modelo do relatório (`fechamento.md`), a triagem de
+medições, o caminho pesado por extenso e o fluxo de banco (`revisao.md`), as regras ao subir na escada
+(`aprendizado.md`), a retomada (`sessao.md`) e o início em worktree (`paralelo.md`). No núcleo fica um gatilho com o
+que não muda. Medido com `wc -w`: de 6.926 para 4.939 palavras. O que sobra é o que vale em toda tarefa: Início,
+aprovação única, tipo de tarefa, classificação, roteamento, duas velocidades, interrupções e a escada.
+
+**Por quê:** o núcleo vai pré-carregado inteiro no agente, e as regras do meio eram as que mais se perdiam. A meta de
+cerca de 4 mil palavras não foi atingida porque cortar mais faria o agente ler arquivo em toda tarefa.
+
+**Decisão (Stop):** depois de commit de código na sessão, o gate de aprendizado também exige `princípios:` numa linha
+acrescentada ao Registro desde o início da sessão. Antes, rodar o `principles.mjs` era só orientação.
+
+**O que não faz:** o gate confere o campo, não que o script rodou; escrever o campo à mão passa. É um degrau acima do
+texto (a linha não sai mais sem o campo) e abaixo de rodar o script no hook, que exigiria o caminho da transcrição no
+`Stop` e aprovação para lê-la.

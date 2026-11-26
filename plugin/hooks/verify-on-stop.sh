@@ -61,6 +61,22 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
       } >&2
       exit 2
     fi
+    # A linha de Registro precisa do campo "princípios:", que o principles.mjs produz no fechamento (fechamento.md da
+    # skill lead): linha sem ele é Registro escrito sem a conferência. Vale para as linhas acrescentadas desde o início
+    # da sessão, commitadas ou não; arquivo de calibração novo, ainda fora do git, conta inteiro.
+    if [ -n "$(git ls-files --others --exclude-standard -- "$LEARN_FILE")" ]; then
+      added=$(cat "$LEARN_FILE")
+    else
+      added=$(git diff "$base" -- "$LEARN_FILE" | sed -n 's/^+//p')
+    fi
+    if ! grep -q 'princípios:' <<< "$added"; then
+      emit learning_blocked
+      {
+        echo "Registro sem o campo princípios: a linha desta tarefa em $LEARN_FILE não traz '— princípios: ...'."
+        echo "Rode o principles.mjs como manda o fechamento.md da skill lead e complete a linha; 'princípios: nenhum' é válido quando nenhuma regra mudou decisão."
+      } >&2
+      exit 2
+    fi
   fi
 fi
 
