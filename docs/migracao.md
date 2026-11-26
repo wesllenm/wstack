@@ -110,6 +110,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   conta Skill ou Read sem resultado na transcrição.
 - 0.0.17: no `Stop`, não conseguir ler o `transcript_path` (node ausente, entrada que não é JSON) bloqueia em vez de
   cair no aviso; a chamada dos scripts de conferência funciona no bash 3.2 do macOS.
+- 0.0.18: o `Stop` deixa de pular a verificação por falta de ferramenta: a impressão digital vem do `git hash-object`
+  (sem `sha1sum` nem `xargs` GNU, que o macOS padrão não tem), aviso do node não vira caminho de transcrição, e entrada
+  sem `session_id` bloqueia o gate de aprendizado.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
