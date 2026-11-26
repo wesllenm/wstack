@@ -26,9 +26,15 @@ LEARN_FILE="docs/review-calibration.md"
 LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/gotchas" "docs/review-rubric.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
 
 BLOCKED=".claude/verify-blocked.md"
+UNVERIFIED=".claude/.session/unverified"
+# Encerramento com todos os gates verdes (código 0 sem exceção) apaga o marcador de verificação pendente
+exception_used=0
+trap 'rc=$?; [ "$rc" -eq 0 ] && [ "$exception_used" -eq 0 ] && rm -f "$UNVERIFIED"' EXIT
 STAMP=".claude/.verify-ok"
 CODE=(-- .)
 for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
+# estado dos hooks (HEAD do início da sessão, marcador de verificação pendente) nunca é código, mesmo sem o .gitignore
+CODE+=(":(exclude).claude/.session")
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 # o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
@@ -68,7 +74,12 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
     partial=$(printf '[\300-\377][\200-\277]*$')
     reason=$(printf '%s' "$reason" | LC_ALL=C sed "s/$partial//")
   fi
-  # uso único: a exceção libera este encerramento e sai; o próximo Stop, e o código editado depois, voltam aos gates
+  # uso único: a exceção libera este encerramento e sai; o próximo Stop, e o código editado depois, voltam aos gates.
+  # O marcador segura o push (push-guard) até um Stop com todos os gates verdes, de qualquer sessão: na nuvem o agente
+  # consegue gravar a exceção pelo Bash sem pedir, e a garantia fica no que sai da máquina.
+  mkdir -p .claude/.session
+  printf '%s (sessão %s, HEAD %s)\n' "$1" "${sid:-?}" "$(git rev-parse --short HEAD 2> /dev/null)" > "$UNVERIFIED"
+  exception_used=1
   rm -f "$BLOCKED"
   printf '{"systemMessage": "⚠ Turno encerrado sem %s, por exceção aprovada (consumida). Motivo registrado: %s"}\n' "$1" "$reason"
   exit 0

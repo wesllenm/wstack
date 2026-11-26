@@ -565,3 +565,18 @@ de aprendizado.
 **Risco aceito:** na nuvem a trava de texto do Bash é livre (decisão "trava por texto na nuvem"), então um
 redirecionamento pelo Bash grava o arquivo sem pedir. A ferramenta de escrita pede; o Bash na nuvem fica com o PR e o
 CI como barreira, como o resto do harness ali.
+
+## 2026-11-26: exceção usada segura o push até a verificação verde
+
+**Decisão:** quando o `Stop` libera um encerramento pela exceção de verificação, ele grava
+`.claude/.session/unverified` (motivo, sessão, HEAD). Enquanto o marcador existe, o `push-guard` recusa todo push de
+branch, só o checkpoint `wip/` passa. O marcador sai quando um `Stop` termina com todos os gates verdes, em qualquer
+sessão. A pasta `.claude/.session` deixa de contar como código no gate, mesmo sem a linha no `.gitignore`.
+
+**Por quê:** na nuvem a trava de texto do Bash é livre (decisão "trava por texto na nuvem"), então o agente consegue
+gravar a exceção pelo Bash sem pedir. Pedir aprovação ali travaria a sessão, porque muitas vezes ninguém responde. A
+garantia vai para o que sai da máquina: o agente consegue encerrar, mas nada sem verificação chega a um PR. O marcador
+vale para o repositório, não para a sessão, para uma sessão nova não enviar os mesmos commits.
+
+**Limite:** um push que não passa pelo Bash (ferramentas de API do GitHub que gravam arquivo direto) não é visto pelo
+`push-guard`. A barreira ali continua sendo o CI do PR.
