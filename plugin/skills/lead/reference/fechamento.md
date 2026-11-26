@@ -83,8 +83,13 @@ Riscos e limitações:
 Follow-ups: candidatos de test-audit e itens fora do escopo
 Stop condition: [x] critério ...
 🎯 Resultado final:
+
+## Decisões pendentes
+nenhuma | - <decisão> — recomendação: <a escolha recomendada> — impacto: <o que muda com cada opção> — evidência: <arquivo:linha, comando ou SHA> — risco: <o que acontece se ficar sem decisão>
 ```
 
 Não usar `verificado` sem evidência. `implementado` não significa `ativo` em produção.
+
+**Decisões pendentes.** O relatório termina com a seção Decisões pendentes: cada escolha que só o desenvolvedor pode fazer (pendência do commit em CRITICA, proposta de mecanismo ou de skill, recusa a confirmar, follow-up que muda escopo), com a recomendação, o impacto, a evidência e o risco. Sem pendência, a seção diz `nenhuma`; ela nunca some. Na nuvem, onde o desenvolvedor chega depois sem ter acompanhado a sessão, a seção vem também no topo do relatório, antes de `Status:`, porque é a primeira coisa que ele lê.
 
 **Rótulo de evidência.** Cada afirmação relevante do relatório (em Resumo, Testes e verificações, Riscos e limitações, e o fato de segurança) leva entre colchetes o rótulo da escada da `review-rubric` (Degraus de prova): `[medida]` (teste ou script rodado, ou reprodução na aplicação: degraus 4 e 5), `[inferida]` (leitura com `arquivo:linha` ou busca com o comando: degraus 2 e 3) ou `[palpite]` (sem fonte: degrau 1). Palpite não sustenta `verificado`. Quando a `blast-radius` rodou, o relatório traz o fato de segurança dela, o rótulo e o comando que o provou.

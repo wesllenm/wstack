@@ -164,6 +164,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   `subtract-before-you-add`; playbooks `diagnostico-runtime.md` e `prototipo.md` e a subida iterativa no
   `performance.md`; pausa antes da compactação no `sessao.md`. O `iteration-guard` ignora `session_id` fora de
   `[A-Za-z0-9_-]`. Sem ação no projeto.
+- 0.0.31: relatório e PR (lote 5 do pstack). Seção Decisões pendentes no fim do relatório (na nuvem, também no
+  topo); `why` com hipóteses concorrentes, bloco Preservar / Mudar / Evitar / Risco e fontes puladas; corpo do PR nas
+  seções Por quê, O que mudou, Escopo, Trade-offs, Raio de impacto e Verificação, conferido por `slop-check.mjs --pr`,
+  e PR em draft com verificação pendente; `test-readme-counts.sh` no CI. Acompanhamento do PR (5.5) registrado como
+  planejado para depois da 0.1.0. Sem ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
