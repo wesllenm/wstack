@@ -102,6 +102,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   exige o campo `princípios:` na linha de Registro; o bootstrap pergunta se o projeto liga a revisão por outro
   fornecedor; `interrogate.mjs` e `principles.mjs` ficam robustos ao texto de modelo (acentos, prosa, pontuação,
   chamada que falhou).
+- 0.0.15: o `Stop` confere os campos `princípios:` e `pedidos:` da linha de Registro contra a transcrição da sessão
+  (`principles.mjs --cited` e `permission-asks.mjs`); o `interrogate.mjs` grava `falhou: ...` e sai 4 quando nenhum
+  modelo responde, e na CRITICA isso segura o commit.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
