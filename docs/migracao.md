@@ -119,6 +119,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.20: o `.claude/verify-blocked.md` só vale para a sessão que o gravou (linha `sessão: <id>`, ou `head: <SHA>` sem
   `session_id`); arquivo de outra sessão é ignorado com aviso, e o `SessionStart` avisa quando ele existe. O
   `session_id` só é aceito em `[A-Za-z0-9_-]`.
+- 0.0.21: só o desenvolvedor cria a exceção de verificação: gravar `.claude/verify-blocked.md` pede aprovação
+  (`write-guard` na ferramenta, também na nuvem; `path-guard` no Bash fora dela), e ela vale para um encerramento,
+  porque o `Stop` a apaga ao usar.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
