@@ -44,6 +44,21 @@ expect 0 verificacao-passa
 novo 'verify_solution = sol.txt' 'verify_build = false' 'verify_test = true'
 printf 's\n' > "$proj/sol.txt"; printf 'mudou\n' >> "$proj/a.txt"
 expect 2 build-falha 'Verificação falhou'
+# sem sha1sum e sem xargs GNU (macOS padrão): a impressão digital não pode ficar vazia e casar com um carimbo vazio,
+# pulando build e testes na mudança seguinte. sha1sum e xargs falsos que falham, na frente do PATH.
+mkdir -p "$work/sem-gnu"
+printf '#!/bin/sh\nexit 127\n' > "$work/sem-gnu/sha1sum"; printf '#!/bin/sh\nexit 1\n' > "$work/sem-gnu/xargs"
+chmod +x "$work/sem-gnu/sha1sum" "$work/sem-gnu/xargs"
+novo 'verify_solution = sol.txt' 'verify_build = true' 'verify_test = true'
+printf 's\n' > "$proj/sol.txt"; printf 'mudou\n' >> "$proj/a.txt"; printf 'novo\n' > "$proj/nao-rastreado.txt"
+PATH="$work/sem-gnu:$PATH" expect 0 sem-sha1sum-passa
+[ -s "$proj/.claude/.verify-ok" ] || fail_msg 'sem-sha1sum-passa: carimbo vazio ou ausente'
+sed -i 's/^verify_build = .*/verify_build = false/' "$proj/.claude/risk.conf"
+printf 'mudou de novo\n' >> "$proj/a.txt"
+PATH="$work/sem-gnu:$PATH" expect 2 sem-sha1sum-mudanca-roda-build 'Verificação falhou'
+printf 'conteudo diferente\n' > "$proj/nao-rastreado.txt"
+sed -i '$d' "$proj/a.txt"
+PATH="$work/sem-gnu:$PATH" expect 2 nao-rastreado-mudou-roda-build 'Verificação falhou'
 novo 'verify_solution = sol.txt' 'verify_build = true' 'verify_lint = false' 'verify_test = true'
 printf 's\n' > "$proj/sol.txt"; printf 'mudou\n' >> "$proj/a.txt"
 expect 2 formato-falha 'Verificação falhou'
@@ -109,6 +124,16 @@ expect 0 sem-transcript-path-aviso 'Aviso: transcrição da sessão indisponíve
 RAW_INPUT='{"session_id":"s1", quebrado' expect 2 entrada-nao-json 'não consegui ler transcript_path'
 mkdir -p "$work/sem-node" && printf '#!/bin/sh\nexit 127\n' > "$work/sem-node/node" && chmod +x "$work/sem-node/node"
 PATH="$work/sem-node:$PATH" TRANSCRIPT=$tr expect 2 node-ausente 'node saiu com código 127'
+# node que imprime aviso no stderr e sai 0: o aviso não pode virar caminho (cairia no aviso e pularia a conferência)
+real_node=$(command -v node)
+mkdir -p "$work/node-falante"
+printf '#!/bin/sh\necho "(node) aviso de depreciação" >&2\nexec "%s" "$@"\n' "$real_node" > "$work/node-falante/node"
+chmod +x "$work/node-falante/node"
+printf -- '- t — pedidos: 1 — princípios: ok (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+PATH="$work/node-falante:$PATH" TRANSCRIPT=$tr expect 2 node-com-aviso-confere 'NÃO CARREGADA: ok'
+sed -i '$d' "$proj/docs/review-calibration.md"
+# sem session_id, com o gate adotado: bloqueia em vez de pular o gate de aprendizado
+RAW_INPUT='{"hook_event_name":"Stop"}' expect 2 sem-session-id 'não traz session_id'
 # script que não roda: bloqueia com "não consegui verificar" (cópia do plugin com o script trocado)
 broken=$work/plugin-quebrado
 cp -r "$(dirname "$hook")/.." "$broken"

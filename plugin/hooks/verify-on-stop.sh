@@ -41,6 +41,13 @@ emit() {
 }
 
 # Gate 1: aprendizado registrado depois do último commit de código da sessão.
+# Sem session_id não há como achar o HEAD do início da sessão: com o arquivo de calibração (gate adotado), bloqueia em
+# vez de pular o gate inteiro. O Claude Code sempre manda o campo; vazio é entrada quebrada.
+if [ -z "$sid" ] && [ -f "$LEARN_FILE" ]; then
+  echo "Não consegui verificar o aprendizado: a entrada do Stop não traz session_id, então não dá para achar o início da sessão." >&2
+  echo "Se for do ambiente, registre o motivo em $BLOCKED e reporte ao desenvolvedor." >&2
+  exit 2
+fi
 base_file=".claude/.session/$sid.base"
 if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
   base=$(cat "$base_file")
@@ -94,8 +101,11 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
     }
     # Ler o caminho é parte da conferência: node ausente ou entrada que não é JSON bloqueia (sai diferente de 0); só a
     # entrada válida sem transcript_path, ou o arquivo que não existe, vira aviso.
-    transcript=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{let j;try{j=JSON.parse(d)}catch{process.exit(2)}process.stdout.write(String(j?.transcript_path??""))})' 2>&1); rc=$?
-    [ "$rc" -eq 0 ] || unverified 'princípios: e pedidos:' "não consegui ler transcript_path da entrada do Stop (node saiu com código $rc: node ausente ou entrada que não é JSON)"
+    # stdout é só o caminho; o stderr vai para outro arquivo (aviso do node na saída viraria caminho falso)
+    node_err=$(mktemp)
+    transcript=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{let j;try{j=JSON.parse(d)}catch{process.exit(2)}process.stdout.write(String(j?.transcript_path??""))})' 2> "$node_err"); rc=$?
+    node_msg=$(tail -1 "$node_err"); rm -f "$node_err"
+    [ "$rc" -eq 0 ] || unverified 'princípios: e pedidos:' "não consegui ler transcript_path da entrada do Stop (node saiu com código $rc: node ausente ou entrada que não é JSON${node_msg:+; $node_msg})"
     transcript=${transcript/#\~/$HOME}
     if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
       emit registry_unverified
@@ -151,8 +161,13 @@ fi
 [ -n "$SOLUTION" ] && [ -n "$BUILD_CMD" ] && [ -n "$TEST_CMD" ] || exit 0
 [ -f "$SOLUTION" ] || exit 0
 
-fingerprint=$( { git diff HEAD "${CODE[@]}" 2> /dev/null; git ls-files --others --exclude-standard -z "${CODE[@]}" | xargs -0 -r sha1sum; } | sha1sum | cut -d' ' -f1 )
-if [ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$fingerprint" ]; then
+# Impressão digital do working tree (diff e conteúdo dos não rastreados), calculada pelo próprio git: sha1sum e xargs -r
+# não existem no macOS padrão. Vazia é falha no cálculo: roda a verificação e não grava carimbo, em vez de casar com
+# um carimbo vazio e pular build e testes.
+untracked=$(git ls-files --others --exclude-standard "${CODE[@]}")
+fingerprint=$( { git diff HEAD "${CODE[@]}" 2> /dev/null; printf '%s\n' "$untracked"
+  [ -z "$untracked" ] || printf '%s\n' "$untracked" | git hash-object --stdin-paths; } | git hash-object --stdin 2> /dev/null )
+if [ -n "$fingerprint" ] && [ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$fingerprint" ]; then
   exit 0
 fi
 
@@ -170,6 +185,6 @@ if ! { bash -c "$BUILD_CMD" && { [ -z "$LINT_CMD" ] || bash -c "$LINT_CMD"; } &&
 fi
 
 rm -f "$log"
-echo "$fingerprint" > "$STAMP"
+[ -z "$fingerprint" ] || echo "$fingerprint" > "$STAMP"
 emit verification_passed
 exit 0
