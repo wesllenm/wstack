@@ -230,7 +230,7 @@ blocked_valid && blocked_exit 'verificação verde'
 
 # Saída sem verificar com o marcador desta sessão: o push continua recusado, e o desenvolvedor vê por quê.
 pending_exit() { # pending_exit <motivo, sem aspas nem barra invertida>
-  [ -f "$UNVERIFIED" ] && printf '{"systemMessage": "⚠ Verificação pendente desta sessão (%s) continua: %s. O push de branch segue recusado."}\n' "$UNVERIFIED" "$1"
+  [ -f "$UNVERIFIED" ] && printf '{"systemMessage": "⚠ Verificação pendente desta sessão (%s) continua: %s. O push de branch segue recusado. Para liberar sem nova verificação, o desenvolvedor roda fora do agente, na raiz do projeto: rm -f %s"}\n' "$UNVERIFIED" "$1" "$UNVERIFIED"
   exit 0
 }
 

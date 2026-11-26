@@ -55,7 +55,18 @@ out=$(payload 'git push -u origin feat/x' | bash "$guard" 2>&1 > /dev/null)
 grep -qF 'rm -f .claude/.session/unverified-s2' <<< "$out" || { echo "FALHOU: recusa sem o comando de destravar: $out"; fails=$((fails + 1)); }
 grep -q 'checkpoint-ok' <<< "$out" && { echo "FALHOU: comando de destravar apaga o checkpoint: $out"; fails=$((fails + 1)); }
 rm -f "$hermetic/.claude/.session/unverified-s2"
+# nome fora do padrão que o Stop grava: segura o push, mas não entra no comando de destravar (o shell o interpretaria)
+printf 'x\n' > "$hermetic/.claude/.session/unverified-a;touch b"
+expect deny 'git push -u origin chore/permissoes'
+out=$(payload 'git push -u origin feat/x' | bash "$guard" 2>&1 > /dev/null)
+grep -qF 'rm -f' <<< "$out" && { echo "FALHOU: nome fora do padrão entrou no comando de destravar: $out"; fails=$((fails + 1)); }
+grep -q 'fora do padrão' <<< "$out" || { echo "FALHOU: recusa não avisa do nome fora do padrão: $out"; fails=$((fails + 1)); }
+rm -f "$hermetic/.claude/.session/unverified-a;touch b"
 expect ok 'git push -u origin chore/permissoes'
+# sem CLAUDE_PROJECT_DIR e fora de repositório git: não dá para procurar os marcadores, então recusa
+mkdir -p "$work/fora-do-git"
+out=$(PAYLOAD_CWD=$work/fora-do-git payload 'git push -u origin chore/permissoes' | env -u CLAUDE_PROJECT_DIR GIT_CEILING_DIRECTORIES=$work bash -c "cd '$work/fora-do-git' && bash '$guard'" 2>&1 > /dev/null); rc=$?
+[ "$rc" = 2 ] && grep -q 'raiz do projeto desconhecida' <<< "$out" || { echo "FALHOU: raiz desconhecida não recusou (rc=$rc): $out"; fails=$((fails + 1)); }
 printf 'verificação verde (sessão s1, HEAD abc)\n' > "$hermetic/.claude/.session/unverified"
 expect deny 'git push -u origin chore/permissoes'
 expect deny 'git status && git push -u origin chore/a'

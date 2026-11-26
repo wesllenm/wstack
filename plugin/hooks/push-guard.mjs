@@ -107,19 +107,25 @@ function verdict(cmd, cwd) {
 // Os marcadores ficam na raiz do projeto ($CLAUDE_PROJECT_DIR, ou a raiz git do cwd), um por sessão.
 function unverified(cwd) {
   let root = process.env.CLAUDE_PROJECT_DIR;
-  if (!root) { try { root = git(cwd, 'rev-parse', '--show-toplevel'); } catch { return ''; } }
+  // sem a raiz não dá para saber se há marcador: falha fechada, como o resto do hook
+  if (!root) { try { root = git(cwd, 'rev-parse', '--show-toplevel'); } catch { return 'raiz do projeto desconhecida: sem CLAUDE_PROJECT_DIR e fora de repositório git, não deu para procurar os marcadores'; } }
   // um marcador por sessão (unverified-<sessão>): qualquer um segura o push, de qualquer sessão
   const dir = join(root, '.claude', '.session');
   let names;
   try { names = existsSync(dir) ? readdirSync(dir).filter((n) => /^unverified(?:-|$)/.test(n)) : []; } catch { return 'pasta .claude/.session ilegível'; }
   if (!names.length) return '';
+  const clean = (s) => s.replace(/[\x00-\x1f\x7f]/g, ' ');
   const reasons = names.map((n) => {
-    try { return readFileSync(join(dir, n), 'utf8').split('\n')[0].slice(0, 200).trim() || n; } catch { return `${n} ilegível`; }
+    try { return clean(readFileSync(join(dir, n), 'utf8').split('\n')[0].slice(0, 200)).trim() || clean(n); } catch { return `${clean(n)} ilegível`; }
   }).join('; ');
   // o comando de destravar vai na mensagem: marcador preso (commit da exceção reescrito por amend ou rebase, sessão
-  // encerrada, formato antigo) só o desenvolvedor tira, e o path-guard recusa o comando ao agente
-  const files = names.map((n) => `.claude/.session/${n}`).join(' ');
-  return `${reasons}). Para liberar sem nova verificação, o desenvolvedor roda fora do agente, na raiz do projeto: rm -f ${files}`;
+  // encerrada, formato antigo) só o desenvolvedor tira, e o path-guard recusa o comando ao agente. Só nomes no formato
+  // que o Stop grava entram no comando (nada que o shell interprete); um nome fora dele segura o push do mesmo jeito
+  const valid = names.filter((n) => /^unverified(?:-[A-Za-z0-9_-]+)?$/.test(n));
+  const odd = names.length - valid.length;
+  const cmd = valid.length ? ` Para liberar sem nova verificação, o desenvolvedor roda fora do agente, na raiz do projeto: rm -f ${valid.map((n) => `.claude/.session/${n}`).join(' ')}` : '';
+  const extra = odd ? ` ${odd} arquivo(s) unverified* com nome fora do padrão em .claude/.session também seguram o push: o desenvolvedor confere e apaga.` : '';
+  return `${reasons}).${cmd}${extra}`;
 }
 
 // O que o push publica, da origem de cada refspec (antes do ":", ou o próprio nome) até o merge-base com

@@ -79,6 +79,7 @@ sed -i 's/^verify_build = .*/verify_build = /' "$proj/.claude/risk.conf"
 expect 0 sem-comandos-marcador-fica
 [ -e "$mark" ] || fail_msg 'sem-comandos-marcador-fica: marcador apagado sem verificação'
 grep -q 'Verificação pendente desta sessão' "$work/out" || fail_msg 'sem-comandos-marcador-fica: saída silenciosa com o marcador'
+grep -qF 'rm -f .claude/.session/unverified-s1' "$work/out" || fail_msg 'sem-comandos-marcador-fica: aviso sem o comando de destravar'
 jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'sem-comandos-marcador-fica: systemMessage não é JSON válido'
 sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
 mv "$proj/sol.txt" "$work/sol.bak"
