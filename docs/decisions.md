@@ -580,3 +580,27 @@ vale para o repositório, não para a sessão, para uma sessão nova não enviar
 
 **Limite:** um push que não passa pelo Bash (ferramentas de API do GitHub que gravam arquivo direto) não é visto pelo
 `push-guard`. A barreira ali continua sendo o CI do PR.
+
+## 2026-11-26: o marcador de verificação pendente só sai com verificação de verdade
+
+**Decisão:** substitui, na entrada anterior, a regra de limpeza e o marcador único.
+- O `Stop` só apaga o marcador quando o build e os testes rodaram nesse encerramento e passaram. Árvore limpa, carimbo
+  de verificação anterior e projeto sem comandos `verify_*` não contam: com o marcador, o build roda mesmo sem mudança
+  pendente, sobre o que está commitado.
+- O HEAD do encerramento pela exceção fica gravado no marcador (`head: <SHA>`), e o marcador só sai quando o HEAD
+  verificado descende dele.
+- Um marcador por sessão (`.claude/.session/unverified-<sessão>`, `unverified-sem-sessao` sem `session_id`). O
+  `push-guard` recusa o push se existir qualquer um. Só o encerramento verde da própria sessão apaga o dela; o de uma
+  sessão encerrada fica para o desenvolvedor, e o `SessionStart` avisa que ele existe.
+- `.claude/.session/` e `.claude/verify-blocked.md` ficam fora do alcance do agente também na nuvem, com deny: o
+  `write-guard` recusa gravar em `.claude/.session/`, e o `path-guard` recusa comando de Bash que cita o marcador,
+  apaga, move ou copia algo em `.claude/.session/` ou roda de dentro dela. Na nuvem, também comando que cita
+  `.claude/verify-blocked.md`. Fora da nuvem a exceção continua pedindo aprovação.
+
+**Por quê:** a limpeza dependia só do código de saída 0. O fluxo normal do lead depois da exceção é commitar e
+encerrar; com a árvore limpa o hook saía 0 sem rodar nada e apagava o marcador, e o push saía sem verificação. Com um
+marcador só, o verde de uma sessão liberava o push dos commits sem verificação de outra. Na nuvem a trava de texto era
+livre, então o agente apagava o marcador pelo Bash sem pedir.
+
+**Limite:** a trava do Bash continua sendo por texto. Um comando que monta o caminho para esconder (variável, `eval`)
+passa, como nas outras travas por texto (ver Riscos aceitos em `docs/harness-capabilities.md`).

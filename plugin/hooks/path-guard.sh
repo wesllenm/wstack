@@ -11,6 +11,7 @@ command -v node > /dev/null || ask '"path-guard: node ausente; todo comando só 
 verdict=$(printf '%s' "$input" | node "$(dirname "$0")/path-guard.mjs") || ask '"path-guard: falhou ao ler o comando; comando só com aprovação"'
 case "$verdict" in
   '') exit 0 ;;
+  DENY*) echo "path-guard: ${verdict#DENY }" >&2; exit 2 ;;
   ASK*) ask "$(printf '%s' "path-guard: ${verdict#ASK }" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.stringify(s)))')" ;;
   *) ask '"path-guard: veredito ilegível; comando só com aprovação"' ;;
 esac

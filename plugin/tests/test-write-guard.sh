@@ -36,6 +36,10 @@ expect ok Write "$repo/src/a.cs"
 expect ask Write "$repo/.claude/verify-blocked.md"
 expect ask Edit .claude/verify-blocked.md
 expect ask Write "$repo/sub/../.claude/verify-blocked.md"
+# o estado dos hooks (marcador de verificação pendente, checkpoints) só os hooks gravam
+expect deny Write "$repo/.claude/.session/unverified-s1"
+expect deny Edit .claude/.session/unverified-s1
+expect deny Write "$repo/sub/../.claude/.session/checkpoint-ok-x"
 expect ok Write "$repo/.claude/outro.md"
 expect ok Edit src/a.cs
 expect ok Write "$repo/.gitignore"
