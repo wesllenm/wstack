@@ -108,6 +108,8 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.16: a conferência do Registro no `Stop` falha fechada: script de conferência que não roda ou sai com código
   inesperado bloqueia ("não consegui verificar"), e só a transcrição ausente fica como aviso; o `principles.mjs` não
   conta Skill ou Read sem resultado na transcrição.
+- 0.0.17: no `Stop`, não conseguir ler o `transcript_path` (node ausente, entrada que não é JSON) bloqueia em vez de
+  cair no aviso; a chamada dos scripts de conferência funciona no bash 3.2 do macOS.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
