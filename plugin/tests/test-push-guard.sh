@@ -46,6 +46,16 @@ expect ok 'git push -u origin claude/exec-manutencao-aprendizado-pyaaqb'
 expect ok 'git push origin abc123:refs/heads/wip/permissoes-1'
 expect ok 'git push -u origin chore/a:chore/a'
 expect ask 'git status && git push -u origin chore/a'
+# verificação pendente (o Stop encerrou um turno pela exceção): push de branch recusado, checkpoint wip/ segue
+mkdir -p "$hermetic/.claude/.session" && printf 'verificação verde (sessão s1, HEAD abc)\n' > "$hermetic/.claude/.session/unverified"
+expect deny 'git push -u origin chore/permissoes'
+expect deny 'git status && git push -u origin chore/a'
+expect ok 'git push origin abc123:refs/heads/wip/permissoes-1'
+expect ok 'git status'
+out=$(payload 'git push -u origin feat/x' | bash "$guard" 2>&1 > /dev/null)
+grep -q 'verificação pendente' <<< "$out" || { echo "FALHOU: motivo da recusa sem 'verificação pendente': $out"; fails=$((fails + 1)); }
+rm -f "$hermetic/.claude/.session/unverified"
+expect ok 'git push -u origin chore/permissoes'
 expect ok 'git -C . push -u origin chore/a'
 expect ok 'git push -u origin chore/a 2>&1'
 expect ok 'git push -u origin chore/a > /tmp/p.log 2>&1'

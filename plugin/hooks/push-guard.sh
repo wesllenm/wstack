@@ -20,6 +20,9 @@ verdict=$(printf '%s' "$input" | node "$(dirname "$0")/push-guard.mjs")
 case "$verdict" in
   OK) exit 0 ;;
   ASK*) ask "$(printf '%s' "push-guard: ${verdict#ASK }" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.stringify(s)))')" ;;
-  DENY*) echo "push-guard: ${verdict#DENY } (recusado: push para a main, force puro e apagar ref são sempre do desenvolvedor)" >&2; exit 2 ;;
+  DENY*) case "$verdict" in
+      "DENY verificação pendente"*) echo "push-guard: ${verdict#DENY }" >&2 ;;
+      *) echo "push-guard: ${verdict#DENY } (recusado: push para a main, force puro e apagar ref são sempre do desenvolvedor)" >&2 ;;
+    esac; exit 2 ;;
   *) ask '"push-guard: veredito ilegível; push só com aprovação do desenvolvedor"' ;;
 esac

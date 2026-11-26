@@ -53,9 +53,15 @@ expect 0 build-excecao-da-sessao
 grep -q 'Motivo registrado: build quebrado antes da tarefa' "$work/out" || fail_msg 'build-excecao-da-sessao: motivo fora do systemMessage'
 # uso único: a exceção é consumida; o próximo encerramento (e o código editado depois) volta ao gate
 [ ! -e "$proj/.claude/verify-blocked.md" ] || fail_msg 'build-excecao-da-sessao: exceção não foi consumida'
+[ -s "$proj/.claude/.session/unverified" ] || fail_msg 'build-excecao-da-sessao: sem o marcador de verificação pendente (segura o push)'
 printf 'editado depois da exceção\n' >> "$proj/a.txt"
 expect 2 build-depois-da-excecao 'Verificação falhou'
 grep -q 'aprovação dele' "$work/err" || fail_msg 'build-depois-da-excecao: mensagem não diz que a exceção é do desenvolvedor'
+[ -e "$proj/.claude/.session/unverified" ] || fail_msg 'build-depois-da-excecao: encerramento que falhou apagou o marcador'
+# encerramento com todos os gates verdes apaga o marcador (e libera o push)
+sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
+expect 0 verde-depois-da-excecao
+[ ! -e "$proj/.claude/.session/unverified" ] || fail_msg 'verde-depois-da-excecao: marcador de verificação pendente não foi apagado'
 rm -f "$proj/.claude/verify-blocked.md"
 # SessionStart avisa quando a exceção existe
 printf 'algo\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
