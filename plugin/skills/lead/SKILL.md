@@ -251,7 +251,7 @@ Não declarar `verificado` sem executar os comandos e gates definidos. Nunca afi
 
 O hook `Stop` roda build e testes rápidos sempre que você tenta encerrar com mudanças não verificadas. Se ele bloquear, a saída dele é a próxima instrução: corrija e tente encerrar de novo. Nunca contorne o gate editando o hook, o `settings.json` ou os testes.
 
-Só escreva `.claude/verify-blocked.md` quando a falha for preexistente ou cair numa das interrupções previstas, com o motivo em uma ou duas linhas, e reporte ao desenvolvedor. Apague o arquivo ao retomar.
+Só escreva `.claude/verify-blocked.md` quando a falha for preexistente ou cair numa das interrupções previstas, com o motivo em uma ou duas linhas e a linha `sessão: <id>` que a mensagem do hook mostra (sem ela, ou de outra sessão, o arquivo é ignorado), e reporte ao desenvolvedor. Apague o arquivo ao retomar.
 
 A stop condition só é atingida depois da limpeza e do Clean state check (`fechamento.md`). Limpe antes da última tentativa de encerrar: o hook considera arquivos não rastreados, então sobras no repositório fazem ele rodar build e testes de novo.
 
