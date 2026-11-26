@@ -23,6 +23,13 @@ process.stdin.on('data', (c) => (d += c)).on('end', () => {
     out(`DENY gravação na pasta do plugin wstack (muda por atualização do plugin, não por edição): ${file}`);
     return;
   }
+  // A exceção de verificação libera o Stop: o agente pode propor, quem cria é o desenvolvedor, aprovando a gravação.
+  // Pela ferramenta (não pelo texto), então vale também na nuvem.
+  if (/(?:^|\/)\.claude\/verify-blocked\.md$/i.test(p) || /(?:^|\/)\.claude\/verify-blocked\.md$/i.test(r)) {
+    const v = writeVerdict(file, cwd);
+    out(v === 'OK' ? 'ASK exceção de verificação (.claude/verify-blocked.md): libera o Stop sem build, testes ou conferência; só o desenvolvedor aprova' : v);
+    return;
+  }
   out(writeVerdict(file, cwd));
 });
 function out(v) { process.stdout.write(v); }

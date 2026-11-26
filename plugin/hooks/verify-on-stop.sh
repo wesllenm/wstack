@@ -32,7 +32,8 @@ for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 # o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
-[[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || sid=
+raw_sid=$sid
+[[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || sid=""
 
 # Telemetria do workflow: só se .claude/telemetry existir; nunca falha o hook nem grava conteúdo.
 emit() {
@@ -47,7 +48,8 @@ emit() {
 # aspas nem barra invertida. Sem node: a exceção existe justamente para o ambiente quebrado.
 # A exceção vale só para a sessão que a gravou: o arquivo precisa da linha "sessão: <session_id>" (sem session_id na
 # entrada, "head: <SHA do HEAD>"). Arquivo esquecido de outra sessão não desliga os gates das seguintes: é ignorado,
-# com aviso. As mensagens de bloqueio mostram a linha exata a escrever.
+# com aviso. Ela vale para um encerramento só (blocked_exit apaga o arquivo), e gravá-la pede aprovação do
+# desenvolvedor (write-guard na ferramenta de escrita, path-guard no Bash fora da nuvem).
 if [ -n "$sid" ]; then exception_key="sessão: $sid"; else exception_key="head: $(git rev-parse --verify -q HEAD)"; fi
 blocked_valid() {
   [ -f "$BLOCKED" ] || return 1
@@ -66,7 +68,9 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
     partial=$(printf '[\300-\377][\200-\277]*$')
     reason=$(printf '%s' "$reason" | LC_ALL=C sed "s/$partial//")
   fi
-  printf '{"systemMessage": "⚠ Turno encerrado sem %s. Motivo registrado: %s"}\n' "$1" "$reason"
+  # uso único: a exceção libera este encerramento e sai; o próximo Stop, e o código editado depois, voltam aos gates
+  rm -f "$BLOCKED"
+  printf '{"systemMessage": "⚠ Turno encerrado sem %s, por exceção aprovada (consumida). Motivo registrado: %s"}\n' "$1" "$reason"
   exit 0
 }
 
@@ -75,8 +79,12 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
 # vez de pular o gate inteiro. O Claude Code sempre manda o campo; vazio é entrada quebrada.
 if [ -z "$sid" ] && [ -f "$LEARN_FILE" ]; then
   blocked_valid && blocked_exit 'verificar o aprendizado (entrada sem session_id)'
-  echo "Não consegui verificar o aprendizado: a entrada do Stop não traz session_id, então não dá para achar o início da sessão." >&2
-  echo "É problema do ambiente: registre o motivo em $BLOCKED, com a linha '$exception_key' (libera só este encerramento, com aviso ao desenvolvedor), e reporte." >&2
+  if [ -n "$raw_sid" ]; then
+    echo "Não consegui verificar o aprendizado: o session_id da entrada do Stop está fora do formato esperado ([A-Za-z0-9_-]), então não dá para achar o início da sessão." >&2
+  else
+    echo "Não consegui verificar o aprendizado: a entrada do Stop não traz session_id, então não dá para achar o início da sessão." >&2
+  fi
+  echo "É problema do ambiente: peça ao desenvolvedor para aprovar a exceção em $BLOCKED (o motivo e a linha '$exception_key'); a gravação pede aprovação dele e vale para um encerramento só." >&2
   exit 2
 fi
 base_file=".claude/.session/$sid.base"
@@ -134,8 +142,8 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
       {
         echo "Não consegui verificar o campo $1 da linha de Registro contra a transcrição da sessão: $2"
         echo "Corrija a causa (node, o script do plugin, a transcrição) e tente encerrar de novo. Se for do ambiente e não"
-        echo "der para corrigir agora, registre o motivo em $BLOCKED, com a linha '$exception_key': isso libera só esta"
-        echo "sessão, com aviso ao desenvolvedor."
+        echo "der para corrigir agora, peça ao desenvolvedor para aprovar a exceção em $BLOCKED (o motivo e a linha"
+        echo "'$exception_key'); a gravação pede aprovação dele e vale para um encerramento só."
       } >&2
       exit 2
     }
@@ -163,7 +171,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
           emit learning_blocked
           {
             echo "O campo princípios: da linha de Registro não confere com a transcrição da sessão:"
-            grep '^NÃO CARREGADA\|^CAMPO AUSENTE' <<< "$out" || tail -3 <<< "$out"
+            grep -E '^(NÃO CARREGADA|CAMPO AUSENTE)' <<< "$out" || tail -3 <<< "$out"
             echo "Cite só skill carregada nesta sessão (ou 'nenhum'), na forma que o principles.mjs devolve; não carregue a skill agora só para citá-la."
           } >&2
           exit 2 ;;
@@ -211,7 +219,7 @@ if ! { bash -c "$BUILD_CMD" && { [ -z "$LINT_CMD" ] || bash -c "$LINT_CMD"; } &&
   emit verification_failed
   {
     echo "Verificação falhou: a stop condition não foi atingida. Corrija e tente encerrar de novo."
-    echo "Se a falha for preexistente ou um bloqueio real (skill lead, Interrupções), registre o motivo em $BLOCKED, com a linha '$exception_key', e reporte ao desenvolvedor."
+    echo "Se a falha for preexistente ou um bloqueio real (skill lead, Interrupções), reporte ao desenvolvedor e peça a aprovação da exceção em $BLOCKED (o motivo e a linha '$exception_key'); a gravação pede aprovação dele e vale para um encerramento só."
     echo "--- últimas linhas ---"
     tail -n 60 "$log"
   } >&2

@@ -548,3 +548,20 @@ aceito no alfabeto `[A-Za-z0-9_-]`, porque vira caminho de arquivo.
 **Por quê:** desde a decisão anterior o arquivo libera, além de build e testes, as conferências do Registro que o
 ambiente impediu. Sem dono nem prazo, um registro esquecido de semanas atrás desligava os gates de todas as sessões
 seguintes, sem ninguém perceber.
+
+## 2026-11-26: só o desenvolvedor cria a exceção de verificação, e ela vale uma vez
+
+**Decisão:** gravar `.claude/verify-blocked.md` pede aprovação: o `write-guard` devolve `ask` para Edit e Write nesse
+caminho (pela ferramenta, então vale também na nuvem), e o `path-guard` e o `ask` do `settings.json` modelo pegam o
+caminho pelo Bash, como já faziam com o `.verify-ok`. A exceção vale para um encerramento: o `Stop` a apaga ao usar.
+As mensagens de bloqueio dizem que a exceção depende da aprovação do desenvolvedor.
+
+**Por quê:** o agente escrevia a exceção sozinho, e as mensagens entregavam a linha pronta com o `session_id`: sob
+pressão para terminar, o build quebrado virava exceção, e os gates viravam conselho. A garantia do wstack vem de hook,
+não da boa vontade do modelo. O uso único cobre o que prender ao fingerprint cobriria (a exceção não vale para o
+código editado depois nem para os encerramentos seguintes), sem o hook precisar calcular o fingerprint antes do gate
+de aprendizado.
+
+**Risco aceito:** na nuvem a trava de texto do Bash é livre (decisão "trava por texto na nuvem"), então um
+redirecionamento pelo Bash grava o arquivo sem pedir. A ferramenta de escrita pede; o Bash na nuvem fica com o PR e o
+CI como barreira, como o resto do harness ali.

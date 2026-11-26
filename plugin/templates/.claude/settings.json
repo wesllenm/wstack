@@ -97,6 +97,7 @@
       "Edit(./**/.claude/scripts/**)",
       "Edit(./.claude/cloud/**)",
       "Edit(./.claude/.verify-ok)",
+      "Edit(./.claude/verify-blocked.md)",
       "Edit(./.claude/.session/checkpoint-ok-*)",
       "Edit(./.github/workflows/**)",
       "Edit(./.claude/settings.local.json)",

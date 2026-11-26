@@ -79,7 +79,7 @@ expect ask 'copy x .claude\hooks\push-guard.sh'
 for c in 'cd .claude/ && cp /dev/null hooks/push-guard.sh' 'cd .claude/ && sed -i s/ask/allow/ settings.json' \
   'grep -rl ask .claude/ | xargs sed -i s/ask/allow/g' 'find .claude/ -name push-guard.sh -delete' \
   'pushd .claude/ && rm hooks/push-guard.sh' 'touch .claude/.session/checkpoint-ok-abc' \
-  'git diff HEAD | sha1sum | cut -d" " -f1 | tee .claude/.verify-ok'; do
+  'git diff HEAD | sha1sum | cut -d" " -f1 | tee .claude/.verify-ok' 'printf "sessão: x" > .claude/verify-blocked.md'; do
   expect ask "$c"
 done
 expect livre 'ls .claude/skills/'

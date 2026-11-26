@@ -227,7 +227,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 
 | Evento | Hook | O que faz |
 |---|---|---|
-| `PreToolUse` Edit/Write | `write-guard` | a ferramenta de escrita não grava em `.git`, na config do git nem na pasta do plugin |
+| `PreToolUse` Edit/Write | `write-guard` | a ferramenta de escrita não grava em `.git`, na config do git nem na pasta do plugin, e pede a sua aprovação para gravar a exceção do `Stop` (`.claude/verify-blocked.md`) |
 | `PreToolUse` Bash | `push-guard` | push só na forma exata, para branch de atividade, nunca na padrão; pede aprovação se publica caminho protegido |
 | | `path-guard` | pede aprovação para comando que cita trava (`settings.json`, `risk.conf`, `.git`, workflows, a pasta do plugin) ou segredo |
 | | `redirect-guard` | pede aprovação para `>` fora das formas fechadas |
@@ -237,7 +237,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 | `TaskCompleted` | `checkpoint-tests` | idem, ao fechar uma tarefa |
 | `PostToolUse` edição | `edit-check` | lint e formatação do arquivo recém-editado |
 | | `iteration-guard` | lembra a regra das três tentativas a cada N edições sem commit |
-| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão; quando não consegue conferir (script, node ou entrada quebrados), bloqueia em vez de passar, e só libera com o motivo registrado em `.claude/verify-blocked.md`, que vale só para a sessão que o gravou e aparece para você ao encerrar |
+| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão; quando não consegue conferir (script, node ou entrada quebrados), bloqueia em vez de passar, e só libera com a exceção em `.claude/verify-blocked.md`, que só você aprova, vale para a sessão que a gravou e para um encerramento, e aparece para você ao encerrar |
 | `SessionStart` | `session-start`, `sessions.sh`, `map-staleness`, `cloud-services` | versão em uso, registro da sessão, aviso de mapa de features velho, serviços da nuvem |
 | `SessionEnd` | `sessions.sh` | tira a sessão do registro |
 | `Notification` | `notify` | aviso do sistema operacional quando a sessão espera você |
