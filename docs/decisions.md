@@ -747,3 +747,43 @@ lê, e um teste confirma que a linha completa no formato novo passa.
 
 **Risco aceito:** `allow_module = dotnet` sem data deixa de valer na atualização, e as formas do dotnet voltam a pedir
 aprovação até o desenvolvedor acrescentar `| vence: ... | motivo: ...` (`docs/migracao.md`, 0.0.29).
+
+## 2026-11-26: planejamento com esboço, paralelismo e juiz, princípios novos e mais playbooks
+
+Lote 4 das melhorias trazidas do pstack (skills `architect`, `arena`, `principle-*` e os playbooks `feature`,
+`runtime-forensics`, `hillclimb`, `prototype` e `pause-safely` do `poteto-mode`).
+
+**Decisão:**
+- **Esboço da fatia.** Em COMPLEXA e CRITICA, o sprint contract traz o uso primeiro e as assinaturas derivadas dele,
+  com corpos vazios. O `implementer` sinaliza desvio em vez de absorvê-lo, e o desvio na assinatura pública volta ao
+  lead. O `iteration-guard` passa a mandar descartar o esboço e voltar ao plano.
+- **Checkpoint de paralelismo.** O plano de COMPLEXA e CRITICA lista passos que bloqueiam, frentes independentes,
+  estado mutável compartilhado (separado por padrão) e a menor decomposição segura, com `n/a` e motivo.
+- **Arena com juiz.** Um `planner` novo, que não gerou proposta, pontua as propostas sem saber a postura de cada uma; o
+  lead pontua sem ver a nota dele. Divergência faz os dois relerem e aparece no plano. Propostas que respondem a
+  perguntas diferentes reenquadram a pergunta, uma vez. As duas notas vão para o `docs/decisions.md` do projeto.
+- **Princípios.** Quatro skills curtas e citáveis: `attack-the-premise` (playbook de bug e mensagem do
+  `iteration-guard`), `build-the-lever` (`lote.md`), `separate-before-serializing` (`paralelo.md`, checkpoint de
+  paralelismo e skill `concurrency`) e `subtract-before-you-add` (lente `review-simplicity`). O `principles.mjs` as
+  confere como qualquer skill.
+- **Playbooks.** `diagnostico-runtime.md` (sinal do processo rodando com as ferramentas do .NET, artefato grande
+  reduzido por subagente, mecanismo provado, `arquivo:linha`, diagnóstico sem correção), `prototipo.md` (uma decisão,
+  variantes lado a lado na pasta temporária, nunca no branch) e a subida iterativa no `performance.md` (medição
+  congelada, log de tentativas fora do git, uma mudança por tentativa, parada sem relaxar o predicado).
+- **Pausa antes da compactação.** O `sessao.md` ganha o gatilho e os passos: ponto seguro, nada novo, commit `wip:`
+  local (na nuvem, o checkpoint `wip/`) e o `SESSION.md` com intenção, progresso, estado verificado, próximos passos,
+  arquivos-chave e armadilhas.
+
+**Por quê:** o `implementer` recebia o contrato sem um desenho fechado e absorvia o atrito em silêncio; a arena era
+julgada por quem a conduziu; o paralelismo não tinha um ponto de decisão no plano; e faltavam receitas para
+diagnóstico em processo rodando, protótipo e trabalho de performance feito em várias tentativas medidas.
+
+**Divergências do documento de trabalho:** não há um modelo de plano na referência, então o checkpoint de
+paralelismo foi para o `pipeline.md`, que descreve o plano de cada nível. O playbook de runtime se chama
+`diagnostico-runtime.md`, na convenção em português dos outros. A regra de migrar chamadores e apagar a API antiga já
+estava na skill `refactoring`, restrita à API interna, como o documento pede. O `session_id` do `iteration-guard` virava
+caminho de arquivo sem validação; ele passou a usar o mesmo alfabeto fechado dos outros hooks, e o teste novo mostra
+que a versão anterior gravava fora da pasta de estado dos hooks.
+
+**Limite:** esboço, checkpoint, juiz e playbooks são orientação ao lead; os mecanismos deste lote são a mensagem do
+`iteration-guard`, agora com teste, e a conferência dos princípios pelo `principles.mjs`.

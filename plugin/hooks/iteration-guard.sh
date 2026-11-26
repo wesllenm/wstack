@@ -12,7 +12,8 @@ git rev-parse --is-inside-work-tree > /dev/null 2>&1 || exit 0
 if [ ! -e .claude/risk.conf ]; then node "$(dirname "$0")/risk-conf.mjs" --absent; [ $? = 10 ] && exit 0; fi
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-[ -n "$sid" ] || exit 0
+# o id vira caminho de arquivo (.claude/.session/<id>.iter): só o alfabeto fechado dos outros hooks
+[[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || exit 0
 
 limit=$(sed -n 's/^[[:space:]]*iteration_limit[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' .claude/risk.conf 2> /dev/null | tail -1)
 limit=${limit:-40}
@@ -36,6 +37,6 @@ if [ -d .claude/telemetry ]; then
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sid" "$count" >> ".claude/telemetry/sessions/$sid.jsonl" 2> /dev/null || true
 fi
 
-reason="Limite de iteração: $count edições desde o último commit, sem uma unidade verde commitada. Pare antes da próxima edição e aplique a regra das três tentativas sem progresso: (1) se existe uma unidade verde, commite-a; (2) senão, ataque a premissa: escreva em .claude/SESSION.md, numa frase, a suposição que as tentativas que falharam têm em comum, e a evidência que a confirma ou não; se ela não foi verificada, verifique-a (teste, log, leitura do código) antes de qualquer nova correção; se foi refutada, descarte a linha de ataque inteira, não só a última tentativa; (3) se a premissa se sustenta e não há saída, registre o que foi tentado e reporte ao desenvolvedor com a decisão necessária. Outra variação da mesma correção, sem esse passo, é desvio do workflow."
+reason="Limite de iteração: $count edições desde o último commit, sem uma unidade verde commitada. Pare antes da próxima edição e aplique a regra das três tentativas sem progresso: (1) se existe uma unidade verde, commite-a; (2) senão, ataque a premissa: escreva em .claude/SESSION.md, numa frase, a suposição que as tentativas que falharam têm em comum, e a evidência que a confirma ou não; se ela não foi verificada, verifique-a (teste, log, leitura do código) antes de qualquer nova correção; se foi refutada, descarte a linha de ataque inteira, não só a última tentativa (skill attack-the-premise); se a unidade seguia um esboço da fatia no sprint contract, descarte o esboço e volte ao plano em vez de remendá-lo; (3) se a premissa se sustenta e não há saída, registre o que foi tentado e reporte ao desenvolvedor com a decisão necessária. Outra variação da mesma correção, sem esse passo, é desvio do workflow."
 printf '{"decision":"block","reason":"%s"}\n' "$reason"
 exit 0

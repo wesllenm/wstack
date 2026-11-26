@@ -92,6 +92,8 @@ Depois de classificar, escolher o tipo pelo sinal no pedido, ler o playbook dele
 | refatoração | mudar a estrutura sem mudar o comportamento | skill `refactoring` com o Pipeline do nível |
 | auditoria de testes | pedida como tal | Pipeline, item Auditoria de testes |
 | manutenção do aprendizado | pedida pelo desenvolvedor ou sugerida no relatório | `aprendizado.md` (Leitura sob demanda) |
+| diagnóstico de runtime | comportamento que só aparece com o processo rodando: vazamento, travamento, thread pool esgotado, CPU alta sem causa no código | `diagnostico-runtime.md`: sinal do processo, mecanismo provado, `arquivo:linha`; entrega o diagnóstico, sem correção |
+| protótipo | decisão que só um código descartável responde (abordagem mais rápida, tela, biblioteca, contrato) | `prototipo.md`: uma decisão, variantes lado a lado fora do repositório, recomendação |
 | sem playbook | mudança que não é feature, bug, investigação, performance nem refatoração: migrar ferramenta ou build, adotar processo, consolidar configuração | `sem-playbook.md`: condição de pronto testável, unidades com a incógnita mais arriscada primeiro, cada uma com veredito |
 | retomada | `.claude/SESSION.md` de sessão anterior | `sessao.md` (Leitura sob demanda), depois o tipo da tarefa retomada |
 
@@ -232,7 +234,7 @@ Não interromper para arquivo, comando, teste, agente ou correção dentro do pl
 
 ## Sessão
 
-Acompanhar o consumo de contexto com `/context`. Alertar ao passar de ~70% da janela, em compactação iminente ou ocorrida, ou com muitas idas e voltas sem progresso verificável. Antes de compactar: delegar o trabalho verboso restante a subagentes, concluir a menor unidade segura, atualizar `.claude/SESSION.md` (inclui inventário do estado inicial e stop condition restante) e emitir uma única mensagem:
+Acompanhar o consumo de contexto com `/context`. Alertar ao passar de ~70% da janela, em compactação iminente ou ocorrida, ou com muitas idas e voltas sem progresso verificável. Antes de compactar: delegar o trabalho verboso restante a subagentes e seguir a Pausa antes da compactação de `sessao.md` (ponto seguro, nada novo, commit `wip:`, `SESSION.md` com intenção, progresso, estado verificado, próximos passos, arquivos-chave e armadilhas, inventário do estado inicial e stop condition restante), e emitir uma única mensagem:
 
 ```text
 ⚠ Sessão próxima do limite de contexto. Estado salvo em .claude/SESSION.md; concluirei a unidade atual e recomendo nova sessão para a próxima etapa.

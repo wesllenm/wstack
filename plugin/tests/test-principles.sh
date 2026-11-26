@@ -125,6 +125,15 @@ node "$script" "$main" --cited 'tdd, security' > /dev/null; [ $? = 3 ] || fail '
 node "$script" "$main" --cited 'nenhum, tdd' > /dev/null; [ $? = 3 ] || fail '--cited nenhum junto de outro passou'
 node "$script" "$main" --cited '' > /dev/null; [ $? = 3 ] || fail '--cited vazio passou'
 node "$script" "$main" --cited tdd --report "$rel" > /dev/null 2>&1; [ $? = 2 ] || fail '--cited e --report juntos: código diferente de 2'
+# os princípios do plugin (attack-the-premise, build-the-lever, separate-before-serializing, subtract-before-you-add)
+# valem como qualquer skill: aceitos quando carregados, recusados quando não
+for p in attack-the-premise build-the-lever separate-before-serializing subtract-before-you-add; do
+  [ -f "$(dirname "$script")/../skills/$p/SKILL.md" ] || fail "princípio $p: skill ausente no plugin"
+  pr=$work/principio-$p.jsonl
+  { use Skill "{\"skill\":\"wstack:$p\"}"; } > "$pr"
+  node "$script" "$pr" --cited "$p" > /dev/null; [ $? = 0 ] || fail "princípio $p carregado: --cited recusou"
+  node "$script" "$main" --cited "$p" > /dev/null; [ $? = 3 ] || fail "princípio $p sem carga: --cited aceitou"
+done
 
 # Skill sem resultado na transcrição (chamada interrompida) não conta como carregada
 jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"z1",name:"Skill",input:{skill:"wstack:ux"}}]}}' > "$work/sem-resultado.jsonl"

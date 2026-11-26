@@ -12,6 +12,13 @@ As ferramentas de cada camada estão na skill `performance` e na referência da 
 6. **Prender o ganho.** Teste de contagem ou orçamento no benchmark (camadas 2 e 3 da `performance`) que falharia se a regressão voltasse. É o degrau 1 ou 2 da escada contra a próxima regressão.
 7. **Testes de comportamento verdes e revisão** pelo nível (seção Revisão do núcleo).
 
+**Subida iterativa (hillclimb).** Quando o alvo pede várias tentativas, os passos 2 a 6 viram um laço com estas regras:
+- **Medição congelada.** Antes da primeira tentativa, conferir que a medição separa as cargas que importam (rodar com a carga pequena e a grande e ver números diferentes acima do ruído), congelar o comando e a carga, e registrar a linha de base e um gate de regressão verde (os testes de comportamento e os de contagem). A medição não muda no meio do laço; se precisar mudar, a linha de base é refeita.
+- **Log de tentativas**, ignorado pelo git (na pasta temporária da sessão), uma linha por tentativa: `mudança — mecanismo esperado — resultado (antes → depois, ruído) — decisão (mantida | revertida)`.
+- **Uma mudança por tentativa**, mantida só se a métrica passa do ruído e o gate continua verde; senão, revertida antes da próxima.
+- **Parada.** O alvo atingido, ou um mínimo de três tentativas seguidas sem ganho acima do ruído; o predicado de parada nunca é relaxado no meio para "terminar". Parar sem o alvo vai ao relatório com o log.
+- **Correção e simplicidade acima do número.** Ganho que troca correção, ou que só aparece com código bem mais difícil de ler, vai ao relatório para o desenvolvedor decidir, mesmo passando do ruído.
+
 No relatório, o campo Performance do núcleo traz, além do formato dele:
 
 ```text

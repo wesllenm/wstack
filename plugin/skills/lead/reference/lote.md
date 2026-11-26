@@ -9,4 +9,6 @@ Quando a mesma transformação se repete em muitos arquivos (renomear símbolo q
 3. rode o script sobre a versão original da unidade feita à mão (`git stash` ou cópia) e confira que o resultado é idêntico ao oráculo; divergência significa script errado, não exceção a tratar à mão;
 4. aplique no restante, revise o `git diff --stat` e uma amostra do diff, rode build e testes e commite como uma unidade.
 
+É o princípio da skill `build-the-lever`: carregá-la antes do passo 1. Prefira o script determinístico a dividir a mesma transformação entre vários subagentes, que decidem os casos de borda cada um do seu jeito.
+
 A regra vale a partir de uns dez arquivos ou quando a transformação não é óbvia de olhar; abaixo disso, editar direto custa menos. Edições feitas por script passam por `Bash` e não contam no `iteration-guard.sh`; o commit por unidade continua valendo. Mudança em teste existente por script continua exigindo a autorização do sprint contract.

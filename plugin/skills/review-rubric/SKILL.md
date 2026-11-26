@@ -154,7 +154,7 @@ O que cada lente procura. O prompt do agente só aponta para cá.
 1. Reuso: para cada função, classe, extension, helper, mapeamento, validação ou consulta nova, Grep por nomes, verbos e tipos envolvidos. Existe algo que faz o mesmo: candidato `reuse` com o caminho.
 2. Abstração especulativa: interface com uma implementação sem fronteira que a justifique; classe base com um herdeiro; genérico com um tipo; factory, strategy ou builder para um caso; camada que só repassa. Candidato `simplicity` com o uso único. Respeitar a skill `clean-architecture` (Quando introduzir uma abstração).
 3. Sem uso: parâmetro sempre com o mesmo valor, configuração que nada lê, sobrecarga não chamada, código comentado, membro público sem chamador.
-4. Tamanho: trecho que não serve a critério de aceitação ou resolve caso que o contrato não pede.
+4. Tamanho: trecho que não serve a critério de aceitação ou resolve caso que o contrato não pede. A superfície do desenho (tipos públicos, parâmetros, configurações, caminhos para a mesma tarefa) que cresceu sem um critério de aceitação que peça, e sem remover o que o novo substitui, é candidato (skill `subtract-before-you-add`).
 5. Clareza local (nit): condicional aninhada que retorno antecipado resolve, expressão que precisa de comentário, nome que não diz o que faz.
 6. Linhas `DUPLICADO` e `CRAP` do `quality-signals.sh`, quando vierem no pedido: abrir os dois lados de cada par e cada função apontada, e aplicar a seção Sinais de qualidade.
 7. Não propor abstração nova para dois trechos pequenos; não apontar estilo de formatador; não refatorar fora do diff.

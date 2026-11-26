@@ -158,6 +158,12 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   linhas do `.claude/risk.conf` (a edição pede aprovação). Também: `/correct historico`; seção Regras e garantias no
   `CLAUDE.md` do modelo e Backlog de mecanismo no `docs/review-calibration.md` (projeto existente copia à mão); triagem
   das lições em aceitas, rejeitadas e backlog no campo `aprendizado:` do Registro; tipo de tarefa "sem playbook".
+- 0.0.30: planejamento e playbooks (lote 4 do pstack). Esboço da fatia (uso e assinaturas) no sprint contract de
+  COMPLEXA e CRITICA, com desvio sinalizado pelo `implementer`; checkpoint de paralelismo no plano; arena com `planner`
+  juiz e pontuação independente do lead; skills `attack-the-premise`, `build-the-lever`, `separate-before-serializing` e
+  `subtract-before-you-add`; playbooks `diagnostico-runtime.md` e `prototipo.md` e a subida iterativa no
+  `performance.md`; pausa antes da compactação no `sessao.md`. O `iteration-guard` ignora `session_id` fora de
+  `[A-Za-z0-9_-]`. Sem ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

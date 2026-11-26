@@ -29,6 +29,7 @@ Contadores, saldos e cotas (ex.: consumo por mês) e sequências com alta disput
 
 ## Regras gerais
 
+- Antes de sincronizar, eliminar o compartilhamento: um arquivo, chave, partição ou pasta por ator; serializar só a invariante que não separa, dita em uma frase (skill `separate-before-serializing`). Instrução pedindo cuidado não é controle de concorrência.
 - Operação que lê, decide e grava precisa ser atômica ou protegida por versão.
 - Quando um orquestrador (workflow) é dono do estado de uma entidade, a transição só passa por ele; webhook concorrente vira evento para o workflow, não escrita direta.
 - Não paralelizar sem limite, hipótese e medição (skill `performance`); usar `Parallel.ForEachAsync` com `MaxDegreeOfParallelism` ou `Channel<T>` limitado. [CON-04]
