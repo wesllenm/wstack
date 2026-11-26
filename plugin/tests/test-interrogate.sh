@@ -94,6 +94,7 @@ grep -q '^- id: alfa-interrogate-1$' "$work/saida.txt" || fail 'um modelo com ac
 grep -q 'Claro, seguem' "$work/saida.txt" && fail 'um modelo com achado: texto antes da lista não foi cortado'
 grep -q 'pedido incompleto' "$work/saida.txt" && fail 'um modelo com achado: o modelo não recebeu instrução e pacote'
 [ -f "$work/saida.txt.alfa.bruto" ] || fail 'um modelo com achado: sem a resposta bruta'
+[ "$(tail -n 1 "$work/saida.txt")" = 'status: achados' ] || fail 'um modelo com achado: lista sem a linha final "status: achados" (o check-findings a leria como lacuna)'
 
 conf "interrogate_cmd = zeta bash $work/bin/partido.sh"
 run "$work/pacote.txt"; expect 'acento partido entre pedaços' 0

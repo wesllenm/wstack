@@ -24,7 +24,7 @@ Todo código novo ou alterado.
 - erros não são engolidos: `catch` vazio ou que só loga e segue é proibido sem justificativa; [QLT-01]
 - resultados esperados de negócio (validação, regra violada) são retorno tipado, não exceção; [QLT-01]
 - dependências têm fronteiras claras e entram pelo construtor;
-- comentários explicam por quê ou restrições não óbvias; [DOC-04] nada de narrar o código, código comentado ou `TODO`/`FIXME`/`HACK` no código (o que ficou para depois vira follow-up no relatório); o `diff-smells.mjs` aponta o que o diff adicionou;
+- comentários explicam por quê ou restrições não óbvias; [DOC-04] nada de narrar o código, código comentado ou `TODO`/`FIXME`/`HACK` no código (o que ficou para depois vira follow-up no relatório); restrição que o código pode garantir (tipo, checagem, teste, lint) se garante em vez de se comentar, e o comentário fica só para o que não pode mudar; o `diff-smells.mjs` aponta o que o diff adicionou (`RESTRICAO` para comentário de regra);
 - válvula de escape (supressão de aviso, null-forgiving `!`, `dynamic`, `.Result`/`.Wait()`, `catch` vazio; `any` e `@ts-ignore` no frontend) é sinal de desenho a resolver, não atalho: antes de usar uma, perguntar por que o tipo ou o fluxo a pediu;
 - diagramas são código (Mermaid ou o equivalente do perfil), com descrição textual equivalente e sintaxe validada; sem link, `click` nem HTML nos rótulos [DOC-05]
 - código morto é removido dentro do escopo;

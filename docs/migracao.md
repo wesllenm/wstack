@@ -140,6 +140,12 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.26: o `rm -f` da recusa só lista nomes no formato que o `Stop` grava (arquivo `unverified*` com outro nome segura
   o push e é avisado); o aviso do `Stop` com o `risk.conf` incompleto traz o comando; sem `CLAUDE_PROJECT_DIR` e fora
   de repositório git, o `push-guard` recusa o push.
+- 0.0.27: revisão com prova por execução, lacuna de lente e comentário de restrição (lote 1 do pstack). Candidato
+  bloqueante ou importante de comportamento leva `prova: <comando> → <saída esperada>`; sem ela, o
+  `check-findings.mjs` o marca `situação: a confirmar`, e o `review-verifier` roda a prova antes de confirmar. Cada
+  lente termina com `status: achados | sem achados | falhou: <motivo>`, e o `check-findings.mjs` recebe um arquivo por
+  lente: sem status é lacuna (código 4), nunca `sem achados`. O `diff-smells.mjs` separa o comentário de restrição
+  (`RESTRICAO`). Lista de candidatos sem linha de status, que antes passava, agora sai 4.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

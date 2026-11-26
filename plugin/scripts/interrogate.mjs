@@ -5,8 +5,8 @@
 // Um modelo ataca; o verificador confirma ou refuta.
 // Uso: node interrogate.mjs <pacote> <saída>
 //   <pacote>: arquivo com o diff dos arquivos que o review-dispatch.mjs manda a revisor, o contrato e os pontos de foco
-//   <saída>: candidatos de todos os modelos, com o id prefixado pelo nome do modelo (ou "sem achados"); a resposta
-//            bruta de cada modelo fica em <saída>.<nome>.bruto
+//   <saída>: candidatos de todos os modelos, com o id prefixado pelo nome do modelo e a linha final "status: achados"
+//            (ou "sem achados"); a resposta bruta de cada modelo fica em <saída>.<nome>.bruto
 // .claude/risk.conf do projeto:
 //   interrogate_cmd = <nome> <comando>   um por modelo; o comando roda com bash -c na raiz do projeto, lê o pedido da
 //                                        entrada padrão e escreve a resposta na saída padrão
@@ -76,6 +76,7 @@ Regras:
     <linha exata do código em local>
   evidência: <arquivo:linha> — <o que o código faz, trecho curto>
   cenário: <entrada ou estado> → <resultado errado>
+  prova: <comando que reproduz a falha no projeto, como um teste ou script> → <saída esperada da falha>
   correção mínima: <mudança>
   preexistente: sim | não
 
@@ -154,5 +155,6 @@ if (failed === results.length) {
   write(outPath, `falhou: ${failures.join('; ')}\n`);
   process.exit(4);
 }
-write(outPath, blocks.length ? `${blocks.join('\n')}\n` : 'sem achados\n');
+// a linha de status fecha a lista, como nas lentes: o check-findings.mjs trata resposta sem ela como lacuna
+write(outPath, blocks.length ? `${blocks.join('\n')}\nstatus: achados\n` : 'sem achados\n');
 process.exit(failed ? 3 : 0);

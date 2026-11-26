@@ -25,4 +25,4 @@ como provar: <o teste, script ou condução na aplicação mais barato que leva 
 liberados: <riscos descartados com prova de degrau 2 ou mais, cada um com arquivo:linha e o degrau; risco com confiança 70 ou mais continua candidato, não entra aqui; omitir a linha se não houver>
 ```
 
-Depois do bloco do fato de segurança, retorne no máximo cinco candidatos no formato da `review-rubric`, com o teste recomendado na correção mínima, ou exatamente `sem achados críticos`. O bloco do fato vem sempre, com ou sem candidatos. Nada cosmético.
+Depois do bloco do fato de segurança, retorne no máximo cinco candidatos no formato da `review-rubric`, com o teste recomendado na correção mínima, e termine com a linha de status da rubrica (`status: achados`, `status: sem achados` ou `status: falhou: <motivo>`, depois de qualquer outra linha, salvo `aprendizado:`): sem ela, o `check-findings.mjs` trata a resposta como lacuna. O bloco do fato vem sempre, com ou sem candidatos. Nada cosmético.

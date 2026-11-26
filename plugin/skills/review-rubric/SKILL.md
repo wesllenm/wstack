@@ -55,7 +55,8 @@ Todo candidato traz:
 - `local`: `arquivo:linha` no diff;
 - `trecho`: a linha (ou as linhas consecutivas) exata do código em `local`, copiada sem alterar. O `check-findings.mjs` procura esse texto no arquivo antes do verificador: trecho que não existe descarta o candidato (achado alucinado) e trecho achado em outra linha corrige o `local`. Copie do arquivo, nunca de memória;
 - `evidência`: `arquivo:linha` que mostra o comportamento alegado (a definição chamada, o chamador, a configuração, o teste), com trecho curto;
-- `cenário`: entrada ou estado, e o resultado errado.
+- `cenário`: entrada ou estado, e o resultado errado;
+- `prova`: o comando exato que reproduz a falha (teste que falha, script de reprodução, comando com a saída errada) e a saída esperada dela, separados por `→`. Obrigatória em bloqueante e importante, salvo `reuse`, `simplicity` e `scope`, cuja evidência é o outro trecho de código; opcional no resto. O `check-findings.mjs` marca `situação: a confirmar` no candidato que precisa de prova e não a traz, ou que a traz sem a saída esperada: ele não é descartado, mas o verificador só o confirma rodando uma prova. O comando roda com as travas de Bash de sempre; prova que só passa com exceção de permissão não é prova.
 
 Por categoria:
 
@@ -167,6 +168,7 @@ O que cada lente procura. O prompt do agente só aponta para cá.
    - **lista mantida à mão:** dois ou mais lugares listam os mesmos itens, e adicionar um item exige editar todos; derivar de uma fonte ou fazer o build falhar quando divergirem.
    Candidato `simplicity`, com o lugar do segundo dono, do segundo caminho ou da segunda lista.
 9. Teste de leitura (nit): para cada valor ou estado novo, dá para responder em 30 segundos de onde ele vem e o que pode mudá-lo? Se não, candidato `simplicity` com o salto a cortar.
+10. Comentário de restrição (linha `RESTRICAO` do `diff-smells.mjs`, quando vier no pedido): "não chamar antes de Init()", "nunca nulo aqui", "não é thread-safe" são regras que só o modelo lê. Para cada uma, propor o degrau mais alto da escada de correção (skill `correct`) que garanta a regra no código: tipo ou construtor que torna o uso errado impossível, checagem em tempo de execução, teste ou regra de lint. Candidato `simplicity`, `nit`, com a garantia em `correção mínima`. É proposta: o `lead` não a implementa sem aprovação no plano. Comentário que descreve algo que não pode mudar (protocolo externo, requisito de outro sistema) fica, e o candidato diz por quê. Comentário fora do diff não entra.
 
 ### falhas (`review-failures`)
 
@@ -197,6 +199,7 @@ O que cada lente procura. O prompt do agente só aponta para cá.
 Para cada candidato:
 
 0. Os candidatos chegam ancorados: o `lead` os passou por `check-findings.mjs`, que descartou os de trecho inexistente e corrigiu o `local` dos deslocados (linha `ancoragem:`). Candidato `realocado` merece confirmar o `local` novo; aviso `preexistente: não` fora das linhas alteradas é contradição a decidir aqui.
+0a. Prova por execução: antes de confirmar, rodar o comando de `prova:` e anexar o comando e o trecho da saída ao veredito (`execução:`). A saída mostra a falha e a falha contraria a intenção da mudança (o contrato): segue para os passos abaixo, já no degrau 4. O comando roda e não reproduz a falha: `refutado`, com motivo `refutado por execução` e a saída. O comando não roda (dependência ausente, ambiente): diga isso em `execução:` e siga sem ela. Candidato com `situação: a confirmar` (sem prova) só sai `confirmado` se você escrever e rodar uma prova que reproduza a falha; senão, no máximo `plausível`, com a prova que faltou em `como provar`. Os comandos rodam com as travas de Bash de sempre: nunca pedir exceção de permissão para uma prova.
 1. Abrir `local` e `evidência`. Evidência inexistente ou que não diz o que o candidato afirma: `refutado`.
 2. Tentar refutar: procurar o tratamento que o candidato diz faltar (outra camada, middleware, filtro global, teste existente, configuração, garantia do tipo ou do framework), seguindo chamadores e chamados.
 3. Reconstruir o cenário: a entrada ou estado é alcançável de um ponto de entrada real? Se não, `refutado`.
@@ -222,7 +225,7 @@ Em CRITICA, a maior parte do risco de uma mudança costuma depender de um único
 
 ## Formato do candidato
 
-Cada lente devolve uma lista no formato abaixo, ou exatamente `sem achados`:
+Cada lente devolve uma lista no formato abaixo e termina **sempre** com uma linha de status, a última da resposta: `status: achados` depois da lista, `status: sem achados` sem lista, ou `status: falhou: <motivo>` quando não deu para revisar (arquivo ilegível, grupo grande demais, ferramenta que falhou). O `check-findings.mjs` trata resposta sem essa linha, ou com status que contradiz o conteúdo, como lacuna: lente que não terminou nunca conta como "sem achados".
 
 ```text
 - id: <lente>-<n>
@@ -234,8 +237,10 @@ Cada lente devolve uma lista no formato abaixo, ou exatamente `sem achados`:
     <linha exata do código em local, copiada do arquivo>
   evidência: <arquivo:linha> — <o que o código faz, trecho curto>
   cenário: <entrada ou estado> → <resultado errado>
+  prova: <comando exato> → <saída esperada da falha>
   correção mínima: <mudança>
   preexistente: sim | não
+status: achados
 ```
 
 ## Formato do veredito
@@ -246,14 +251,16 @@ O `review-verifier` devolve:
 - id: <id original; ids fundidos separados por vírgula>
   veredito: confirmado | plausível | refutado
   prova: <degrau 1 a 5, Degraus de prova>
+  execução: <comando rodado> → <trecho da saída> | não rodou: <motivo> | sem prova
   severidade final: bloqueante | importante | nit
-  motivo: <uma ou duas linhas, com arquivo:linha>
+  motivo: <uma ou duas linhas, com arquivo:linha; "refutado por execução" quando a prova não reproduziu>
   como provar: <teste ou execução que confirmaria, só para plausível>
 ```
 
 ## Checklist de saída
 
-- [ ] todo candidato com local, evidência e cenário;
+- [ ] todo candidato com local, evidência e cenário, e com prova quando bloqueante ou importante de comportamento;
+- [ ] a última linha é o status (`achados`, `sem achados` ou `falhou: <motivo>`);
 - [ ] nenhum candidato abaixo de confiança 70;
 - [ ] nenhum item de Não reportar;
 - [ ] preexistentes marcados;
