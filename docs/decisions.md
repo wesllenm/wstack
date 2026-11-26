@@ -473,3 +473,14 @@ acrescentada ao Registro desde o início da sessão. Antes, rodar o `principles.
 **O que não faz:** o gate confere o campo, não que o script rodou; escrever o campo à mão passa. É um degrau acima do
 texto (a linha não sai mais sem o campo) e abaixo de rodar o script no hook, que exigiria o caminho da transcrição no
 `Stop` e aprovação para lê-la.
+
+## 2026-11-26: o bootstrap pergunta sobre a revisão por outro fornecedor
+
+**Decisão:** a proposta do `/wstack:bootstrap` sempre tem a linha "Revisão por outro fornecedor", com o custo dito por
+extenso: o diff de COMPLEXA e CRITICA sai da máquina para o fornecedor do modelo. O diagnóstico levanta as CLIs
+disponíveis e se o repositório é de cliente. Sem CLI, o padrão é não ligar. Ligada ou não, a escolha vai para o
+`docs/decisions.md` do projeto.
+
+**Por quê:** o `interrogate.mjs` só roda com `interrogate_cmd` no `risk.conf`, e o bootstrap não tocava nessa chave.
+O revisor de outro fornecedor ficava desligado em todo projeto sem que ninguém tivesse decidido isso. Mandar código
+para terceiros continua sendo decisão do projeto; o que muda é que ela passa a ser tomada e registrada.

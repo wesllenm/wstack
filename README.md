@@ -121,6 +121,9 @@ flowchart LR
    | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto |
    | `.claude/skills/verify-<app>/` | esqueleto da skill que sobe a aplicação e prova comportamento (só com aplicação) |
 
+   A proposta também pergunta se o projeto liga a revisão por outro fornecedor (`interrogate_cmd`): o diff de COMPLEXA
+   e CRITICA sai da máquina para esse fornecedor. Ligada ou não, a resposta vai para o `docs/decisions.md` do projeto.
+
 4. **Revisar e fazer o merge.** O bootstrap preenche o que consegue detectar nos `<...>` dos modelos; o resto, e a
    receita da `verify-<app>` (que sai como esqueleto), você completa na mesma sessão. O commit vai para a branch
    `chore/bootstrap-wstack`; o merge na branch padrão fixa a versão do plugin no projeto.
@@ -209,9 +212,9 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 
 As referências por stack ficam em `reference/*.md`: .NET, Node, Bash e frontend web em `performance` e
 `review-rubric` (esta também tem regras por caminho), e EF Core e PostgreSQL em `query-plan`. A skill `lead` tem um
-núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (revisão, delegação,
-limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, manutenção do aprendizado), lido no momento que a tabela
-Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação e
+núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (sequência por nível,
+revisão, delegação, limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, fechamento com o relatório,
+manutenção do aprendizado), lido no momento que a tabela Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação e
 performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos. A arena
 (`reference/arena.md`) compara propostas paralelas de `planner` em decisão de design cara de reverter, e o
 `interrogate.mjs` manda o diff de COMPLEXA e CRITICA para modelos de outro fornecedor que o projeto configure no
