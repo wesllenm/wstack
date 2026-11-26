@@ -32,13 +32,15 @@ import { allowed as gitForm } from './git-read-allow.mjs';
 import { foreignRepo, git } from './git-repo.mjs';
 import { pluginRoots } from './plugin-root.mjs';
 import { confValues } from './risk-conf.mjs';
+import { validValues } from './conf-exception.mjs';
 
 // allow_module = <nome> no risk.conf: ./<nome>-allow.mjs exporta allowed(cmd, cwd), a forma fechada que fica livre. Nome fora
 // de ^[a-z0-9-]+$, módulo ausente ou quebrado: moduleFailure, e todo comando pede (falha fechada, nunca exceção).
 const NAME = /^[a-z0-9-]+$/;
 const moduleForms = [];
 let moduleFailure = '';
-for (const name of confValues('allow_module')) {
+// exceção com validade (conf-exception.mjs): sem data, vencida ou sem motivo, o módulo não carrega e as formas pedem
+for (const name of validValues(confValues('allow_module'))) {
   try {
     if (!NAME.test(name)) throw new Error('nome inválido');
     const m = await import(new URL(`./${name}-allow.mjs`, import.meta.url).href);

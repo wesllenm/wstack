@@ -152,6 +152,12 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   migration ou mensageria. Os Degraus de prova da `review-rubric` viram a escada de evidência, com os rótulos medida,
   inferida e palpite no relatório. Projeto que já tem a `verify-<app>` copia as seções novas à mão: o bootstrap não
   sobrescreve o que existe.
+- 0.0.29: aprendizado (lote 3 do pstack). **Exige ação no projeto:** `allow_module`, `review_exclude` e `smell_exclude`
+  só valem com `| vence: AAAA-MM-DD | motivo: <texto>`; sem isso são ignorados (as formas do dotnet voltam a pedir, o
+  arquivo excluído volta à revisão e ao `diff-smells`) e o `SessionStart` avisa a linha. Acrescentar a validade às
+  linhas do `.claude/risk.conf` (a edição pede aprovação). Também: `/correct historico`; seção Regras e garantias no
+  `CLAUDE.md` do modelo e Backlog de mecanismo no `docs/review-calibration.md` (projeto existente copia à mão); triagem
+  das lições em aceitas, rejeitadas e backlog no campo `aprendizado:` do Registro; tipo de tarefa "sem playbook".
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

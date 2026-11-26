@@ -42,7 +42,7 @@ quebrá-lo depois do código. A evidência de cada afirmação usa a escada da `
 
 ```text
 Mudança: <o que muda, com arquivo:linha por símbolo>
-Fato de segurança: <uma frase> — provado (degrau 4 ou 5: comando → resultado) | não provado (degrau atual, e a prova que falta)
+Fato de segurança: <uma frase> — VERIFICADO (degrau 4 ou 5: comando → resultado) | NÃO VERIFICADO (a prova rodou e o fato não vale) | INCONCLUSIVO (degrau atual e a prova que falta)
 Riscos confirmados:
 - <risco> — probabilidade — custo — arquivo:linha — degrau
 Descartados:
@@ -52,7 +52,9 @@ Foco para as lentes: <os pontos que o contrato e a revisão precisam cobrir>
 ```
 
 Cada afirmação leva o rótulo da escada: **medida** (degraus 4 e 5), **inferida** (2 e 3) ou **palpite** (1). Fato de
-segurança que fica em palpite vai ao plano como pergunta, não como premissa.
+segurança que fica em palpite vai ao plano como pergunta, não como premissa. Os vereditos são os da prova por
+execução da `review-rubric` e do playbook `sem-playbook.md` da `lead`; INCONCLUSIVO conta como `não provado` no
+`revisao.md` (o commit de CRITICA espera o desenvolvedor).
 
 ## Restrições
 

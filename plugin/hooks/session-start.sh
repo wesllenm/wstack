@@ -24,6 +24,10 @@ if [ ! -e .claude/risk.conf ]; then
   [ $? = 10 ] && { echo "Projeto sem o wstack: só as travas de segurança estão ativas. Para adotar o workflow, /wstack:bootstrap."; exit 0; }
 fi
 
+# Exceções do risk.conf com validade (conf-exception.mjs): vencida, sem data ou sem motivo, é ignorada pelo hook ou script
+# que a lê; aqui só se avisa.
+node "$plugin/hooks/conf-exception.mjs" --warn 2> /dev/null
+
 # Exceção de verificação esquecida: ela só vale para a sessão que a gravou (linha "sessão: <id>"), mas o arquivo parado
 # confunde e esconde o motivo; avisar para ler e apagar ao retomar.
 if [ -f .claude/verify-blocked.md ]; then

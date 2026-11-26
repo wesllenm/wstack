@@ -233,7 +233,7 @@ cfg=$work/cfg; mkdir -p "$cfg" && cp -r "$plug/hooks" "$cfg/hooks"
 cfghook=$cfg/hooks/$(basename "$hook")
 conf() { local l; : > "$proj/.claude/risk.conf"; for l in "$@"; do printf '%s\n' "$l" >> "$proj/.claude/risk.conf"; done; }
 cfgexpect() { hook=$cfghook expect "$@"; }
-conf 'allow_module = dotnet'
+conf 'allow_module = dotnet | vence: 2999-12-31 | motivo: teste'
 cfgexpect livre 'dotnet build .claude/hooks/x.csproj'
 cfgexpect livre 'dotnet build App.slnx'
 conf '# allow_module = dotnet'
@@ -243,19 +243,25 @@ rm -f "$proj/.claude/risk.conf"
 cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
 # módulo declarado que não carrega (ausente, nome inválido): todo comando pede, nunca exceção nem forma livre
 for m in inexistente 'Dotnet' 'dotnet/../x' '../dotnet' 'dotnet x'; do
-  conf "allow_module = $m"
+  conf "allow_module = $m | vence: 2999-12-31 | motivo: teste"
   cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
   cfgexpect ask 'ls src'
 done
 printf 'throw new Error("quebrado");\n' > "$cfg/hooks/quebrado-allow.mjs"
-conf 'allow_module = quebrado'
+conf 'allow_module = quebrado | vence: 2999-12-31 | motivo: teste'
 cfgexpect ask 'ls src'
 printf 'export const allowed = 1;\n' > "$cfg/hooks/semfuncao-allow.mjs"
-conf 'allow_module = semfuncao'
+conf 'allow_module = semfuncao | vence: 2999-12-31 | motivo: teste'
 cfgexpect ask 'ls src'
 # um módulo quebrado ao lado do válido não libera nada: continua pedindo
-conf 'allow_module = dotnet' 'allow_module = inexistente'
+conf 'allow_module = dotnet | vence: 2999-12-31 | motivo: teste' 'allow_module = inexistente | vence: 2999-12-31 | motivo: teste'
 cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
+# exceção sem validade (sem data, data passada ou inválida, sem motivo): o módulo não carrega e a forma pede
+for l in 'allow_module = dotnet' 'allow_module = dotnet | vence: 2000-01-01 | motivo: velho' \
+  'allow_module = dotnet | vence: 2999-02-30 | motivo: data que não existe' 'allow_module = dotnet | vence: 2999-12-31'; do
+  conf "$l"
+  cfgexpect ask 'dotnet build .claude/hooks/x.csproj'
+done
 rm -f "$proj/.claude/risk.conf"
 
 # cada glob de Edit do ask e do deny do settings.json modelo cai numa regra do hook

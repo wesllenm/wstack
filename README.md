@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.28.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.29.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -221,8 +221,8 @@ As referências por stack ficam em `reference/*.md`: .NET, Node, Bash e frontend
 `review-rubric` (esta também tem regras por caminho), e EF Core e PostgreSQL em `query-plan`. A skill `lead` tem um
 núcleo com o que vale em toda tarefa e, em `reference/`, o detalhe que só parte das tarefas usa (sequência por nível,
 revisão, delegação, limpeza, `SESSION.md`, modo paralelo, nuvem, mudança em lote, fechamento com o relatório,
-manutenção do aprendizado), lido no momento que a tabela Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação e
-performance), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos. A arena
+manutenção do aprendizado), lido no momento que a tabela Leitura sob demanda do núcleo indica. Em `playbooks/` ficam as sequências por tipo de tarefa (bug, investigação,
+performance e a de tarefa sem playbook, com unidades e veredito), escolhidas depois da classificação de risco: o risco decide os gates, o tipo decide os passos. A arena
 (`reference/arena.md`) compara propostas paralelas de `planner` em decisão de design cara de reverter, e o
 `interrogate.mjs` manda o diff de COMPLEXA e CRITICA para modelos de outro fornecedor que o projeto configure no
 `risk.conf`, com os achados passando pelo `review-verifier`. O relatório diz qual regra de qual skill mudou qual decisão

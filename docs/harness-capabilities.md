@@ -5,7 +5,7 @@ wstack mostra o caso positivo e o negativo), **IMPLEMENTADO** (existe e roda, se
 **NÃO VERIFICADO** (depende do Claude Code real e não foi medido nesta versão). Os testes estão em `plugin/tests/` e
 rodam no CI (`.github/workflows/ci.yml`); as provas `prove-*.sh` usam o Claude Code real e rodam à mão.
 
-Versão 0.0.28: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
+Versão 0.0.29: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
 
 | Mecanismo | Ativação | Garante | Não garante | Estado | Evidência |
 |---|---|---|---|---|---|
@@ -25,6 +25,7 @@ Versão 0.0.28: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os m
 | `edit-check.sh` | `PostToolUse` em edição | lint e formatação do arquivo devolvidos ao Claude na hora | que a edição seja desfeita (o `PostToolUse` não bloqueia) | IMPLEMENTADO | — |
 | `iteration-guard.sh` | `PostToolUse` em edição | entrega ao modelo a regra das três tentativas a cada N edições sem commit | obediência; edições por Bash e scripts | IMPLEMENTADO | — |
 | `session-start.sh` | `SessionStart` | diz a versão do plugin em uso | — | VERIFICADO | `test-hook-commands.sh` |
+| `conf-exception.mjs` | `path-guard` (`allow_module`), `review-dispatch.mjs` (`review_exclude`), `diff-smells.mjs` (`smell_exclude`) e `session-start.sh` (`--warn`) | as exceções do `risk.conf` que afrouxam um gate só valem com `\| vence: AAAA-MM-DD \| motivo: <texto>`, data real e não passada: sem data, data inválida ou passada, ou sem motivo, quem lê ignora a exceção (o gate volta ao normal), e o `SessionStart` avisa a linha e o problema | que o desenvolvedor renove com motivo verdadeiro (a edição do `risk.conf` pede aprovação) | VERIFICADO | `test-conf-exception.sh`; `test-path-guard.sh` (`allow_module` sem validade); `test-diff-smells.sh` (`smell_exclude` vencido) |
 | `session-start.sh` (registro) | `SessionStart` | registra o HEAD do início da sessão para o gate de aprendizado | — | IMPLEMENTADO | `test-verify-on-stop.sh` usa o arquivo, mas o cria à mão |
 | `cloud/setup.sh` e `cloud-services.sh` | setup do ambiente; `SessionStart` na nuvem | ferramentas por stack detectada; o plugin wstack na referência fixada no `.claude/settings.json` do projeto (o `--check` acusa versão diferente), ou, no projeto que ainda não cita o plugin, na maior tag `v<versão>` publicada; nenhum texto do repositório vira comando nem chega ao contexto | o que o setup não detecta; container restaurado do guardado não roda o setup (o `--check` do `SessionStart` acusa) | VERIFICADO | `test-cloud-setup.sh` (modos sem rede; a última tag por um repositório local); instalação real conferida à mão na 2.4 e com a última tag |
 | `classify-diff.sh` | skills lead e commit | nível de risco pelos arquivos, tamanho e `risk.conf`; sem configuração, CRITICA | sinais fora de convenção de pasta e nome | VERIFICADO | `test-classify.sh` |

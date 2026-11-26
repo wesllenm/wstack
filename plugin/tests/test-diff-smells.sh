@@ -49,6 +49,17 @@ run
 node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); process.exit("RESTRICAO" in j.totals?0:1)' <<< "$out" 2> /dev/null \
   || fail "json: totals sem RESTRICAO ($out)"
 
+# smell_exclude é exceção com validade: vencida ou sem data não exclui o arquivo
+mkdir -p "$repo/src/Interop"
+printf 'class B {\n  // TODO legado\n}\n' > "$repo/src/Interop/B.cs"
+printf 'smell_exclude = **/Interop/** | vence: 2999-12-31 | motivo: código gerado de interop\n' > "$repo/.claude/risk.conf"
+run --text; grep -q 'src/Interop/B.cs' <<< "$out" && fail "smell_exclude válido: não excluiu ($out)"
+for l in 'smell_exclude = **/Interop/**' 'smell_exclude = **/Interop/** | vence: 2000-01-01 | motivo: velho'; do
+  printf '%s\n' "$l" > "$repo/.claude/risk.conf"
+  run --text; grep -q '^MARCADOR *src/Interop/B.cs' <<< "$out" || fail "smell_exclude sem validade ('$l'): excluiu o arquivo ($out)"
+done
+rm -rf "$repo/src/Interop"; printf 'base = main\nsmell_comment_limit = 1\n' > "$repo/.claude/risk.conf"
+
 # falha e entrada malformada: fora de repositório é 3, argumento desconhecido é 2, limite inválido no risk.conf é 3
 mkdir -p "$work/fora"
 out=$(cd "$work/fora" && GIT_CEILING_DIRECTORIES=$work node "$script" --text 2>&1); code=$?

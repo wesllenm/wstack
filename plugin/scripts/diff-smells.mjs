@@ -15,6 +15,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, posix } from 'node:path';
+import { validValues } from '../hooks/conf-exception.mjs';
 
 function die(code, msg) { console.error(`diff-smells: ${msg}`); process.exit(code); }
 const argv = process.argv.slice(2);
@@ -42,7 +43,7 @@ if (existsSync(confPath)) {
   for (const raw of readFileSync(confPath, 'utf8').split(/\r?\n/)) {
     const m = /^\s*([a-z_]+)\s*=\s*(.*?)\s*$/.exec(raw);
     if (!m || raw.trim().startsWith('#')) continue;
-    if (m[1] === 'smell_exclude') exclude.push(m[2]);
+    if (m[1] === 'smell_exclude') exclude.push(...validValues([m[2]])); // exceção com validade
     else if (m[1] in conf) conf[m[1]] = m[1] === 'base' ? m[2] : Number(m[2]);
   }
 }

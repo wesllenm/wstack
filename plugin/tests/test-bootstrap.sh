@@ -91,6 +91,10 @@ p=$(newrepo app)
 boot "$p" --app web > /dev/null
 grep -qx 'name: verify-web' "$p/.claude/skills/verify-web/SKILL.md" 2> /dev/null || fail "verify-web sem o nome"
 [ -f "$p/.claude/skills/verify-web/features/README.md" ] || fail "verify-web sem o mapa de features"
+# o CLAUDE.md gerado traz a tabela de regras e garantias, e a calibração a seção do backlog de mecanismo
+grep -qx '## Regras e garantias' "$p/CLAUDE.md" || fail "CLAUDE.md sem a seção Regras e garantias"
+grep -qx '| regra | garantia | origem |' "$p/CLAUDE.md" || fail "CLAUDE.md sem as colunas da tabela de regras e garantias"
+grep -qx '## Backlog de mecanismo' "$p/docs/review-calibration.md" || fail "review-calibration.md sem a seção Backlog de mecanismo"
 # as seis seções da receita, as regras e a manutenção, na ordem da prova de ponta a ponta
 secoes=$(grep '^## ' "$p/.claude/skills/verify-web/SKILL.md" 2> /dev/null | tr '\n' '|')
 [ "$secoes" = '## Regras|## Launch|## Doctor|## Drive|## Evidence|## Cleanup|## Helpers|## Manutenção|' ] || fail "verify-web: seções fora do esperado ($secoes)"

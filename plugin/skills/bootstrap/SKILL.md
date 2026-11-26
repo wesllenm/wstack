@@ -78,7 +78,9 @@ de produto, arquitetura, segurança ou escopo que não dê para inferir.
 2. Preencher cada `<...>` dos arquivos criados com o que o diagnóstico achou, nunca com exemplo genérico:
    - `CLAUDE.md`: comandos e fatos que o código não mostra (curto: o arquivo é lido em toda sessão);
    - `.claude/risk.conf`: `critical`, `complex`, `domain`, `verify_*` e, quando couber, `allow_module`, `edit_check`,
-     `checkpoint`, `feature_surface`, `cloud_*`; descomentar só o que se aplica;
+     `checkpoint`, `feature_surface`, `cloud_*`; descomentar só o que se aplica. As exceções (`allow_module`,
+     `review_exclude`, `smell_exclude`) saem no formato com validade, `<valor> | vence: AAAA-MM-DD | motivo: <texto>`,
+     com vencimento de até seis meses e o motivo da proposta aprovada: exceção sem data é ignorada;
    - `.claude/settings.json`: os comandos de build, teste e lint do `CLAUDE.md` no `allow` como regra exata (sem `:*`),
      o `ask` e o `deny` da stack (aplicar migration, publicar pacote, deploy) e o `WebFetch(domain:...)` da documentação
      oficial dos motores em uso; cada glob de `Edit(...)` novo no `ask` ou `deny` precisa de regra no path-guard do

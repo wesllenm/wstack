@@ -92,6 +92,7 @@ Depois de classificar, escolher o tipo pelo sinal no pedido, ler o playbook dele
 | refatoração | mudar a estrutura sem mudar o comportamento | skill `refactoring` com o Pipeline do nível |
 | auditoria de testes | pedida como tal | Pipeline, item Auditoria de testes |
 | manutenção do aprendizado | pedida pelo desenvolvedor ou sugerida no relatório | `aprendizado.md` (Leitura sob demanda) |
+| sem playbook | mudança que não é feature, bug, investigação, performance nem refatoração: migrar ferramenta ou build, adotar processo, consolidar configuração | `sem-playbook.md`: condição de pronto testável, unidades com a incógnita mais arriscada primeiro, cada uma com veredito |
 | retomada | `.claude/SESSION.md` de sessão anterior | `sessao.md` (Leitura sob demanda), depois o tipo da tarefa retomada |
 
 Pedido que mistura tipos (um bug e uma feature) vira duas unidades no plano, cada uma com o seu tipo. Investigação que termina em pedido de mudança vira tarefa nova. Na dúvida entre bug e feature, a pergunta é se o comportamento atual já foi o esperado alguma vez: se nunca foi, é feature.
@@ -276,11 +277,17 @@ Ao final de cada tarefa, antes do relatório, e também ao interromper, verifica
   Degrau 1 ou 2 só está feito quando a checagem nova falha no caso que a motivou.
 - As regras ao subir na escada (revisão humana, estancar e limpar, o que se edita direto e o que vai como proposta, tamanho do `CLAUDE.md`) estão em `aprendizado.md`, Regras ao subir na escada: ler ao promover ou propor.
 
+**Triagem das lições.** Cada lição da tarefa termina numa de três listas, no relatório e na linha de Registro:
+- **Aceita:** vira agora edição de texto do projeto (gotcha, regra no `CLAUDE.md`, Sempre verificar), com o destino;
+- **Rejeitada:** não vale levar adiante, com o motivo em uma linha;
+- **Backlog:** deveria virar hook, lint ou teste e ainda não virou. Vai para a seção Backlog de mecanismo de `docs/review-calibration.md` (uma linha com a lição, o mecanismo proposto e a ocorrência), que o `/correct historico` lê.
+Edição em skill, agente ou hook do plugin nunca é aplicada direto: é proposta, como acima. Quando a sequência de uma tarefa sem playbook (`playbooks/sem-playbook.md`) se repetir em duas tarefas, propor no relatório um playbook novo para ela.
+
 ### Registro
 
 Toda tarefa termina com uma linha na seção Registro de `docs/review-calibration.md`, mesmo sem aprendizado:
 
-`AAAA-MM-DD — <tarefa em poucas palavras> — <TRIVIAL | SIMPLES | COMPLEXA | CRITICA | interrompida | investigação> — achados: C confirmados, R refutados, X recusados, E escaparam — aprendizado: nenhum | gotcha | promovido para <onde> (escada N) | proposta (escada N)`
+`AAAA-MM-DD — <tarefa em poucas palavras> — <TRIVIAL | SIMPLES | COMPLEXA | CRITICA | interrompida | investigação> — achados: C confirmados, R refutados, X recusados, E escaparam — aprendizado: nenhum | aceitas N (gotcha, promovido para <onde> (escada N)), rejeitadas N, backlog N (proposta (escada N))`
 
 Ao fechar a tarefa, completar a linha com `— pedidos:` (`permission-asks.mjs`) e `— princípios:` (`principles.mjs`), na forma de `fechamento.md`.
 

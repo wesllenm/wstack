@@ -15,6 +15,16 @@ plugin exige a linha da tarefa em Registro depois de commit de código na sessã
 
 Última leitura: {{DATA}} — último PR lido: nenhum
 
+## Backlog de mecanismo
+
+Lições que deveriam virar hook, lint ou teste e ainda não viraram (triagem do passo Aprendizado da skill `lead`), e
+classes de erro que o `/correct historico` achou e não aplicou. Uma linha por item; o `/correct historico` lê esta
+seção e anota aqui a data da última execução.
+
+Última execução do /correct historico: nunca
+
+<!-- AAAA-MM-DD — <lição ou classe> — mecanismo proposto: hook | lint | teste — ocorrências: <tarefa, sha ou PR> -->
+
 ## Registro
 
 <!-- uma linha por tarefa, mais recente embaixo; formato na skill lead, seção Aprendizado -->
