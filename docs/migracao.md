@@ -137,6 +137,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.25: marcador de verificação preso (commit da exceção reescrito por amend ou rebase, sessão encerrada, formato
   antigo) diz como destravar: a recusa do `push-guard`, o aviso do `SessionStart` e o `systemMessage` do `Stop` trazem
   o `rm -f` dos marcadores, para o desenvolvedor rodar fora do agente.
+- 0.0.26: o `rm -f` da recusa só lista nomes no formato que o `Stop` grava (arquivo `unverified*` com outro nome segura
+  o push e é avisado); o aviso do `Stop` com o `risk.conf` incompleto traz o comando; sem `CLAUDE_PROJECT_DIR` e fora
+  de repositório git, o `push-guard` recusa o push.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
