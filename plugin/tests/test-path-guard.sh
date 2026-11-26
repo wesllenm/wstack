@@ -82,12 +82,19 @@ expect ask 'copy x .claude\hooks\push-guard.sh'
 # segunda revisão: .claude/ com barra no fim e os marcadores que pulam build e testes
 for c in 'cd .claude/ && cp /dev/null hooks/push-guard.sh' 'cd .claude/ && sed -i s/ask/allow/ settings.json' \
   'grep -rl ask .claude/ | xargs sed -i s/ask/allow/g' 'find .claude/ -name push-guard.sh -delete' \
-  'pushd .claude/ && rm hooks/push-guard.sh' 'touch .claude/.session/checkpoint-ok-abc' \
-  'git diff HEAD | sha1sum | cut -d" " -f1 | tee .claude/.verify-ok' 'printf "sessão: x" > .claude/verify-blocked.md'; do
+  'pushd .claude/ && rm hooks/push-guard.sh' 'printf "sessão: x" > .claude/verify-blocked.md'; do
   expect ask "$c"
 done
+# o estado dos hooks (marcadores que pulam build e testes, marcador que segura o push): recusa, por qualquer caminho
+for c in 'touch .claude/.session/checkpoint-ok-abc' 'git diff HEAD | sha1sum | cut -d" " -f1 | tee .claude/.verify-ok' \
+  'cd .claude && touch .session/checkpoint-ok-abc' 'cd .claude && tee .verify-ok' 'touch .claude/.s*/checkpoint-ok-x' \
+  'rm -rf .claude/.session' 'echo x > /dev/null; cat .claude/.session/abc.base'; do
+  expect deny "$c"
+done
 expect livre 'ls .claude/skills/'
-expect livre 'echo x > /dev/null; cat .claude/.session/abc.base'
+expect livre 'cat .claude/.session/abc.base'
+expect livre 'dotnet test --filter Http.Session'
+expect livre 'grep -rn user.session src'
 expect ask 'cd .claude && cp a hooks/push-guard.sh'
 expect ask 'bash .claude/scripts/checkpoint.sh a 1 b && cp x .claude/hooks/push-guard.sh'
 expect ask 'bash .claude/scripts/checkpoint.sh .claude/hooks/x 1 b'
@@ -161,7 +168,7 @@ nuvem() { # nuvem <livre|ask> <comando>
   [ "$got" = "$1" ] || { echo "FALHOU (nuvem): esperado $1, obtido $got: $2 (cwd ${VCWD:-projeto})"; fails=$((fails + 1)); }
 }
 for t in .claude/hooks/push-guard.sh .claude/settings.json .claude/risk.conf .claude/scripts/checkpoint.sh .claude/cloud/setup.sh \
-  .claude/agents/x.md .claude/skills/lead/SKILL.md .claude/.verify-ok .mcp.json .gitignore \
+  .claude/agents/x.md .claude/skills/lead/SKILL.md .mcp.json .gitignore \
   .github/workflows/ci.yml .claude/; do
   nuvem livre "cp /tmp/x $t"
   nuvem livre "sed -i s/^/x/ $t"
@@ -178,10 +185,14 @@ done
 # o marcador de verificação pendente e a exceção seguram o push, que é o que a nuvem confere: lá também é deny
 for c in 'rm -f .claude/.session/unverified-s1' 'rm .claude/.session/*' 'find .claude/.session -delete' 'cp /tmp/x .claude/.session/checkpoint-ok-abc' \
   'tee .claude/.session/unverified-s1' 'cd .claude/.session && ls unverified*' 'printf "sessão: x" > .claude/verify-blocked.md' \
-  'sed -i 1d .claude/verify-blocked.md'; do
+  'sed -i 1d .claude/verify-blocked.md' 'touch .claude/.session/checkpoint-ok-abc' 'cd .claude && touch .session/checkpoint-ok-abc' \
+  'cp /tmp/x .claude/.verify-ok' 'sed -i s/^/x/ .claude/.verify-ok' 'tee .claude/.verify-ok' 'touch .claude/.s*/checkpoint-ok-x'; do
   nuvem deny "$c"
 done
+nuvem livre 'cat .claude/.verify-ok'
 mkdir -p "$proj/.claude/.session"
+VCWD=$proj/.claude/.session nuvem deny 'touch checkpoint-ok-abc'
+VCWD=$proj/.claude/.session nuvem livre 'ls'
 VCWD=$proj/.claude/.session nuvem deny 'rm -f unverified-s1'
 VCWD=$proj/.claude/.session nuvem deny 'rm -f ./*'
 VCWD=$proj/.claude/hooks nuvem livre 'cp a push-guard.sh'
