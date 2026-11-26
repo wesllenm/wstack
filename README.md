@@ -237,7 +237,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 | `TaskCompleted` | `checkpoint-tests` | idem, ao fechar uma tarefa |
 | `PostToolUse` edição | `edit-check` | lint e formatação do arquivo recém-editado |
 | | `iteration-guard` | lembra a regra das três tentativas a cada N edições sem commit |
-| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão; quando não consegue conferir (script, node ou entrada quebrados), bloqueia em vez de passar |
+| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão; quando não consegue conferir (script, node ou entrada quebrados), bloqueia em vez de passar, e só libera com o motivo registrado em `.claude/verify-blocked.md`, que aparece para você ao encerrar |
 | `SessionStart` | `session-start`, `sessions.sh`, `map-staleness`, `cloud-services` | versão em uso, registro da sessão, aviso de mapa de features velho, serviços da nuvem |
 | `SessionEnd` | `sessions.sh` | tira a sessão do registro |
 | `Notification` | `notify` | aviso do sistema operacional quando a sessão espera você |
