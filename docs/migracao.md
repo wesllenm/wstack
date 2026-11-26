@@ -129,6 +129,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   (`unverified-<sessão>`), e qualquer um segura o push; o `SessionStart` avisa do de outra sessão. Gravar em
   `.claude/.session/` é recusado pelo `write-guard` e pelo `path-guard`, também na nuvem, onde o `path-guard` recusa
   ainda comando que cita `.claude/verify-blocked.md`.
+- 0.0.24: todo o estado dos hooks fica fora do alcance do agente, também na nuvem: o `path-guard` recusa comando que
+  cita `.claude/.session/` (o `checkpoint-ok` incluído) ou `.claude/.verify-ok`, e o `write-guard` recusa gravá-los.
+  O marcador de verificação pendente só sai com a árvore limpa (verde com conserto sem commit o mantém e pede o
+  commit), e saída sem verificação com o marcador avisa que o push segue recusado. Mensagem de commit que cite esses
+  caminhos vai por arquivo (`git commit -F`).
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
