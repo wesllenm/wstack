@@ -5,7 +5,7 @@ wstack mostra o caso positivo e o negativo), **IMPLEMENTADO** (existe e roda, se
 **NÃO VERIFICADO** (depende do Claude Code real e não foi medido nesta versão). Os testes estão em `plugin/tests/` e
 rodam no CI (`.github/workflows/ci.yml`); as provas `prove-*.sh` usam o Claude Code real e rodam à mão.
 
-Versão 0.0.19: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
+Versão 0.0.20: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
 
 | Mecanismo | Ativação | Garante | Não garante | Estado | Evidência |
 |---|---|---|---|---|---|
