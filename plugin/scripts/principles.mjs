@@ -37,7 +37,8 @@ const agentsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'agents');
 function preloads(name) {
   const p = join(agentsDir, `${name}.md`);
   if (!/^[a-z0-9-]+$/.test(name) || !existsSync(p)) return [];
-  const fm = /^---\n([\s\S]*?)\n---\n/.exec(readFileSync(p, 'utf8'))?.[1] ?? '';
+  // CRLF tolerado: arquivo salvo no Windows não pode passar sem pré-carga e sem aviso
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(readFileSync(p, 'utf8').replace(/\r\n/g, '\n'))?.[1] ?? '';
   const lines = fm.split('\n');
   const i = lines.findIndex((l) => l.startsWith('skills:'));
   if (i < 0) return [];
@@ -117,14 +118,19 @@ const cited = new Set();
 const principles = field('Princípios aplicados');
 if (principles === null) missing.push('campo "Princípios aplicados:" ausente no relatório');
 for (const item of principles ?? []) {
-  const skill = short(item.split(/\s+—\s+/)[0].replace(/`/g, ''));
+  // separador: travessão, meia-risca ou hífen com espaços em volta (o modelo troca um pelo outro); nome de skill tem
+  // hífen sem espaço (query-plan), que não separa
+  const skill = short(item.split(/\s+[—–-]\s+/)[0].replace(/`/g, ''));
   cited.add(skill);
   if (!loaded.has(skill)) missing.push(`${skill} citado sem ter sido carregado`);
 }
 for (const item of field('Referências lidas') ?? []) {
-  for (const m of item.matchAll(/([a-z0-9-]+\/)?(reference|playbooks)\/([^\s`—;,]+\.md)/g)) {
-    const key = `${m[1] ? m[1].slice(0, -1) : 'lead'}/${m[2]}/${m[3]}`;
-    if (!refs.has(key)) missing.push(`${key} listado em Referências lidas sem ter sido lido`);
+  for (const m of item.matchAll(/([a-z0-9-]+\/)?(reference|playbooks)\/([^\s`—–;,]+\.md)/g)) {
+    // com o nome da skill, só aquela; sem ele, a referência de qualquer skill com esse caminho (o relatório do lead
+    // escreve "reference/revisao.md", mas a lista pode citar a referência de stack de outra skill do mesmo jeito)
+    const tail = `/${m[2]}/${m[3]}`;
+    const ok = m[1] ? refs.has(`${m[1].slice(0, -1)}${tail}`) : [...refs].some((r) => r.endsWith(tail));
+    if (!ok) missing.push(`${m[1] ? m[1].slice(0, -1) : '*'}${tail} listado em Referências lidas sem ter sido lido`);
   }
 }
 console.log(`citadas: ${cited.size ? sorted(cited).join(', ') : 'nenhuma'}`);
