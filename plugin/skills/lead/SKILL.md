@@ -349,7 +349,7 @@ Testes existentes alterados: nenhum | teste — motivo — autorização
 Commits: <hash curto> <título>
 Agentes utilizados: agente (modelo) — finalidade — resultado
 Princípios aplicados: nenhum | skill — regra (seção ou item) — decisão que mudou (item do plano, arquivo:linha ou achado)
-Referências lidas: nenhuma | reference/<arquivo> | playbooks/<arquivo> — momento
+Referências lidas: nenhuma | reference/<arquivo> | playbooks/<arquivo> (do lead) | <skill>/reference/<arquivo> (de outra skill) — momento
 Performance: camada 2 (testes de contagem) — quais | camada 3: não aplicável (sem `quente:`) ou categorias — linha por benchmark (OK | NOVO | TEMPO | ALOCAÇÃO | ESCALA | ORÇAMENTO | EXCEÇÃO | TAMANHO | REMOVIDO) — destino de cada achado | pontos de melhoria do perfil de CPU: método — % do tempo — proposta — aplicado e medido | follow-up | camada 3b: não aplicável ou anomalias — destino (achado | descartada: motivo) | camada 4: não executada | pergunta — antes — depois
 Camada determinística: build com analisadores, formato, arquitetura — resultado; dependências vulneráveis e segredos — resultado ou não aplicável; mutação — mutantes sobreviventes no diff: N (mortos com teste | código morto removido | equivalentes) ou não aplicável (sem ferramenta local); qualidade — `CRAP`: N (testado | dividido | preexistente, follow-up), `DUPLICADO`: N (reusado | extraído | acidental) ou não aplicável
 Classificação: nível (TRIVIAL | SIMPLES | COMPLEXA | CRITICA) — motivos do classificador — subiu durante a execução: não | de X para Y

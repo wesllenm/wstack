@@ -8,7 +8,9 @@
 //        [--report <relatório>]
 // A transcrição fica em ~/.claude/projects/<projeto>/<sessão>.jsonl e os subagentes em <sessão>/subagents/*.jsonl.
 // --agent: o agente da sessão principal (padrão lead, o "agent" do settings.json que o bootstrap gera).
-// Saída: "carregadas:", "referências:" e, com --report, "citadas:" e uma linha "SEM LEITURA:" por citação sem leitura.
+// Saída: "carregadas:", "referências:", "AVISO:" com linhas ilegíveis e, com --report, "citadas:" e uma linha por
+// problema: "NÃO CARREGADA:" (skill citada sem carga), "NÃO LIDA:" (referência sem leitura), "CAMPO AUSENTE:".
+// Chamada de ferramenta que falhou (is_error) não conta como carga nem leitura.
 // Código: 0 ok, 1 arquivo ou pasta ilegível, 2 uso errado, 3 citação sem leitura.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -52,22 +54,36 @@ function preloads(name) {
 function readJsonl(path) {
   let text;
   try { text = readFileSync(path, 'utf8'); } catch (e) { return fail(1, `não consegui ler ${path}: ${e.code ?? e.message}`); }
-  return text.split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+  return text.split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)]; } catch { unreadable++; return []; } });
 }
+let unreadable = 0; // linhas que não são JSON: evidência que pode estar faltando, contada e avisada
 
 const loaded = new Map(); // skill -> origem
 const refs = new Set();   // <skill>/<reference|playbooks>/<arquivo>.md
 const add = (skill, origin) => { if (skill && !loaded.has(skill)) loaded.set(skill, origin); };
 for (const s of preloads(agent)) add(s, `pré-carga de ${agent}`);
 
+// Chamada de ferramenta que falhou (tool_result com is_error) não conta: Skill recusada não carregou nada, Read que
+// falhou não leu. O id da chamada liga o tool_use ao resultado dele, no mesmo arquivo.
+function failedIds(entries) {
+  const ids = new Set();
+  for (const e of entries) {
+    const content = e.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content) if (b?.type === 'tool_result' && b.is_error === true && b.tool_use_id) ids.add(b.tool_use_id);
+  }
+  return ids;
+}
+
 function collect(entries) {
+  const failed = failedIds(entries);
   for (const e of entries) {
     const content = e.message?.content;
     const texts = typeof content === 'string' ? [content] : [];
     if (Array.isArray(content)) {
       for (const b of content) {
         if (b?.type === 'text' && e.message?.role === 'user') texts.push(String(b.text ?? ''));
-        if (b?.type !== 'tool_use') continue;
+        if (b?.type !== 'tool_use' || failed.has(b.id)) continue;
         const input = b.input ?? {};
         if (b.name === 'Skill' && input.skill) add(short(input.skill), 'ferramenta Skill');
         if ((b.name === 'Agent' || b.name === 'Task') && input.subagent_type) {
@@ -100,6 +116,7 @@ if (subDir) {
 const sorted = (it) => [...it].sort();
 console.log(`carregadas: ${loaded.size ? sorted(loaded.keys()).join(', ') : 'nenhuma'}`);
 console.log(`referências: ${refs.size ? sorted(refs).join(', ') : 'nenhuma'}`);
+if (unreadable) console.log(`AVISO: ${unreadable} linha(s) da transcrição não são JSON e foram ignoradas: o que estava nelas não conta como leitura`);
 if (!report) process.exit(0);
 
 // Relatório: o campo é a linha "Princípios aplicados:" e as linhas seguintes que começam com "-", até o próximo campo.
@@ -113,26 +130,26 @@ function field(name) {
   for (const l of lines.slice(i + 1)) { if (!/^\s*-\s/.test(l)) break; items.push(l.replace(/^\s*-\s/, '')); }
   return items.map((x) => x.trim()).filter((x) => x && !/^nenhum[a]?$/i.test(x));
 }
-const missing = [];
+const missing = []; // [rótulo, texto]
 const cited = new Set();
 const principles = field('Princípios aplicados');
-if (principles === null) missing.push('campo "Princípios aplicados:" ausente no relatório');
+if (principles === null) missing.push(['CAMPO AUSENTE', '"Princípios aplicados:" não está no relatório']);
 for (const item of principles ?? []) {
   // separador: travessão, meia-risca ou hífen com espaços em volta (o modelo troca um pelo outro); nome de skill tem
   // hífen sem espaço (query-plan), que não separa
   const skill = short(item.split(/\s+[—–-]\s+/)[0].replace(/`/g, ''));
   cited.add(skill);
-  if (!loaded.has(skill)) missing.push(`${skill} citado sem ter sido carregado`);
+  if (!loaded.has(skill)) missing.push(['NÃO CARREGADA', `${skill} citada em Princípios aplicados`]);
 }
 for (const item of field('Referências lidas') ?? []) {
   for (const m of item.matchAll(/([a-z0-9-]+\/)?(reference|playbooks)\/([^\s`—–;,]+\.md)/g)) {
-    // com o nome da skill, só aquela; sem ele, a referência de qualquer skill com esse caminho (o relatório do lead
-    // escreve "reference/revisao.md", mas a lista pode citar a referência de stack de outra skill do mesmo jeito)
-    const tail = `/${m[2]}/${m[3]}`;
-    const ok = m[1] ? refs.has(`${m[1].slice(0, -1)}${tail}`) : [...refs].some((r) => r.endsWith(tail));
-    if (!ok) missing.push(`${m[1] ? m[1].slice(0, -1) : '*'}${tail} listado em Referências lidas sem ter sido lido`);
+    // sem o nome da skill, a referência é da skill do agente da sessão (--agent, padrão lead: o relatório do lead
+    // escreve "reference/revisao.md"); referência de outra skill leva o nome dela ("performance/reference/dotnet.md"),
+    // para um arquivo lido de uma skill não valer pela citação de outra
+    const key = `${m[1] ? m[1].slice(0, -1) : agent}/${m[2]}/${m[3]}`;
+    if (!refs.has(key)) missing.push(['NÃO LIDA', `${key} listada em Referências lidas`]);
   }
 }
 console.log(`citadas: ${cited.size ? sorted(cited).join(', ') : 'nenhuma'}`);
-for (const m of missing) console.log(`SEM LEITURA: ${m}`);
+for (const [label, msg] of missing) console.log(`${label}: ${msg}`);
 process.exit(missing.length ? 3 : 0);
