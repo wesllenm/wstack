@@ -641,3 +641,37 @@ chamável pelo agente (o `path-guard` libera os scripts do plugin na raiz), ent�
 `unverified*` com outro nome segura o push do mesmo jeito, e a recusa avisa que ele existe. O aviso do `Stop` sem
 comandos `verify_*` ou sem o arquivo da solução também traz o comando. Sem `CLAUDE_PROJECT_DIR` e fora de repositório
 git, o `push-guard` recusa o push, porque não dá para procurar os marcadores.
+
+## 2026-11-26: revisão com prova por execução, lacuna de lente e comentário de restrição
+
+Lote 1 das melhorias trazidas do pstack (`cursor/plugins/pstack`, skills `interrogate`, `swarm` e `no-comments`).
+
+**Decisão:**
+- **Prova por execução.** O candidato ganha o campo `prova: <comando> → <saída esperada da falha>`. Ela é
+  obrigatória em bloqueante e importante, salvo `reuse`, `simplicity` e `scope`, cuja evidência é outro trecho de
+  código. Sem ela, o `check-findings.mjs` marca `situação: a confirmar` e mantém o candidato. O `review-verifier` roda
+  a prova antes de confirmar, anexa comando e saída (`execução:`), e prova que não reproduz vira `refutado por
+  execução`. Candidato a confirmar só é confirmado se o verificador escrever e rodar uma prova. As provas rodam com as
+  travas de Bash de sempre.
+- **Lacuna de lente.** Cada lente termina com `status: achados`, `status: sem achados` ou `status: falhou: <motivo>`.
+  O `check-findings.mjs` lê um arquivo por lente: sem status, com status que contradiz o conteúdo ou com falha, a
+  lente é lacuna, o script sai 4 e nunca imprime `sem achados`. O lead chama a lente de novo uma vez; na segunda
+  falha, em CRITICA a lacuna em lente obrigatória bloqueia o commit, e em SIMPLES e COMPLEXA vira pendência no
+  `SESSION.md`. O `interrogate.mjs` fecha a lista com `status: achados`.
+- **Comentário de restrição.** O `diff-smells.mjs` separa como `RESTRICAO` o comentário novo, fora de documentação,
+  que descreve uma regra ("não", "nunca", "sempre", "deve", "obrigatório" e os equivalentes em inglês). A
+  `review-simplicity` propõe a garantia no degrau mais alto da escada do `correct`, como nit; a garantia só é
+  implementada com aprovação no plano. A restrição conta no limite de comentários do `--gate`, como antes.
+
+**Por quê:** um achado plausível e errado chegava à correção porque a ancoragem só prova que o trecho existe. Uma
+lente que estourava o tempo ou respondia fora do formato podia ser lida como "sem achados", a mesma falha aberta já
+corrigida no interrogate. E regra escrita em comentário só vale enquanto o modelo a lê.
+
+**Divergências do documento de trabalho:** a rubrica usa `bloqueante | importante | nit`, não "alta" e "crítica"; a
+prova obrigatória ficou em bloqueante e importante de comportamento. O `lote.md` descreve codemod por script e não
+tem workers, então a regra de status não se aplica a ele. `TODO`, `HACK` e `workaround` já eram `MARCADOR`, com gate
+mais estrito, e continuam assim. Comentário de documentação (`///`, `/** */`) segue `DOC`: contar a restrição dele no
+limite apertaria o gate em todo projeto com documentação XML.
+
+**Limite:** repetir a lente, tratar a lacuna e rodar a prova são orientação ao lead e ao verificador; o mecanismo é
+o `check-findings.mjs`, que garante que lacuna e falta de prova aparecem na saída.

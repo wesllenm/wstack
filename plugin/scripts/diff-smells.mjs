@@ -3,6 +3,9 @@
 //   ESCAPE            supressão de aviso, tipo que desliga o compilador, exceção engolida, bloqueio de async
 //   CODIGO_COMENTADO  comentário cujo corpo é código
 //   MARCADOR          TODO, FIXME, HACK, XXX, workaround, gambiarra, temporário
+//   RESTRICAO         comentário que descreve uma regra ("não", "nunca", "sempre", "deve", "obrigatório", "never",
+//                     "always", "must", "do not", "required"): regra que só o modelo lê; a review-simplicity propõe
+//                     como garanti-la no código (tipo, checagem, teste, lint). Conta no limite de COMENTARIO
 //   COMENTARIO        qualquer outro comentário novo: o lead justifica cada um (porquê não óbvio) ou remove
 //   DOC               comentário de documentação (///, /** */, docstring): informativo
 // Linha movida (o mesmo texto removido em outro ponto do diff) não conta: só o que o diff introduziu.
@@ -112,6 +115,8 @@ const langOf = (p) => LANGS.find((l) => l.re.test(p));
 const MULTILINE = { cs: /"{3,}/g, ts: /(?<!\\)`/g };
 
 const MARKER = /\b(TODO|FIXME|HACK|XXX)\b|\bworkaround\b|\bgambiarra\b|\btempor[áa]ri[oa]\b|\btemporary\b/i;
+// palavra inteira, com letra acentuada contando como letra (\b do JS só vê ASCII)
+const RESTRICTION = /(?<!\p{L})(n[ãa]o|nunca|sempre|devem?|obrigat[óo]ri[oa]s?|never|always|must|do not|don't|required)(?!\p{L})/iu;
 const CODE_BODY = /;\s*$|^[{}]\s*$|^\s*(var|let|const|return|if|for|foreach|while|await|public|private|protected|internal|using|import|from|fn|def|class|new)\b.*[;({=]|^\s*[\w.]+\s*\(.*\)\s*;?\s*$|^\s*[\w.]+\s*=\s*.+;\s*$/;
 
 // Separa código e comentário de uma linha. Strings viram espaços antes, para "//" numa URL não virar comentário
@@ -210,20 +215,23 @@ for (const [f, lines] of added) {
     else if (CODE_BODY.test(body)) add('CODIGO_COMENTADO', '');
     else if (continuation) continue; // bloco de comentário conta uma vez, na linha em que abre
     else if (isDoc) add('DOC', '');
+    else if (RESTRICTION.test(body)) add('RESTRICAO', RESTRICTION.exec(body)[1].toLowerCase());
     else add('COMENTARIO', '');
   }
 }
 
 const count = (k) => items.filter((i) => i.kind === k).length;
-const totals = Object.fromEntries(['ESCAPE', 'CODIGO_COMENTADO', 'MARCADOR', 'COMENTARIO', 'DOC'].map((k) => [k, count(k)]));
+const order = ['ESCAPE', 'CODIGO_COMENTADO', 'MARCADOR', 'RESTRICAO', 'COMENTARIO', 'DOC'];
+const totals = Object.fromEntries(order.map((k) => [k, count(k)]));
 const over = [];
 if (totals.ESCAPE > conf.smell_escape_limit) over.push(`ESCAPE ${totals.ESCAPE} > ${conf.smell_escape_limit}`);
 if (totals.CODIGO_COMENTADO > 0) over.push(`CODIGO_COMENTADO ${totals.CODIGO_COMENTADO}`);
 if (totals.MARCADOR > 0) over.push(`MARCADOR ${totals.MARCADOR}`);
-if (totals.COMENTARIO > conf.smell_comment_limit) over.push(`COMENTARIO ${totals.COMENTARIO} > ${conf.smell_comment_limit}`);
+// comentário de restrição continua sendo comentário: o limite vale para os dois juntos, como antes da separação
+const comments = totals.COMENTARIO + totals.RESTRICAO;
+if (comments > conf.smell_comment_limit) over.push(`COMENTARIO ${comments} > ${conf.smell_comment_limit}`);
 
 if (text) {
-  const order = ['ESCAPE', 'CODIGO_COMENTADO', 'MARCADOR', 'COMENTARIO', 'DOC'];
   for (const k of order) for (const i of items.filter((x) => x.kind === k))
     console.log(`${k.padEnd(16)} ${i.file}:${i.line}${i.detail ? '  ' + i.detail : ''}  | ${i.text}`);
   console.log(`total: ${order.map((k) => `${k}=${totals[k]}`).join(' ')}  base=${mb.slice(0, 12)}`);

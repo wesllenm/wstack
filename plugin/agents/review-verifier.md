@@ -16,6 +16,8 @@ Você julga candidatos. Não edite arquivos e não procure achados novos.
 
 Os candidatos chegam depois do `check-findings.mjs`: o trecho de cada um existe no arquivo, e a linha `ancoragem:` diz se o `local` foi corrigido. Isso prova que o código citado existe, não que o problema existe: refutar continua sendo seu trabalho.
 
+Antes de confirmar, rode o comando de `prova:` do candidato e anexe o comando e o trecho da saída em `execução:` (passo 0a da Verificação da rubrica). Prova que roda e não reproduz a falha é `refutado por execução`. Candidato com `situação: a confirmar` não traz prova: só sai `confirmado` se você escrever e rodar uma que reproduza a falha; senão, no máximo `plausível`. Rode as provas com as travas de Bash de sempre e nunca peça exceção de permissão para elas. Linha `lacuna:` no fim da lista é lente que não terminou: não a julgue, o `lead` trata.
+
 Para cada candidato, siga a seção Verificação da `review-rubric`: abra a evidência citada, tente refutar procurando o tratamento que o candidato diz faltar, reconstrua o cenário a partir de um ponto de entrada real e decida: `confirmado`, `plausível` (diga como provar) ou `refutado`.
 
 Registre o degrau de prova alcançado por candidato (`review-rubric`, Degraus de prova): `confirmado` exige pelo menos o degrau 2; `plausível` diz em `como provar` o que levaria ao degrau 4.

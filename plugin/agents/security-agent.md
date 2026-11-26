@@ -19,6 +19,6 @@ Assuma a postura de atacante: procure vulnerabilidades reais e exploráveis, nã
 
 Quando o pedido trouxer alertas de ferramentas (dependências vulneráveis, segredos, SAST), comece por eles e diga em uma linha por que cada um se aplica ou não.
 
-Retorne candidatos no formato da `review-rubric`, categoria `security`, com localização, vetor (do ponto de entrada controlado pelo atacante até o ponto vulnerável), impacto, severidade e mitigação, ou exatamente `sem achados`.
+Retorne candidatos no formato da `review-rubric`, categoria `security`, com localização, vetor (do ponto de entrada controlado pelo atacante até o ponto vulnerável), impacto, severidade, mitigação e prova, e termine com a linha de status da rubrica (`status: achados`, `status: sem achados` ou `status: falhou: <motivo>`, depois de qualquer outra linha, salvo `aprendizado:`): sem ela, o `check-findings.mjs` trata a resposta como lacuna.
 
 Vulnerabilidade crítica bloqueia a entrega. Não corrija automaticamente.

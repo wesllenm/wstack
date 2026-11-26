@@ -63,12 +63,14 @@ Revisões:
 - caminho rápido: review-agent → review-verifier — resultado
 - caminho pesado: na sessão | segundo plano (concluído | pendente em SESSION.md: `revisão pesada pendente`) | adiado por SKIP_HEAVY_REVIEW
 - lentes: review-simplicity (obrigatória); review-failures, review-domain — executada ou não aplicável — motivo
-- review-verifier (Opus) — candidatos: N — confirmados: N — plausíveis: N — refutados: N
+- review-verifier (Opus) — candidatos: N — a confirmar sem prova: N — confirmados: N — plausíveis: N — refutados: N (por execução: N)
+- lacunas: nenhuma | lente — motivo — repetida: sim — destino (CRITICA: commit esperou o desenvolvedor | pendente em SESSION.md)
 - review-critical (Opus) — executado ou não — motivo
 - interrogate — não configurado | não aplicável (nível) | modelo — candidatos: N — descartados na ancoragem: N — confirmados: N | falhou: modelos — motivo — decisão (CRITICA: commit esperou o desenvolvedor)
 - security-agent (Opus) — executado ou não aplicável
 - rodadas de correção: N
-Achados confirmados: id — severidade — categoria — arquivo:linha — destino (corrigido | recusado: motivo | não aplicável)
+Achados confirmados: id — severidade — categoria — arquivo:linha — prova: comando → trecho da saída (ou degrau e motivo, sem prova exigida) — destino (corrigido | recusado: motivo | não aplicável)
+Restrições em comentário: nenhuma | arquivo:linha — regra — garantia proposta (aprovada e implementada | proposta | não garantida)
 Preexistentes (follow-up): arquivo:linha — problema
 Calibração: nenhuma | categoria — refutados/recusados — proposta para Não reportar de docs/review-rubric.md
 Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do PR — critério do review-critical atendido

@@ -6,16 +6,25 @@
 //   realocado   trecho encontrado em outro ponto do arquivo; o local é corrigido
 //   descartado  arquivo inexistente, candidato sem trecho, ou trecho que não existe no arquivo (achado alucinado)
 // Também marca local fora das linhas alteradas pelo diff com `preexistente: não`, contradição que o verificador decide.
-// Uso: node check-findings.mjs [candidatos.txt] [--rev <ref>] [--base <ref>] [--tolerance 3] [--json]
-//   sem arquivo, lê da entrada padrão; --rev lê o código de um commit em vez da árvore de trabalho.
-// Saída: os candidatos mantidos, no formato da review-rubric, com o local corrigido e a linha `ancoragem:`;
-// o resumo vai para stderr. Código: 0 ok, 2 uso errado, 3 entrada ilegível.
+// Prova por execução: candidato bloqueante ou importante de categoria de comportamento (todas menos reuse, simplicity
+// e scope) precisa de `prova: <comando> → <saída esperada da falha>`. Sem ela, ou sem a saída esperada, o candidato
+// fica, mas ganha `situação: a confirmar`: o verificador não o confirma sem executar uma prova.
+// Status da lente: cada arquivo é a resposta de uma lente (ou de um grupo do despacho) e termina com uma linha
+// `status: sem achados`, `status: achados` ou `status: falhou: <motivo>` (o arquivo inteiro `sem achados` ou
+// `falhou: <motivo>`, saída do interrogate.mjs, também vale). Sem status, com status que contradiz o conteúdo, ou com
+// falhou, a lente é lacuna: nunca conta como "sem achados", e os candidatos que ela trouxe seguem para o verificador.
+// Uso: node check-findings.mjs [<lente.txt>...] [--rev <ref>] [--base <ref>] [--tolerance 3] [--json]
+//   sem arquivo, lê uma lente da entrada padrão; --rev lê o código de um commit em vez da árvore de trabalho.
+// Saída: os candidatos mantidos, no formato da review-rubric, com o local corrigido e as linhas `ancoragem:` e
+// `situação:`; depois deles, uma linha `lacuna: <lente> — <motivo>` por lente que falhou ("sem achados" só sai sem
+// candidato e sem lacuna). O resumo vai para stderr.
+// Código: 0 ok, 2 uso errado, 3 arquivo ilegível, 4 alguma lente é lacuna (a saída continua válida).
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 
 function die(code, msg) { console.error(`check-findings: ${msg}`); process.exit(code); }
-const opt = { file: null, rev: null, base: null, tol: 3, json: false };
+const opt = { files: [], rev: null, base: null, tol: 3, json: false };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], v = () => { if (i + 1 >= argv.length) die(2, `${a} sem valor`); return argv[++i]; };
@@ -24,37 +33,58 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--tolerance') { opt.tol = Number(v()); if (!Number.isInteger(opt.tol) || opt.tol < 0) die(2, '--tolerance inválida'); }
   else if (a === '--json') opt.json = true;
   else if (a.startsWith('--')) die(2, `opção desconhecida: ${a}`);
-  else if (!opt.file) opt.file = a;
-  else die(2, 'mais de um arquivo de candidatos');
+  else opt.files.push(a);
 }
 
 // Referência vinda de argumento ou do risk.conf nunca começa com "-" (injeção de opção no git, como --output=<arquivo>).
 for (const [name, val] of [['--rev', opt.rev], ['--base', opt.base]])
   if (val !== null && (val.startsWith('-') || /[\0\r\n]/.test(val))) die(2, `${name} inválido`);
 
-let input;
-try { input = readFileSync(opt.file ?? 0, 'utf8'); } catch (e) { die(3, `não foi possível ler ${opt.file ?? 'a entrada padrão'}: ${e.code ?? e.message}`); }
-if (/^\s*sem achados\s*$/i.test(input)) { console.log('sem achados'); console.error('check-findings: sem achados'); process.exit(0); }
+const sources = opt.files.length ? opt.files : [null];
+const inputs = sources.map((f) => {
+  try { return { name: f === null ? 'entrada padrão' : basename(f), text: readFileSync(f ?? 0, 'utf8') }; }
+  catch (e) { return die(3, `não foi possível ler ${f ?? 'a entrada padrão'}: ${e.code ?? e.message}`); }
+});
 
-// ---------- leitura dos candidatos ----------
+// ---------- leitura dos candidatos e do status de cada lente ----------
 // Itens começam em "- id:"; campos em "  chave: valor"; o trecho pode continuar em linhas com recuo maior.
+const RESERVED = new Set(['ancoragem', 'situação', 'situacao']); // chaves do script: o candidato não as forja
+const NONE = /^(?:status:\s*)?sem achados\.?$/i;
 const items = [];
-let cur = null, lastKey = null;
-for (const raw of input.split(/\r?\n/)) {
-  const start = /^\s*-\s+id:\s*(.*)$/.exec(raw);
-  if (start) { cur = { fields: [['id', start[1].trim()]], trecho: [] }; items.push(cur); lastKey = 'id'; continue; }
-  if (!cur) continue;
-  const kv = /^\s{1,3}([\p{L} ]+):\s?(.*)$/iu.exec(raw);
-  if (kv && !/^\s{4,}/.test(raw)) {
-    const key = kv[1].trim().toLowerCase();
-    lastKey = key;
-    if (key === 'trecho') { if (kv[2].trim() && kv[2].trim() !== '|') cur.trecho.push(kv[2]); }
-    else if (key !== 'ancoragem') cur.fields.push([key, kv[2]]);   // chave reservada ao script: o candidato não a forja
-    continue;
+const lacunas = []; // { lente, motivo }
+for (const { name, text } of inputs) {
+  const lines = text.split(/\r?\n/);
+  // linhas `aprendizado:` (fato para docs/gotchas/) podem vir depois do status
+  while (lines.length && (!lines[lines.length - 1].trim() || /^aprendizado:/i.test(lines[lines.length - 1].trim()))) lines.pop();
+  const whole = lines.join('\n').trim();
+  const last = (lines[lines.length - 1] ?? '').trim();
+  const st = /^status:\s*(sem achados|achados|falhou)\s*(?::\s*(.*))?$/i.exec(last);
+  let status, motivo = '';
+  if (NONE.test(whole)) status = 'sem achados';
+  else if (/^falhou:/i.test(whole)) { status = 'falhou'; motivo = whole.split('\n')[0].replace(/^falhou:\s*/i, ''); }
+  else if (st) { status = st[1].toLowerCase(); motivo = st[2] ?? ''; lines.pop(); }
+  else status = null;
+  let cur = null, lastKey = null, found = 0;
+  for (const raw of lines) {
+    const start = /^\s*-\s+id:\s*(.*)$/.exec(raw);
+    if (start) { cur = { fields: [['id', start[1].trim()]], trecho: [], lens: name }; items.push(cur); found++; lastKey = 'id'; continue; }
+    if (!cur) continue;
+    const kv = /^\s{1,3}([\p{L} ]+):\s?(.*)$/iu.exec(raw);
+    if (kv && !/^\s{4,}/.test(raw)) {
+      const key = kv[1].trim().toLowerCase();
+      lastKey = key;
+      if (key === 'trecho') { if (kv[2].trim() && kv[2].trim() !== '|') cur.trecho.push(kv[2]); }
+      else if (!RESERVED.has(key)) cur.fields.push([key, kv[2]]);
+      continue;
+    }
+    if (lastKey === 'trecho' && /^\s{4,}\S/.test(raw)) cur.trecho.push(raw.replace(/^\s{4}/, ''));
   }
-  if (lastKey === 'trecho' && /^\s{4,}\S/.test(raw)) cur.trecho.push(raw.replace(/^\s{4}/, ''));
+  const clean = (s) => s.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 200);
+  if (status === null) lacunas.push({ lente: name, motivo: 'sem a linha de status no fim (resposta truncada, fora do formato ou sem resposta)' });
+  else if (status === 'falhou') lacunas.push({ lente: name, motivo: `falhou: ${clean(motivo) || 'sem motivo'}` });
+  else if (status === 'achados' && !found) lacunas.push({ lente: name, motivo: 'status achados sem candidato no formato da review-rubric' });
+  else if (status === 'sem achados' && found) lacunas.push({ lente: name, motivo: 'status sem achados com candidatos na resposta' });
 }
-if (!items.length) die(3, 'nenhum candidato no formato da review-rubric ("- id:") e a entrada não é "sem achados"');
 
 // ---------- código e diff ----------
 let root = process.cwd();
@@ -157,6 +187,15 @@ for (const it of items) {
   r.local = newLocal;
   r.in_diff = diffOk ? inDiff(path, best, end) : null;
   if (r.in_diff === false && /^n[ãa]o$/i.test(get('preexistente') ?? '')) r.warning = 'local fora das linhas alteradas com preexistente: não';
+  // prova por execução: exigida em bloqueante e importante, salvo reuse, simplicity e scope (a evidência ali é o
+  // outro trecho de código, não uma execução). Ausente, ou sem a saída esperada depois da seta, rebaixa a "a confirmar".
+  const sev = (get('severidade') ?? '').toLowerCase(), cat = (get('categoria') ?? '').toLowerCase();
+  const prova = get('prova') ?? '';
+  const needs = /^(bloqueante|importante)$/.test(sev) && !/^(reuse|simplicity|scope)$/.test(cat);
+  const complete = /\S.*(?:→|->)\s*\S/.test(prova);
+  r.proof = !needs ? 'dispensada' : complete ? 'presente' : prova ? 'incompleta' : 'ausente';
+  if (needs && !complete) r.situacao = `a confirmar (${prova ? 'prova: sem a saída esperada depois de "→"' : 'sem prova:'}; o verificador não confirma sem executar uma prova)`;
+  r.lens = it.lens;
   it.newLocal = newLocal;
   it.result = r;
 }
@@ -164,9 +203,11 @@ for (const it of items) {
 const kept = items.filter((it) => it.result && it.result.status !== 'descartado');
 const counts = { ancorado: 0, realocado: 0, descartado: 0 };
 for (const r of results) counts[r.status]++;
-const summary = `check-findings: ${items.length} candidato(s): ${counts.ancorado} ancorado(s), ${counts.realocado} realocado(s), ${counts.descartado} descartado(s)${diffOk ? '' : '; diff indisponível, sem checagem de linhas alteradas'}`;
+const pending = results.filter((r) => r.situacao && r.status !== 'descartado').length;
+const summary = `check-findings: ${items.length} candidato(s): ${counts.ancorado} ancorado(s), ${counts.realocado} realocado(s), ${counts.descartado} descartado(s), ${pending} a confirmar sem prova${lacunas.length ? `; ${lacunas.length} lacuna(s): ${lacunas.map((l) => l.lente).join(', ')}` : ''}${diffOk ? '' : '; diff indisponível, sem checagem de linhas alteradas'}`;
+const code = lacunas.length ? 4 : 0;
 
-if (opt.json) { console.log(JSON.stringify({ total: items.length, counts, diff_checked: diffOk, results }, null, 2)); console.error(summary); process.exit(0); }
+if (opt.json) { console.log(JSON.stringify({ total: items.length, counts, a_confirmar: pending, lacunas, diff_checked: diffOk, results }, null, 2)); console.error(summary); process.exit(code); }
 
 const out = [];
 for (const it of kept) {
@@ -175,7 +216,11 @@ for (const it of kept) {
   out.push('  trecho: |');
   for (const t of it.trecho) out.push(`    ${t}`);
   out.push(`  ancoragem: ${r.status}${r.detail ? ` (${r.detail})` : ''}${r.warning ? `; atenção: ${r.warning}` : ''}`);
+  if (r.situacao) out.push(`  situação: ${r.situacao}`);
 }
+for (const l of lacunas) out.push(`lacuna: ${l.lente} — ${l.motivo}`);
+// "sem achados" só quando nenhuma lente falhou: lacuna nunca conta como aprovação
 console.log(out.length ? out.join('\n') : 'sem achados');
 for (const r of results.filter((x) => x.status === 'descartado')) console.error(`  descartado ${r.id}: ${r.detail}`);
 console.error(summary);
+process.exit(code);

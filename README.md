@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.26.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.27.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -67,12 +67,16 @@ build, formato e testes verdes antes de a sessão encerrar.
 4. **Execução.** O `implementer` recebe um sprint contract delimitado e trabalha com TDD. O `planner` e o `explore`
    levantam contexto em código desconhecido.
 5. **Revisão**, em quatro etapas:
-   - preparar: `diff-smells.mjs` limpa código comentado e marcadores, e `review-dispatch.mjs` agrupa os arquivos e
-     indica a regra de cada caminho;
+   - preparar: `diff-smells.mjs` limpa código comentado e marcadores, separa o comentário que descreve uma regra
+     ("não chamar antes de Init()") para a lente de simplicidade propor como garanti-la no código, e
+     `review-dispatch.mjs` agrupa os arquivos e indica a regra de cada caminho;
    - achar: as lentes rodam em paralelo e, em COMPLEXA e CRITICA, modelos de outro fornecedor tentam quebrar o diff
-     quando o projeto os configura (`interrogate.mjs`); se nenhum responde, em CRITICA o commit espera a sua decisão;
-   - verificar: `check-findings.mjs` descarta o achado cujo trecho não existe no código, e o `review-verifier` tenta
-     refutar cada candidato;
+     quando o projeto os configura (`interrogate.mjs`); se nenhum responde, em CRITICA o commit espera a sua decisão.
+     Cada lente termina com uma linha de status, e lente que não terminou é lacuna, nunca "sem achados": em CRITICA,
+     depois de uma nova tentativa, o commit espera a sua decisão;
+   - verificar: `check-findings.mjs` descarta o achado cujo trecho não existe no código e marca "a confirmar" o
+     achado grave sem o comando que o prova; o `review-verifier` roda esse comando, refuta o que não reproduz e
+     tenta refutar o resto;
    - corrigir: só o confirmado é corrigido, e o delta é revisto de novo (no máximo duas rodadas).
 6. **Commit** pela skill `commit` (Conventional Commits, em português), numa branch de atividade, com a mensagem
    conferida pelo `slop-check.mjs` (skill `unslop`).

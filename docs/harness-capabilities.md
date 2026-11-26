@@ -5,7 +5,7 @@ wstack mostra o caso positivo e o negativo), **IMPLEMENTADO** (existe e roda, se
 **NÃO VERIFICADO** (depende do Claude Code real e não foi medido nesta versão). Os testes estão em `plugin/tests/` e
 rodam no CI (`.github/workflows/ci.yml`); as provas `prove-*.sh` usam o Claude Code real e rodam à mão.
 
-Versão 0.0.26: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
+Versão 0.0.27: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
 
 | Mecanismo | Ativação | Garante | Não garante | Estado | Evidência |
 |---|---|---|---|---|---|
@@ -40,7 +40,9 @@ Versão 0.0.26: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os m
 | comandos de script nas skills | skill lead (núcleo e `reference/`) e as que rodam script | o interpretador escrito é um dos que o `script-allow` aceita para o script | os argumentos escritos (o `script-allow` confere na hora) | VERIFICADO | `test-skills-agents.sh` |
 | aprendizado dos revisores | linha `aprendizado:` no retorno; o lead grava em `docs/gotchas/` | — | que o revisor devolva a linha e o lead a grave (orientação) | IMPLEMENTADO | — |
 | complemento da rubrica no projeto | `review-rubric` manda ler `docs/review-rubric.md` (modelo do bootstrap) | — | que o revisor leia o arquivo (orientação) | IMPLEMENTADO | `test-bootstrap.sh` (o modelo tem as três seções) |
-| demais scripts (`review-dispatch`, `check-findings`, `diff-smells`, `quality-*`, `bench-*`, `sessions`, `nova-atividade`, `worktree-env`, `recall`, `map-staleness`, `summarize-runs`, `otlp-sink`, `enviar-nuvem`, `pr-risk-gate`, conversores) | skills e hooks | o que o cabeçalho de cada um descreve | — | IMPLEMENTADO | sem teste no wstack ainda |
+| `check-findings.mjs` | skill lead (revisão, etapa 3) e `review-verifier` | descarta candidato sem trecho ou com trecho que não existe no arquivo e corrige o `local` do deslocado; marca `situação: a confirmar` no bloqueante ou importante de comportamento (todas as categorias menos `reuse`, `simplicity` e `scope`) sem `prova:` ou com prova sem a saída esperada, sem descartá-lo, e o candidato não forja essa linha nem a de `ancoragem:`; lê um arquivo por lente e exige a linha final `status: achados`, `status: sem achados` ou `status: falhou: <motivo>` (o `sem achados` e o `falhou:` do `interrogate.mjs` valem): sem status, com status que contradiz o conteúdo ou com falha, lista `lacuna: <lente> — <motivo>`, sai 4 e nunca imprime `sem achados` | que o verificador rode a prova e que o lead repita a lente e trate a lacuna (orientação no `revisao.md` e no agente) | VERIFICADO | `test-check-findings.sh` |
+| `diff-smells.mjs` | skill lead (revisão, etapa 1) | nas linhas que o diff adicionou: válvula de escape, código comentado, marcador, comentário de restrição (`RESTRICAO`: "não", "nunca", "sempre", "deve", "obrigatório" e os equivalentes em inglês, em comentário que não é de documentação), comentário comum e de documentação; `--gate` sai 1 acima dos limites do `risk.conf`, e a restrição conta no limite de comentários | que a lente proponha a garantia da restrição (orientação na rubrica) | VERIFICADO | `test-diff-smells.sh` |
+| demais scripts (`review-dispatch`, `quality-*`, `bench-*`, `sessions`, `nova-atividade`, `worktree-env`, `recall`, `map-staleness`, `summarize-runs`, `otlp-sink`, `enviar-nuvem`, `pr-risk-gate`, conversores) | skills e hooks | o que o cabeçalho de cada um descreve | — | IMPLEMENTADO | sem teste no wstack ainda |
 
 ## Riscos aceitos
 
