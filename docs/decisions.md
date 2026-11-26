@@ -635,3 +635,9 @@ verde sobre a árvore limpa, sem a conferência de histórico.
 apagá-lo. Sem o comando na mensagem, o primeiro caso vira investigação. Um script de destravar no plugin seria
 chamável pelo agente (o `path-guard` libera os scripts do plugin na raiz), então a mensagem traz o `rm`, que o
 `path-guard` recusa ao agente.
+
+**Complemento:** o `rm -f` da recusa só lista nomes no formato que o `Stop` grava (`unverified` ou
+`unverified-<sessão>` com `[A-Za-z0-9_-]`), para a linha não levar nada que o shell interprete. Um arquivo
+`unverified*` com outro nome segura o push do mesmo jeito, e a recusa avisa que ele existe. O aviso do `Stop` sem
+comandos `verify_*` ou sem o arquivo da solução também traz o comando. Sem `CLAUDE_PROJECT_DIR` e fora de repositório
+git, o `push-guard` recusa o push, porque não dá para procurar os marcadores.
