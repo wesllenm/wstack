@@ -24,8 +24,14 @@ if [ ! -e .claude/risk.conf ]; then
   [ $? = 10 ] && { echo "Projeto sem o wstack: só as travas de segurança estão ativas. Para adotar o workflow, /wstack:bootstrap."; exit 0; }
 fi
 
+# Exceção de verificação esquecida: ela só vale para a sessão que a gravou (linha "sessão: <id>"), mas o arquivo parado
+# confunde e esconde o motivo; avisar para ler e apagar ao retomar.
+if [ -f .claude/verify-blocked.md ]; then
+  echo "AVISO: .claude/verify-blocked.md existe (exceção de verificação de uma sessão anterior: vale só para a sessão que a gravou). Ler o motivo e apagar o arquivo ao retomar."
+fi
+
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-[ -n "$sid" ] || exit 0
+[[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || exit 0
 head=$(git rev-parse --verify -q HEAD) || exit 0
 
 dir=".claude/.session"

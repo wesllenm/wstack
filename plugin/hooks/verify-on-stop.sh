@@ -31,6 +31,8 @@ CODE=(-- .)
 for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+# o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
+[[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || sid=
 
 # Telemetria do workflow: só se .claude/telemetry existir; nunca falha o hook nem grava conteúdo.
 emit() {
@@ -43,10 +45,21 @@ emit() {
 # Saída pela exceção registrada em $BLOCKED: encerra o turno com o motivo visível ao desenvolvedor (systemMessage).
 # O motivo vai cortado em 300 bytes sem partir caractere UTF-8 (o JSON precisa ser válido) e sem caractere de controle,
 # aspas nem barra invertida. Sem node: a exceção existe justamente para o ambiente quebrado.
+# A exceção vale só para a sessão que a gravou: o arquivo precisa da linha "sessão: <session_id>" (sem session_id na
+# entrada, "head: <SHA do HEAD>"). Arquivo esquecido de outra sessão não desliga os gates das seguintes: é ignorado,
+# com aviso. As mensagens de bloqueio mostram a linha exata a escrever.
+if [ -n "$sid" ]; then exception_key="sessão: $sid"; else exception_key="head: $(git rev-parse --verify -q HEAD)"; fi
+blocked_valid() {
+  [ -f "$BLOCKED" ] || return 1
+  if grep -qxF "$exception_key" "$BLOCKED"; then return 0; fi
+  emit verification_exception_stale
+  echo "Aviso: $BLOCKED é de outra sessão (falta a linha '$exception_key') e foi ignorado; os gates rodam normalmente." >&2
+  return 1
+}
 blocked_exit() { # blocked_exit <o que ficou sem verificar>
   emit verification_exception
   local reason full partial
-  full=$(tr '\n\r\t"\\' '     ' < "$BLOCKED" | LC_ALL=C tr -d '\000-\037')
+  full=$(grep -vxF "$exception_key" "$BLOCKED" | tr '\n\r\t"\\' '     ' | LC_ALL=C tr -d '\000-\037')
   reason=$(printf '%s' "$full" | head -c 300)
   # truncado: o último caractere pode ter ficado partido; tira a sequência UTF-8 do fim (no máximo um caractere)
   if [ "$reason" != "$full" ]; then
@@ -61,9 +74,9 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
 # Sem session_id não há como achar o HEAD do início da sessão: com o arquivo de calibração (gate adotado), bloqueia em
 # vez de pular o gate inteiro. O Claude Code sempre manda o campo; vazio é entrada quebrada.
 if [ -z "$sid" ] && [ -f "$LEARN_FILE" ]; then
-  [ -f "$BLOCKED" ] && blocked_exit 'verificar o aprendizado (entrada sem session_id)'
+  blocked_valid && blocked_exit 'verificar o aprendizado (entrada sem session_id)'
   echo "Não consegui verificar o aprendizado: a entrada do Stop não traz session_id, então não dá para achar o início da sessão." >&2
-  echo "É problema do ambiente: registre o motivo em $BLOCKED (libera o encerramento com aviso ao desenvolvedor) e reporte." >&2
+  echo "É problema do ambiente: registre o motivo em $BLOCKED, com a linha '$exception_key' (libera só este encerramento, com aviso ao desenvolvedor), e reporte." >&2
   exit 2
 fi
 base_file=".claude/.session/$sid.base"
@@ -116,12 +129,13 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
     # consegui verificar". Só a transcrição ausente (entrada sem transcript_path, arquivo que não existe) fica como aviso,
     # porque bloquear ali travaria sessões legítimas; nesse caso vale só a presença do campo, conferida acima.
     unverified() { # unverified <o que> <detalhe>: bloqueia por não conseguir conferir; a exceção registrada libera
-      [ -f "$BLOCKED" ] && blocked_exit "conferir o campo $1 do Registro"
+      blocked_valid && blocked_exit "conferir o campo $1 do Registro"
       emit learning_blocked
       {
         echo "Não consegui verificar o campo $1 da linha de Registro contra a transcrição da sessão: $2"
         echo "Corrija a causa (node, o script do plugin, a transcrição) e tente encerrar de novo. Se for do ambiente e não"
-        echo "der para corrigir agora, registre o motivo em $BLOCKED: isso libera o encerramento com aviso ao desenvolvedor."
+        echo "der para corrigir agora, registre o motivo em $BLOCKED, com a linha '$exception_key': isso libera só esta"
+        echo "sessão, com aviso ao desenvolvedor."
       } >&2
       exit 2
     }
@@ -149,7 +163,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
           emit learning_blocked
           {
             echo "O campo princípios: da linha de Registro não confere com a transcrição da sessão:"
-            grep '^NÃO CARREGADA\|^CAMPO AUSENTE' <<< "$out"
+            grep '^NÃO CARREGADA\|^CAMPO AUSENTE' <<< "$out" || tail -3 <<< "$out"
             echo "Cite só skill carregada nesta sessão (ou 'nenhum'), na forma que o principles.mjs devolve; não carregue a skill agora só para citá-la."
           } >&2
           exit 2 ;;
@@ -173,7 +187,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
 fi
 
 # Exceção de verificação (só depois do gate de aprendizado: ela dispensa build e testes, não o registro).
-[ -f "$BLOCKED" ] && blocked_exit 'verificação verde'
+blocked_valid && blocked_exit 'verificação verde'
 
 # Gate 2: build, formato e testes no working tree atual, ignorando mudanças só em arquivos de aprendizado.
 [ -z "$(git status --porcelain "${CODE[@]}")" ] && exit 0
@@ -197,7 +211,7 @@ if ! { bash -c "$BUILD_CMD" && { [ -z "$LINT_CMD" ] || bash -c "$LINT_CMD"; } &&
   emit verification_failed
   {
     echo "Verificação falhou: a stop condition não foi atingida. Corrija e tente encerrar de novo."
-    echo "Se a falha for preexistente ou um bloqueio real (skill lead, Interrupções), registre o motivo em $BLOCKED e reporte ao desenvolvedor."
+    echo "Se a falha for preexistente ou um bloqueio real (skill lead, Interrupções), registre o motivo em $BLOCKED, com a linha '$exception_key', e reporte ao desenvolvedor."
     echo "--- últimas linhas ---"
     tail -n 60 "$log"
   } >&2

@@ -44,6 +44,19 @@ expect 0 verificacao-passa
 novo 'verify_solution = sol.txt' 'verify_build = false' 'verify_test = true'
 printf 's\n' > "$proj/sol.txt"; printf 'mudou\n' >> "$proj/a.txt"
 expect 2 build-falha 'Verificação falhou'
+# exceção de build: vale só com a linha da sessão atual; esquecida de outra sessão não pula build e testes
+grep -qF "sessão: s1" "$work/err" || fail_msg 'build-falha: mensagem não mostra a linha sessão: a escrever'
+printf 'build quebrado antes da tarefa\nsessão: sessao-da-semana-passada\n' > "$proj/.claude/verify-blocked.md"
+expect 2 build-excecao-velha-ignorada 'é de outra sessão'
+printf 'build quebrado antes da tarefa\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
+expect 0 build-excecao-da-sessao
+grep -q 'Motivo registrado: build quebrado antes da tarefa' "$work/out" || fail_msg 'build-excecao-da-sessao: motivo fora do systemMessage'
+rm -f "$proj/.claude/verify-blocked.md"
+# SessionStart avisa quando a exceção existe
+printf 'algo\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
+out=$(printf '{"session_id":"s9"}' | CLAUDE_PROJECT_DIR=$proj bash -c "cd '$proj' && bash '$(dirname "$hook")/session-start.sh'" 2>&1)
+printf '%s' "$out" | grep -q 'AVISO: .claude/verify-blocked.md existe' || fail_msg "session-start: sem aviso da exceção ($out)"
+rm -f "$proj/.claude/verify-blocked.md"
 # sem sha1sum e sem xargs GNU (macOS padrão): a impressão digital não pode ficar vazia e casar com um carimbo vazio,
 # pulando build e testes na mudança seguinte. sha1sum e xargs falsos que falham, na frente do PATH.
 mkdir -p "$work/sem-gnu"
@@ -136,23 +149,31 @@ sed -i '$d' "$proj/docs/review-calibration.md"
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 2 sem-session-id 'não traz session_id'
 # problema de ambiente registrado em verify-blocked.md libera, com o motivo visível; sem isso o agente ficaria em loop
 blk=$proj/.claude/verify-blocked.md
+# a exceção só vale com a âncora da sessão: sem session_id, "head: <SHA do HEAD>"; a mensagem de bloqueio a mostra
+grep -qF "head: $(git -C "$proj" rev-parse HEAD)" "$work/err" || fail_msg 'sem-session-id: mensagem não mostra a linha head: a escrever'
 printf 'entrada do Stop sem session_id neste ambiente\n' > "$blk"
+RAW_INPUT='{"hook_event_name":"Stop"}' expect 2 excecao-sem-ancora-ignorada 'é de outra sessão'
+printf 'head: %s\n' "$(git -C "$proj" rev-parse HEAD)" >> "$blk"
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 sem-session-id-com-excecao
 grep -q 'Motivo registrado: entrada do Stop sem session_id' "$work/out" || fail_msg 'sem-session-id-com-excecao: motivo fora do systemMessage'
+grep -q 'head:' "$work/out" && fail_msg 'sem-session-id-com-excecao: a linha de âncora apareceu no motivo'
+# session_id fora do alfabeto fechado conta como ausente (vira caminho de arquivo)
+rm -f "$blk"
+RAW_INPUT='{"session_id":"../../x"}' expect 2 session-id-invalido 'não traz session_id'
 rm -f "$blk"
 # a exceção não libera divergência de conteúdo: isso o agente corrige na linha
 printf -- '- t — pedidos: 1 — princípios: ok (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
-printf 'qualquer coisa\n' > "$blk"
+printf 'qualquer coisa\nsessão: s1\n' > "$blk"
 TRANSCRIPT=$tr expect 2 excecao-nao-libera-conteudo 'NÃO CARREGADA: ok'
 rm -f "$blk"; sed -i '$d' "$proj/docs/review-calibration.md"
 # motivo com acento cortado em 300 bytes: o systemMessage continua JSON válido
-{ printf '%0299d' 0 | tr 0 a; printf 'éééé\n'; } > "$blk"
+{ printf '%0299d' 0 | tr 0 a; printf 'éééé\n'; printf 'head: %s\n' "$(git -C "$proj" rev-parse HEAD)"; } > "$blk"
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 excecao-utf8
 # o jq e o Node não recusam o byte partido: trocam por U+FFFD. O que se confere é que ele não sobra.
 node -e 'process.exit(require("fs").readFileSync(process.argv[1],"utf8").includes("\uFFFD")?1:0)' "$work/out" \
   || fail_msg 'excecao-utf8: caractere partido no systemMessage (vira U+FFFD)'
 jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'excecao-utf8: systemMessage não é JSON válido'
-printf 'quebra "com aspas" e\ttab\n' > "$blk"
+printf 'quebra "com aspas" e\ttab\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$blk"
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 excecao-aspas
 jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'excecao-aspas: systemMessage não é JSON válido'
 rm -f "$blk"
@@ -166,10 +187,16 @@ cp -r "$(dirname "$hook")/.." "$broken"
 printf 'process.exit(1)\n' > "$broken/scripts/principles.mjs"
 hook_ok=$hook; hook=$broken/hooks/verify-on-stop.sh
 TRANSCRIPT=$tr expect 2 principles-quebrado 'Não consegui verificar o campo princípios:'
-printf 'node quebrado no ambiente da nuvem\n' > "$blk"
+grep -qF "sessão: s1" "$work/err" || fail_msg 'principles-quebrado: mensagem não mostra a linha sessão: a escrever'
+printf 'node quebrado no ambiente da nuvem\nsessão: outra-sessao\n' > "$blk"
+TRANSCRIPT=$tr expect 2 excecao-de-outra-sessao-ignorada 'é de outra sessão'
+printf 'node quebrado no ambiente da nuvem\nsessão: s1\n' > "$blk"
 TRANSCRIPT=$tr expect 0 principles-quebrado-com-excecao
 grep -q 'sem conferir o campo princípios:' "$work/out" || fail_msg 'principles-quebrado-com-excecao: aviso não diz o que ficou sem conferir'
 rm -f "$blk"
+# código 3 sem as linhas NÃO CARREGADA/CAMPO AUSENTE: o motivo ainda aparece (fim da saída)
+printf 'console.log("saida inesperada do script");process.exit(3)\n' > "$broken/scripts/principles.mjs"
+TRANSCRIPT=$tr expect 2 principles-3-sem-linhas 'saida inesperada do script'
 cp "$(dirname "$hook_ok")/../scripts/principles.mjs" "$broken/scripts/principles.mjs"
 printf 'process.exit(0)\n' > "$broken/scripts/permission-asks.mjs"
 TRANSCRIPT=$tr expect 2 permission-asks-saida-vazia 'Não consegui verificar o campo pedidos:'

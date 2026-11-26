@@ -537,3 +537,14 @@ gate de aprendizado avisa em vez de ser pulado em silêncio. O motivo vai cortad
 ambiente quebrado, o agente registrava, tentava encerrar e era bloqueado de novo, até alguém consertar à mão.
 Divergência de conteúdo fica de fora porque o agente resolve corrigindo a linha, e liberar por arquivo seria o
 contorno que o gate existe para impedir. O corte antigo em bytes partia a letra acentuada, que chegava como U+FFFD.
+
+## 2026-11-26: exceção de verificação amarrada à sessão
+
+**Decisão:** o `.claude/verify-blocked.md` só vale com a linha `sessão: <session_id>` da sessão atual (entrada sem
+`session_id`: `head: <SHA do HEAD>`). As mensagens de bloqueio mostram a linha exata a escrever. Arquivo de outra
+sessão é ignorado com aviso, e os gates rodam. O `SessionStart` avisa quando o arquivo existe. O `session_id` só é
+aceito no alfabeto `[A-Za-z0-9_-]`, porque vira caminho de arquivo.
+
+**Por quê:** desde a decisão anterior o arquivo libera, além de build e testes, as conferências do Registro que o
+ambiente impediu. Sem dono nem prazo, um registro esquecido de semanas atrás desligava os gates de todas as sessões
+seguintes, sem ninguém perceber.
