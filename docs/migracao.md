@@ -134,6 +134,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   O marcador de verificação pendente só sai com a árvore limpa (verde com conserto sem commit o mantém e pede o
   commit), e saída sem verificação com o marcador avisa que o push segue recusado. Mensagem de commit que cite esses
   caminhos vai por arquivo (`git commit -F`).
+- 0.0.25: marcador de verificação preso (commit da exceção reescrito por amend ou rebase, sessão encerrada, formato
+  antigo) diz como destravar: a recusa do `push-guard`, o aviso do `SessionStart` e o `systemMessage` do `Stop` trazem
+  o `rm -f` dos marcadores, para o desenvolvedor rodar fora do agente.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
