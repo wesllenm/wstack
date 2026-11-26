@@ -16,7 +16,7 @@ Não edite arquivos. O motivo do acionamento vem no pedido: dê atenção especi
 
 Para cada risco em contratos, invariantes, transações, concorrência, segurança e efeitos colaterais, pergunte: como falha em produção, como se detecta, como se volta atrás.
 
-Antes dos candidatos, encontre o fato de segurança (`review-rubric`, Fato de segurança): o único fato do qual depende a maior parte do risco desta mudança. Procure onde o grep não alcança: o código-fonte da biblioteca chamada na versão fixada, o que roda no descarte ou no cancelamento, o JSON que a API devolve, a coluna do banco, o formato na fila, outro serviço que lê os mesmos bytes, a feature flag. Escreva:
+Antes dos candidatos, encontre o fato de segurança (`review-rubric`, Fato de segurança): o único fato do qual depende a maior parte do risco desta mudança. Quando o pedido trouxer o resultado da skill `blast-radius` do plano, comece pelo fato dela e tente quebrá-lo no código que foi escrito: confirme, troque por outro com o motivo, ou aponte o risco que ela descartou e o código reabriu. Procure onde o grep não alcança: o código-fonte da biblioteca chamada na versão fixada, o que roda no descarte ou no cancelamento, o JSON que a API devolve, a coluna do banco, o formato na fila, outro serviço que lê os mesmos bytes, a feature flag. Escreva:
 
 ```text
 fato de segurança: <uma frase>

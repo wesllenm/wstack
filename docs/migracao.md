@@ -146,6 +146,12 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   lente termina com `status: achados | sem achados | falhou: <motivo>`, e o `check-findings.mjs` recebe um arquivo por
   lente: sem status é lacuna (código 4), nunca `sem achados`. O `diff-smells.mjs` separa o comentário de restrição
   (`RESTRICAO`). Lista de candidatos sem linha de status, que antes passava, agora sai 4.
+- 0.0.28: verificação (lote 2 do pstack). O modelo da `verify-<app>` ganha as seções Regras e Manutenção
+  (`/verify-<app> manutenção`) e o modelo das quatro seções de cada feature; o aviso do `map-staleness.mjs` cita o
+  comando e o commit de partida. Skill nova `blast-radius`, no plano de CRITICA e de COMPLEXA com contrato público,
+  migration ou mensageria. Os Degraus de prova da `review-rubric` viram a escada de evidência, com os rótulos medida,
+  inferida e palpite no relatório. Projeto que já tem a `verify-<app>` copia as seções novas à mão: o bootstrap não
+  sobrescreve o que existe.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

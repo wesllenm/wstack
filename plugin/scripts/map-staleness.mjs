@@ -2,7 +2,8 @@
 // Avisa no início da sessão quando o mapa de features de uma skill verify-<app> ficou para trás do código.
 // Para cada .claude/skills/verify-*/features/, procura commits depois da última mudança no mapa que tocaram a
 // superfície do usuário (feature_surface no risk.conf: rotas, endpoints, telas, comandos). Hook SessionStart:
-// a saída vai para o contexto; nunca falha a sessão. Sem nenhuma skill verify-*, não diz nada.
+// a saída vai para o contexto; nunca falha a sessão. Sem nenhuma skill verify-*, não diz nada. O aviso cita o comando
+// de manutenção (/verify-<app> manutenção) e o commit de onde ela parte.
 // Uso: node map-staleness.mjs [--verbose]   (--verbose também diz quando o mapa está em dia)
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -69,7 +70,7 @@ for (const skill of skills) {
   const list = [...files].slice(0, 5).join(', ') + (files.size > 5 ? ` e mais ${files.size - 5}` : '');
   out.push(`Mapa de features de ${skill} pode estar desatualizado: ${commits} commit(s) desde ${date} tocaram a superfície`
     + `${surface.length ? '' : ' (feature_surface não configurado no risk.conf; contando todo código fora de testes)'}: ${list}. `
-    + `Antes de confiar no mapa numa condução, rodar a Manutenção da ${skill} para as features desses arquivos.`);
+    + `Antes de confiar no mapa numa condução, rodar /${skill} manutenção (seção Manutenção da skill), a partir de ${sha.slice(0, 12)}.`);
 }
 if (out.length) console.log(out.join('\n'));
 process.exit(0);

@@ -34,7 +34,7 @@ Casos de borda: <o que os testes ou o código tratam de especial> | nenhum visto
 Não verificado: nada | <o que foi deduzido sem abrir o código, e por quê>
 ```
 
-Cada passo do fluxo tem `arquivo:linha` que foi aberto. O que foi deduzido sem abrir vai em Não verificado, nunca no fluxo. Diagrama só quando o fluxo tiver mais de um caminho que se ramifica; texto basta no resto.
+Cada passo do fluxo tem `arquivo:linha` que foi aberto. O que foi deduzido sem abrir vai em Não verificado, nunca no fluxo. A resposta usa a escada de evidência da `review-rubric` (Degraus de prova): um passo lido é **inferido** (degrau 2, ou 3 com o comando da busca mostrado), o que um teste existente roda e passa é **medido** (degrau 4) e o que não tem fonte é **palpite** e vai em Não verificado. O Resumo diz o rótulo de cada afirmação que não for inferida. Diagrama só quando o fluxo tiver mais de um caminho que se ramifica; texto basta no resto.
 
 ## Restrições
 

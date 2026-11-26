@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.27.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.28.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -172,7 +172,7 @@ segurança continuam (`docs/decisions.md`, plugin inerte sem risk.conf).
 plugin/
   .claude-plugin/plugin.json      nome e versão
   agents/       18 subagentes (wstack:<nome>)
-  skills/       29 skills (/wstack:<nome>)
+  skills/       30 skills (/wstack:<nome>)
   hooks/        hooks.json e as travas e verificações
   scripts/      scripts que as skills, os agentes e os hooks chamam
   cloud/        setup.sh do ambiente da nuvem
@@ -209,7 +209,8 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 - **Workflow:** `lead` (o processo acima), `commit`, `review-rubric` (régua comum de severidade, evidência e formato
   dos achados), `test-audit` (gate de autoria de testes e auditoria), `recall` (sessões anteriores), `correct`
   (correção do desenvolvedor registrada na hora, com o degrau da escada), `unslop` (texto técnico em PT-BR sem
-  enfeite), `bootstrap` (adoção num projeto).
+  enfeite), `bootstrap` (adoção num projeto), `blast-radius` (o que a mudança pode quebrar fora do diff e o fato
+  de segurança que a prova, no plano de CRITICA e de COMPLEXA com contrato, migration ou mensageria).
 - **Entender o código:** `how` (como funciona) e `why` (por que está assim), só leitura e fora do pipeline de risco.
 - **Engenharia:** `tdd`, `testing-strategy`, `clean-code`, `refactoring`, `clean-architecture`, `vertical-slice`,
   `domain-modeling`, `api-design`, `concurrency`, `resilience`, `event-driven`, `observability`, `security`,

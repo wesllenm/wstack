@@ -89,7 +89,11 @@ de produto, arquitetura, segurança ou escopo que não dê para inferir.
      Rodar uma vez com um pacote de teste (`node ${CLAUDE_PLUGIN_ROOT}/scripts/interrogate.mjs <pacote> <saída>`) e ver
      sair 0. Aprovada ou não, a escolha vai para `docs/decisions.md` do projeto, com o motivo;
    - `.claude/project.md` (a tabela Domínios, que a skill `lead` lê) e `.claude/architecture.md`;
-   - `verify-<app>`: escrever a receita real e prová-la de ponta a ponta uma vez antes de entregar.
+   - `verify-<app>`: escrever a receita real nas seis seções do modelo (Launch, Doctor, Drive, Evidence, Cleanup,
+     Helpers), o mapa de `features/` com as três a cinco features principais, cada uma nas quatro seções do
+     `features/README.md`, e o `feature_surface` do `.claude/risk.conf` com os caminhos dessas features. Provar de
+     ponta a ponta uma vez antes de entregar, nesta ordem: Launch, Doctor, Drive de uma feature do mapa, Evidence e
+     Cleanup.
 3. Arquivo que já existia: mesclar à mão o que o modelo traz e ele não tem (no `settings.json`: `agent`,
    `worktree.baseRef`, o marketplace fixado, `enabledPlugins`, as regras de `Edit` do `ask` e do `deny`), sem apagar o
    que é do projeto. Depois de criado, `.claude/settings.json` e `.claude/risk.conf` pedem aprovação a cada edição: é

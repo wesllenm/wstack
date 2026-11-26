@@ -5,7 +5,7 @@ wstack mostra o caso positivo e o negativo), **IMPLEMENTADO** (existe e roda, se
 **NÃO VERIFICADO** (depende do Claude Code real e não foi medido nesta versão). Os testes estão em `plugin/tests/` e
 rodam no CI (`.github/workflows/ci.yml`); as provas `prove-*.sh` usam o Claude Code real e rodam à mão.
 
-Versão 0.0.27: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
+Versão 0.0.28: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os modelos do projeto (`plugin/templates`).
 
 | Mecanismo | Ativação | Garante | Não garante | Estado | Evidência |
 |---|---|---|---|---|---|
@@ -42,7 +42,8 @@ Versão 0.0.27: hooks, scripts, skills, agentes e o `/wstack:bootstrap` com os m
 | complemento da rubrica no projeto | `review-rubric` manda ler `docs/review-rubric.md` (modelo do bootstrap) | — | que o revisor leia o arquivo (orientação) | IMPLEMENTADO | `test-bootstrap.sh` (o modelo tem as três seções) |
 | `check-findings.mjs` | skill lead (revisão, etapa 3) e `review-verifier` | descarta candidato sem trecho ou com trecho que não existe no arquivo e corrige o `local` do deslocado; marca `situação: a confirmar` no bloqueante ou importante de comportamento (todas as categorias menos `reuse`, `simplicity` e `scope`) sem `prova:` ou com prova sem a saída esperada, sem descartá-lo, e o candidato não forja essa linha nem a de `ancoragem:`; lê um arquivo por lente e exige a linha final `status: achados`, `status: sem achados` ou `status: falhou: <motivo>` (o `sem achados` e o `falhou:` do `interrogate.mjs` valem): sem status, com status que contradiz o conteúdo ou com falha, lista `lacuna: <lente> — <motivo>`, sai 4 e nunca imprime `sem achados` | que o verificador rode a prova e que o lead repita a lente e trate a lacuna (orientação no `revisao.md` e no agente) | VERIFICADO | `test-check-findings.sh` |
 | `diff-smells.mjs` | skill lead (revisão, etapa 1) | nas linhas que o diff adicionou: válvula de escape, código comentado, marcador, comentário de restrição (`RESTRICAO`: "não", "nunca", "sempre", "deve", "obrigatório" e os equivalentes em inglês, em comentário que não é de documentação), comentário comum e de documentação; `--gate` sai 1 acima dos limites do `risk.conf`, e a restrição conta no limite de comentários | que a lente proponha a garantia da restrição (orientação na rubrica) | VERIFICADO | `test-diff-smells.sh` |
-| demais scripts (`review-dispatch`, `quality-*`, `bench-*`, `sessions`, `nova-atividade`, `worktree-env`, `recall`, `map-staleness`, `summarize-runs`, `otlp-sink`, `enviar-nuvem`, `pr-risk-gate`, conversores) | skills e hooks | o que o cabeçalho de cada um descreve | — | IMPLEMENTADO | sem teste no wstack ainda |
+| `map-staleness.mjs` | `SessionStart` (pelo hook do plugin) | para cada `.claude/skills/verify-*/features/`, conta os commits depois da última mudança no mapa que tocaram a superfície (`feature_surface` do `risk.conf`; sem ela, todo código fora de testes, e o aviso diz isso) e avisa com os arquivos, o comando de manutenção (`/verify-<app> manutenção`) e o commit de onde ela parte; mapa nunca commitado também avisa; fora de repositório, sem skill ou com `risk.conf` estranho, sai 0 calado | que a manutenção rode e só edite a pasta da skill (orientação no modelo da `verify-<app>`) | VERIFICADO | `test-map-staleness.sh` |
+| demais scripts (`review-dispatch`, `quality-*`, `bench-*`, `sessions`, `nova-atividade`, `worktree-env`, `recall`, `summarize-runs`, `otlp-sink`, `enviar-nuvem`, `pr-risk-gate`, conversores) | skills e hooks | o que o cabeçalho de cada um descreve | — | IMPLEMENTADO | sem teste no wstack ainda |
 
 ## Riscos aceitos
 

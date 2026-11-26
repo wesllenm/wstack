@@ -211,13 +211,15 @@ Para cada candidato:
 
 ### Degraus de prova
 
-Quanto um fato está provado, do mais fraco ao mais forte. Vale para o achado e para o fato de segurança de uma mudança.
+Quanto um fato está provado, do mais fraco ao mais forte. É a escada de evidência do wstack: vale para o achado, para o fato de segurança de uma mudança, para a skill `blast-radius`, para a `how` e para as afirmações do relatório do `lead`.
 
-1. **Afirmado:** alguém disse. Não vale nada sozinho.
+1. **Afirmado:** alguém disse, sem fonte. Não vale nada sozinho.
 2. **Apontado:** há `arquivo:linha` real, no código do projeto ou na fonte da biblioteca, que mostra o comportamento.
-3. **Raciocinado:** o caminho da falha foi percorrido passo a passo e chega (ou não chega) ao ponto.
+3. **Raciocinado:** uma busca ou análise estática, com o comando mostrado, percorreu o caminho da falha passo a passo (chamadores, implementações, configuração) e ele chega (ou não chega) ao ponto.
 4. **Executado:** um teste ou script chama o código real e falha alto se o fato estiver errado.
 5. **Reproduzido:** o efeito apareceu na aplicação rodando (skill `verify-<app>` do projeto).
+
+Rótulo de cada afirmação no relatório: **medida** (degraus 4 e 5), **inferida** (2 e 3) ou **palpite** (1). Palpite não sustenta decisão: vira pergunta ou pendência.
 
 ### Fato de segurança
 
