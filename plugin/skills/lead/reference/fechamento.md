@@ -86,3 +86,5 @@ Stop condition: [x] critério ...
 ```
 
 Não usar `verificado` sem evidência. `implementado` não significa `ativo` em produção.
+
+**Rótulo de evidência.** Cada afirmação relevante do relatório (em Resumo, Testes e verificações, Riscos e limitações, e o fato de segurança) leva entre colchetes o rótulo da escada da `review-rubric` (Degraus de prova): `[medida]` (teste ou script rodado, ou reprodução na aplicação: degraus 4 e 5), `[inferida]` (leitura com `arquivo:linha` ou busca com o comando: degraus 2 e 3) ou `[palpite]` (sem fonte: degrau 1). Palpite não sustenta `verificado`. Quando a `blast-radius` rodou, o relatório traz o fato de segurança dela, o rótulo e o comando que o provou.

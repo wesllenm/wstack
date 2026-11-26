@@ -675,3 +675,41 @@ limite apertaria o gate em todo projeto com documentação XML.
 
 **Limite:** repetir a lente, tratar a lacuna e rodar a prova são orientação ao lead e ao verificador; o mecanismo é
 o `check-findings.mjs`, que garante que lacuna e falta de prova aparecem na saída.
+
+## 2026-11-26: verify-<app> com regras e manutenção, e blast-radius no plano
+
+Lote 2 das melhorias trazidas do pstack (skills `create-verification-skill`, `maintain-verification-skill` e
+`blast-radius`).
+
+**Decisão:**
+- **Modelo da `verify-<app>`.** As seis seções (Launch, Doctor, Drive, Evidence, Cleanup, Helpers) já existiam. O
+  modelo ganha a seção Regras: caminho real do usuário, efeito colateral conferido, dry-run conferido no código, nunca
+  matar processo pelo nome, e pré-condição ausente relatada em vez de contornada. Ganha também as dicas de .NET (`dotnet
+  run` ou AppHost do Aspire, health check, HTTP e Playwright pelo `playwright-e2e`). O `features/README.md` traz o modelo
+  das quatro seções de cada feature. O bootstrap preenche o `feature_surface` e prova na ordem Launch, Doctor, Drive,
+  Evidence e Cleanup.
+- **Manutenção do mapa.** A `verify-<app>` ganha a seção Manutenção (`/verify-<app> manutenção`): subagentes `explore`
+  comparam cada feature com o código, o lead confere os commits desde a última mudança no mapa e dirige cada feature
+  que mudou. Só a pasta da skill é editada, conferida por `git status --porcelain`, e o resultado é limpo, alterado ou
+  bloqueado. O aviso do `map-staleness.mjs` cita esse comando e o commit de partida.
+- **`blast-radius`.** Skill nova, carregada no plano de toda CRITICA e de COMPLEXA que toque contrato público,
+  migration ou mensageria: símbolos que mudam, fato de segurança, busca além do grep (versão fixada e fonte de
+  biblioteca, concorrência, JSON da API, colunas e índices, feature flags, consumidores de mensagem), riscos por
+  probabilidade e custo, e a prova do fato. O resultado entra no sprint contract e no foco das lentes, e em CRITICA o
+  `review-critical` o recebe para tentar quebrá-lo no código escrito.
+- **Escada de evidência.** A escada já existia como Degraus de prova da `review-rubric`; ela passa a ser a única, com
+  o degrau 3 citando busca ou análise estática com o comando e os rótulos medida (4 e 5), inferida (2 e 3) e palpite
+  (1). A `blast-radius`, a `how` e o relatório do lead usam esses rótulos.
+
+**Por quê:** a mensagem do `map-staleness` mandava rodar uma Manutenção que o modelo não tinha. Em COMPLEXA e CRITICA,
+ninguém mapeava antes do código o que a mudança quebra fora do diff; o fato de segurança só aparecia na revisão, depois
+do código.
+
+**Divergências do documento de trabalho:** as seis seções do modelo já existiam; o que faltava eram as regras, as dicas
+de .NET, o modelo das seções de cada feature e a Manutenção. A escada de evidência do documento não virou uma segunda
+tabela: ela ajustou a que a rubrica já tinha, para não haver duas formas de medir a mesma coisa. A consulta a vários
+modelos ficou fora da `blast-radius`, como o documento pede.
+
+**Limite:** carregar a `blast-radius` no plano é orientação do `pipeline.md`; o `principles.mjs` confere que ela foi
+carregada só quando o Registro a cita. O mecanismo deste lote é o `map-staleness.mjs`, com teste, e o modelo da
+`verify-<app>`, conferido pelo `test-bootstrap.sh`.

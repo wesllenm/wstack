@@ -91,6 +91,13 @@ p=$(newrepo app)
 boot "$p" --app web > /dev/null
 grep -qx 'name: verify-web' "$p/.claude/skills/verify-web/SKILL.md" 2> /dev/null || fail "verify-web sem o nome"
 [ -f "$p/.claude/skills/verify-web/features/README.md" ] || fail "verify-web sem o mapa de features"
+# as seis seções da receita, as regras e a manutenção, na ordem da prova de ponta a ponta
+secoes=$(grep '^## ' "$p/.claude/skills/verify-web/SKILL.md" 2> /dev/null | tr '\n' '|')
+[ "$secoes" = '## Regras|## Launch|## Doctor|## Drive|## Evidence|## Cleanup|## Helpers|## Manutenção|' ] || fail "verify-web: seções fora do esperado ($secoes)"
+grep -qF '/verify-web manutenção' "$p/.claude/skills/verify-web/SKILL.md" || fail "verify-web: manutenção sem o comando com o nome da app"
+for s in '## Subfeatures' '## Como chegar (visão do usuário)' '## Como dirigir' '## Pegadinhas'; do
+  grep -qF "$s" "$p/.claude/skills/verify-web/features/README.md" || fail "mapa de features sem o modelo da seção $s"
+done
 
 # branch padrão do remoto
 p=$(newrepo remoto)
