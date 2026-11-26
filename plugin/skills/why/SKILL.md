@@ -23,7 +23,10 @@ A regra que importa: separar **registrado** (alguém escreveu o motivo num commi
 4. **PR e revisão.** `gh pr list --state merged --search <sha>` acha o PR do commit; `gh pr view <n> --json title,body,comments,reviews` traz a descrição e a discussão. Comentário de revisão que pediu a mudança costuma ser o motivo real. Sem `gh` autenticado, seguir sem PR e dizer isso.
 5. **Decisões e aprendizado do projeto**: `docs/decisions.md`, ADRs, `docs/gotchas.md` e `docs/gotchas/` da área, comentário de porquê no próprio código, issue citada no commit (`Refs:`, `Closes:`). Para o que foi discutido em sessões do Claude Code e não chegou ao git, carregar a skill `recall` com o caminho e o símbolo.
 6. **O que mudou desde então.** O motivo ainda vale? Procurar se a restrição original sumiu: dependência atualizada, chamador removido, regra de negócio trocada, teste que protegia o comportamento. Isso responde o "dá para tirar" sem decidir por ninguém.
-7. **Histórico cortado.** Se o `git log --oneline --decorate` termina num commit marcado `grafted`, o clone é raso (sessão na nuvem, CI): dizer que o histórico anterior não está disponível, em vez de concluir que o código "sempre foi assim".
+7. **Hipóteses concorrentes.** Sem motivo registrado, ou com registro ambíguo (o commit diz "ajuste", o PR não explica), listar as explicações plausíveis, cada uma com a evidência a favor e contra e o que a decidiria (um teste, uma pergunta a quem escreveu, um dado de produção). Não escolher uma como se fosse registrada.
+8. **Antes de uma mudança planejada.** Quando o `why` roda porque o `lead` vai mudar ou tirar o código, a resposta traz também o bloco Preservar / Mudar / Evitar / Risco: o que o motivo exige que continue valendo, o que a mudança pode mexer com segurança, o que não fazer (o erro que o código original evitava) e o risco se o motivo ainda valer. O `lead` leva esse bloco para o plano.
+9. **Fonte pulada.** Toda fonte dos passos 2 a 5 que não foi consultada leva o motivo por escrito na resposta (clone raso sem histórico, `gh` sem acesso, sem PR para o commit). Fonte omitida sem motivo deixa a confiança em `desconhecido`.
+10. **Histórico cortado.** Se o `git log --oneline --decorate` termina num commit marcado `grafted`, o clone é raso (sessão na nuvem, CI): dizer que o histórico anterior não está disponível, em vez de concluir que o código "sempre foi assim".
 
 ## Resposta
 
@@ -34,6 +37,17 @@ Motivo registrado: "<citação curta do commit, PR, decisão ou comentário>" �
 Inferido: nada | <o que se deduz do código ou da época, e de quê>
 Ainda vale: sim | não | incerto — <o que mudou ou continua igual, com arquivo:linha>
 Confiança: registrado | inferido | desconhecido — <o que falta para subir (histórico raso, gh sem acesso, PR sem descrição)>
+Hipóteses concorrentes: não se aplica (motivo registrado) | - <explicação> — a favor: <evidência> — contra: <evidência> — decidiria: <teste, pergunta ou dado>
+Fontes puladas: nenhuma | <fonte> — <motivo>
+```
+
+Antes de uma mudança planejada, mais o bloco:
+
+```text
+Preservar: <o que o motivo exige que continue valendo>
+Mudar: <o que a mudança pode mexer com segurança>
+Evitar: <o erro que o código original evitava>
+Risco: <o que acontece se o motivo ainda valer e a mudança o ignorar>
 ```
 
 ## Restrições

@@ -60,17 +60,22 @@ Teste do título: ele completa a frase "Se aplicado, este commit vai ___"?
 
 ## Pull request
 
-Quando o plano prevê PR, a descrição é um resumo de um minuto para quem tem o diff na tela, não um diário. Seções `##` nesta ordem, omitindo a que não tiver o que dizer:
+Quando o plano prevê PR, a descrição é um resumo de um minuto para quem tem o diff na tela, não um diário: até cerca de 40 linhas com texto. Seções `##` nesta ordem, omitindo a que não tiver o que dizer (seção vazia sai):
 
-- `## Por quê`: o problema e a abordagem, em uma a três frases;
+- `## Por quê`: o problema e a abordagem, em uma a três frases (obrigatória);
 - `## O que mudou`: uma a três linhas, nomeando símbolo ou caminho só quando ele carrega a mudança;
 - `## Escopo`: o que cobre e o que ficou de fora de propósito (follow-up, lacuna conhecida);
-- `## O que pode quebrar`: quem ou o que a mudança toca, e por que é seguro ou arriscado; em CRITICA, o fato de segurança e o degrau de prova;
-- `## Verificação`: cada linha um caminho real e o resultado (gates, testes novos, condução na aplicação com o caminho da evidência); número de performance com unidade, antes e depois.
+- `## Trade-offs`: o que a escolha custa e a alternativa descartada, quando houver uma;
+- `## Raio de impacto`: quem ou o que a mudança toca, e por que é seguro ou arriscado; vem da skill `blast-radius` quando ela rodou, com o fato de segurança e o degrau de prova;
+- `## Verificação`: cada linha um comando real e o resultado (gates, testes novos, condução na aplicação com o caminho da evidência); número de performance com unidade, antes e depois (obrigatória).
 
-Logs, tabelas de achados e listas de arquivos vão para o relatório, não para o PR.
+Logs longos, tabelas de achados e listas de arquivos vão para o relatório ou para um comentário do PR com link, não para o corpo.
 
-Conferir o corpo com `node ${CLAUDE_PLUGIN_ROOT}/scripts/slop-check.mjs <arquivo>` (skill `unslop`) e abrir com `gh pr create --title "<título do commit principal>" --body-file <arquivo na pasta temporária>` e rotular com o nível de risco do `classify-diff.sh` (`--label risco:<trivial|simples|complexa|critica>`): o rótulo decide quantas aprovações humanas o PR exige e se ele pode entrar sozinho quando os checks ficarem verdes (workflow `merge-por-risco`).
+Commits pequenos e ordenados, cada um podendo virar PR sozinho. Correção de um commit que ainda não foi para o remoto vai com `--amend` (ou `fixup` e rebase local) no commit a que pertence; depois do push, commit novo.
+
+O PR abre em draft (`gh pr create --draft`) enquanto houver verificação pendente (revisão pesada pendente, lacuna de lente, fato de segurança não provado, CI ainda não rodado na branch); sai de draft quando a pendência fecha. Aqui o wstack difere de propósito do fluxo que abre direto para merge.
+
+Conferir o corpo com `node ${CLAUDE_PLUGIN_ROOT}/scripts/slop-check.mjs --pr <arquivo>` (skill `unslop`): além dos padrões de texto, ele recusa seção fora da lista, fora de ordem, repetida ou vazia, a falta de Por quê ou Verificação, e corpo acima de 40 linhas com texto. Abrir com `gh pr create --title "<título do commit principal>" --body-file <arquivo na pasta temporária>` e rotular com o nível de risco do `classify-diff.sh` (`--label risco:<trivial|simples|complexa|critica>`): o rótulo decide quantas aprovações humanas o PR exige e se ele pode entrar sozinho quando os checks ficarem verdes (workflow `merge-por-risco`).
 
 Antes de abrir, conferir se a branch já tem PR aberto (`gh pr list --head <branch> --state open`): se tiver, atualizar a descrição dele em vez de abrir outro. Depois de abrir, conferir o que o GitHub recebeu (`gh pr view <branch> --json url,headRefOid,baseRefName`): o `headRefOid` precisa ser o SHA verificado, e a base, a pretendida; divergência é reportada, não corrigida às cegas. O resultado da CI do GitHub é reportado separado das checagens locais.
 

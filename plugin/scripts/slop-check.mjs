@@ -4,14 +4,20 @@
 // de", "o mesmo" como pronome, emoji); aviso é palavra suspeita que só fica se disser algo concreto.
 // Ignora código entre crases, menção entre aspas duplas, blocos de código cercados e as linhas de rodapé do commit
 // (Co-Authored-By:, Refs: ...).
-// Uso: node slop-check.mjs <arquivo>
+// Uso: node slop-check.mjs [--pr] <arquivo>
+// --pr: o arquivo é o corpo de um pull request (skill commit, Pull request). Além dos padrões, confere as seções "## ":
+//   só as conhecidas, nesta ordem e sem repetir: Por quê, O que mudou, Escopo, Trade-offs, Raio de impacto, Verificação;
+//   Por quê e Verificação obrigatórias; seção sem conteúdo é erro; mais de 40 linhas com texto é erro. O rodapé de
+//   atribuição (da linha "🤖 Generated with" em diante) fica fora da conferência.
 // Saída: "<linha>: erro|aviso: <padrão> — <troca>", uma por ocorrência; o texto da linha não é impresso (o hook
 // script-allow aprova este script sem pedido, e o conteúdo de um arquivo protegido não pode sair por ele).
 // Código: 0 sem erro (avisos podem existir), 3 algum erro, 2 uso errado ou arquivo ilegível.
 import { readFileSync } from 'node:fs';
 
-const [file, extra] = process.argv.slice(2);
-if (!file || extra) { console.error('uso: slop-check.mjs <arquivo>'); process.exit(2); }
+const args = process.argv.slice(2);
+const pr = args[0] === '--pr';
+const [file, extra] = pr ? args.slice(1) : args;
+if (!file || extra || file.startsWith('--')) { console.error('uso: slop-check.mjs [--pr] <arquivo>'); process.exit(2); }
 let text;
 try { text = readFileSync(file, 'utf8'); } catch (e) { console.error(`slop-check: não foi possível ler: ${e.code ?? e.message}`); process.exit(2); }
 
@@ -47,7 +53,37 @@ const WARNINGS = [
 const TRAILER = /^(?:Co-Authored-By|Claude-Session|Signed-off-by|Refs|Closes|Fixes|BREAKING CHANGE|Reviewed-by):/i;
 
 let errors = 0, warnings = 0, fenced = false;
-text.split(/\r?\n/).forEach((raw, i) => {
+let lines = text.split(/\r?\n/);
+if (pr) {
+  // rodapé de atribuição do PR: fora dos padrões (tem emoji de propósito) e da contagem
+  const foot = lines.findIndex((l) => /^\s*🤖 Generated with/.test(l));
+  if (foot >= 0) lines = lines.slice(0, foot);
+  const SECTIONS = ['Por quê', 'O que mudou', 'Escopo', 'Trade-offs', 'Raio de impacto', 'Verificação'];
+  const err = (n, msg) => { console.log(`${n}: erro: ${msg}`); errors++; };
+  let last = -1, inFence = false;
+  const seen = new Set();
+  const heads = [];
+  lines.forEach((l, i) => {
+    if (/^\s*(```|~~~)/.test(l)) inFence = !inFence;
+    if (inFence) return;
+    const m = /^##\s+(.+?)\s*$/.exec(l);
+    if (!m || l.startsWith('###')) return;
+    heads.push(i);
+    const k = SECTIONS.indexOf(m[1]);
+    if (k < 0) err(i + 1, `seção desconhecida no PR — use só ${SECTIONS.join(', ')}`);
+    else if (seen.has(k)) err(i + 1, 'seção repetida no PR — juntar numa só');
+    else if (k < last) err(i + 1, `seção fora de ordem no PR — a ordem é ${SECTIONS.join(', ')}`);
+    if (k >= 0) { seen.add(k); last = Math.max(last, k); }
+  });
+  heads.forEach((h, j) => {
+    const end = j + 1 < heads.length ? heads[j + 1] : lines.length;
+    if (!lines.slice(h + 1, end).some((l) => l.trim())) err(h + 1, 'seção vazia no PR — tirar a seção');
+  });
+  for (const [k, name] of [[0, 'Por quê'], [5, 'Verificação']]) if (!seen.has(k)) err(1, `seção obrigatória ausente no PR: ## ${name}`);
+  const filled = lines.filter((l) => l.trim()).length;
+  if (filled > 40) err(1, `PR com ${filled} linhas de texto (máximo 40) — logs, tabelas e listas longas vão para o relatório`);
+}
+lines.forEach((raw, i) => {
   if (/^\s*(```|~~~)/.test(raw)) { fenced = !fenced; return; }
   if (fenced || TRAILER.test(raw.trim())) return;
   // código entre crases e menção entre aspas duplas ("este commit" citado como exemplo) não são uso

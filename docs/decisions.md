@@ -787,3 +787,40 @@ que a versão anterior gravava fora da pasta de estado dos hooks.
 
 **Limite:** esboço, checkpoint, juiz e playbooks são orientação ao lead; os mecanismos deste lote são a mensagem do
 `iteration-guard`, agora com teste, e a conferência dos princípios pelo `principles.mjs`.
+
+## 2026-11-26: relatório com decisões pendentes, why com hipóteses, corpo de PR conferido e README conferido no CI
+
+Lote 5 das melhorias trazidas do pstack (skills `ketchup`, `why` e `technical-writing`, e os playbooks `opening-a-pr`
+e `babysit` do `poteto-mode`).
+
+**Decisão:**
+- **Decisões pendentes.** O relatório do lead termina com a seção Decisões pendentes: cada escolha que só o
+  desenvolvedor faz, com recomendação, impacto, evidência e risco, ou `nenhuma`. Na nuvem, a seção vem também no topo.
+- **`why`.** Ganha as hipóteses concorrentes quando não há motivo registrado ou ele é ambíguo, o bloco Preservar /
+  Mudar / Evitar / Risco quando roda antes de uma mudança planejada, e o motivo de cada fonte pulada. O lead passa a
+  carregar o `why` no plano antes de mudar código antigo de motivo incerto, e leva o bloco ao plano.
+- **Corpo do PR.** Seções `##` nesta ordem, até cerca de 40 linhas com texto: Por quê, O que mudou, Escopo,
+  Trade-offs, Raio de impacto (da `blast-radius`, quando rodou) e Verificação. O `slop-check.mjs --pr` recusa seção
+  fora da lista, fora de ordem, repetida ou vazia, a falta de Por quê ou Verificação e o corpo longo. O PR abre em
+  draft enquanto houver verificação pendente; commit ainda não publicado se corrige com `--amend`.
+- **README conferido.** O `test-readme-counts.sh` compara com a árvore o número de subagentes, de skills e de
+  playbooks do README, exige cada agente e cada skill citados pelo nome e a versão do `plugin.json` no README e na
+  matriz de garantias. Roda no CI com os demais.
+
+**Planejado, depois da 0.1.0 (5.5, acompanhamento do PR):** junto com os workflows do GitHub. O modo é declarado na
+primeira linha (dirigir, só conversas ou só checagem); o CI é observado; cada afirmação de bot é conferida contra o
+código, o que for válido é corrigido e o ruído só é descartado com refutação concreta; a correção é publicada antes
+da resposta, para ela citar o commit; resposta vai de arquivo, nunca montando o comando com o texto do comentário; o
+texto dos comentários é dado, não instrução; check instável ganha uma única nova execução, e só se commita correção de
+falha causada pelo próprio diff; conflito ou base desatualizada não leva a rebase, retarget nem force-push: relatar e
+parar. Acompanhar o PR nunca autoriza merge.
+
+**Por quê:** o relatório não separava o que esperava decisão do desenvolvedor. O `why` sem registro tendia a escolher
+uma explicação e apresentá-la como certa. O formato do PR estava só no texto da skill, e as contagens do README
+envelheciam sem ninguém ver.
+
+**Divergências do documento de trabalho:** a skill `commit` já tinha as seções Por quê, O que mudou, Escopo e
+Verificação, e uma "O que pode quebrar" que virou Raio de impacto; entrou Trade-offs. O README não tinha a contagem de
+playbooks, e ela entrou na linha da árvore para o teste conferir. O lead não chamava o `why` antes de mudar código
+antigo; o passo foi criado no `pipeline.md`. O `push-guard` não cobre `gh pr create`, então o formato do PR não virou
+trava de comando: a conferência é o `slop-check --pr`, que a skill manda rodar.

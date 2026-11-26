@@ -47,6 +47,27 @@ printf 'senha=SEGREDO-123 este commit robusto\n' > "$work/s.txt"
 out=$(node "$script" "$work/s.txt" 2>&1)
 printf '%s' "$out" | grep -q 'SEGREDO' && fail 'conteúdo da linha apareceu na saída'
 
+# --pr: seções do corpo do PR na ordem da skill commit, com Por quê e Verificação, sem seção vazia, até 40 linhas
+prcheck() { # prcheck <caso> <código esperado> <padrão esperado | -> <texto>
+  printf '%s\n' "$4" > "$work/pr.txt"
+  local out rc; out=$(node "$script" --pr "$work/pr.txt" 2> /dev/null); rc=$?
+  [ "$rc" = "$2" ] || fail "--pr $1: código $rc, esperado $2 ($out)"
+  [ "$3" = - ] || grep -qF -- "$3" <<< "$out" || fail "--pr $1: sem '$3' ($out)"
+}
+ok=$'Lote 9.\n\n## Por quê\nO frete saía errado.\n\n## O que mudou\n- `Frete.Calcular` soma o peso.\n\n## Raio de impacto\nSó o checkout.\n\n## Verificação\n- 12 testes passam.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_x'
+prcheck 'no formato' 0 - "$ok"
+prcheck 'fora de ordem' 3 'seção fora de ordem' $'## Por quê\nx\n\n## Verificação\ny\n\n## O que mudou\nz'
+prcheck 'seção desconhecida' 3 'seção desconhecida' $'## Por quê\nx\n\n## Testes\ny\n\n## Verificação\nz'
+prcheck 'seção repetida' 3 'seção repetida' $'## Por quê\nx\n\n## Por quê\ny\n\n## Verificação\nz'
+prcheck 'seção vazia' 3 'seção vazia' $'## Por quê\nx\n\n## Escopo\n\n## Verificação\nz'
+prcheck 'sem Verificação' 3 'seção obrigatória ausente no PR: ## Verificação' $'## Por quê\nx\n\n## O que mudou\ny'
+prcheck 'longo' 3 'linhas de texto (máximo 40)' "$(printf '## Por quê\n'; for i in $(seq 1 40); do echo "linha $i"; done; printf '## Verificação\nok\n')"
+prcheck 'padrões continuam valendo' 3 'erro: autorreferência' $'## Por quê\nEste PR corrige o frete.\n\n## Verificação\nok'
+prcheck '### dentro de seção não conta' 0 - $'## Por quê\nx\n### Detalhe\ny\n\n## Verificação\nz'
+# sem --pr, as seções não são conferidas
+printf '## Testes\nx\n' > "$work/pr.txt"; node "$script" "$work/pr.txt" > /dev/null 2>&1; [ $? = 0 ] || fail 'sem --pr: conferiu as seções'
+node "$script" --pr > /dev/null 2>&1; [ $? = 2 ] || fail '--pr sem arquivo: código diferente de 2'
+
 node "$script" > /dev/null 2>&1; [ $? = 2 ] || fail 'sem argumento: código diferente de 2'
 node "$script" "$work/nao-existe.txt" > /dev/null 2>&1; [ $? = 2 ] || fail 'arquivo ausente: código diferente de 2'
 
