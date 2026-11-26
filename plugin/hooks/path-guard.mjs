@@ -60,8 +60,9 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const ROOTS_RE = `(?:${pluginRoots().map(escape).join('|')})`;
 const GUARD = [
   ['pasta do plugin wstack', new RegExp(`${ROOTS_RE}(?=$|[/\\s;&|)'"\`])`)],
-  // os marcadores .verify-ok e .session/checkpoint-ok-* fazem o Stop e o checkpoint pularem build e testes
-  ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|\.session\/checkpoint-ok)/i],
+  // os marcadores .verify-ok e .session/checkpoint-ok-* fazem o Stop e o checkpoint pularem build e testes, e a exceção
+  // verify-blocked.md libera o Stop: só com aprovação do desenvolvedor
+  ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|verify-blocked|\.session\/checkpoint-ok)/i],
   ['pasta .claude', /\.claude\/?(?=$|[\s;&|)'"`])/i],
   ['~/.claude.json', /\.claude\.json/i, true],
   ['.mcp.json', /\.mcp\.json/i],

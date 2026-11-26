@@ -21,6 +21,8 @@ expect() { # expect <ok|deny> <ferramenta> <caminho> [cwd]
     '{hook_event_name:"PreToolUse",tool_name:$t,cwd:$d,tool_input:({($k):$p, content:"x"})}')
   printf '%s' "$payload" | HOME=$work/home XDG_CONFIG_HOME='' CLAUDE_PROJECT_DIR=${PROJECT:-$repo} bash "$guard" > /dev/null 2>&1; rc=$?
   case $rc in 0) got=ok ;; 2) got=deny ;; *) got="rc=$rc" ;; esac
+  [ "$got" = ok ] && printf '%s' "$payload" | HOME=$work/home XDG_CONFIG_HOME='' CLAUDE_PROJECT_DIR=${PROJECT:-$repo} bash "$guard" 2> /dev/null \
+    | grep -q '"permissionDecision":"ask"' && got=ask
   [ "$got" = "$1" ] || { echo "FALHOU: esperado $1, obtido $got: $2 $3 (cwd ${4:-$repo})"; fails=$((fails + 1)); }
 }
 
@@ -30,6 +32,11 @@ mkdir -p "$repo/src" "$repo/sub"
 
 # livres: arquivos comuns, inclusive os que começam por .git no nome
 expect ok Write "$repo/src/a.cs"
+# a exceção de verificação libera o Stop: a gravação pede aprovação do desenvolvedor, por qualquer caminho
+expect ask Write "$repo/.claude/verify-blocked.md"
+expect ask Edit .claude/verify-blocked.md
+expect ask Write "$repo/sub/../.claude/verify-blocked.md"
+expect ok Write "$repo/.claude/outro.md"
 expect ok Edit src/a.cs
 expect ok Write "$repo/.gitignore"
 expect ok Write "$repo/.gitattributes"

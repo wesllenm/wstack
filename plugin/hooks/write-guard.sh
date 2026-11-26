@@ -13,6 +13,10 @@ fi
 verdict=$(printf '%s' "$input" | node "$(dirname "$0")/write-guard.mjs")
 case "$verdict" in
   OK) exit 0 ;;
+  ASK*)
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":%s}}\n' \
+      "$(printf '%s' "write-guard: ${verdict#ASK }" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.stringify(s)))')"
+    exit 0 ;;
   DENY*) deny "${verdict#DENY }" ;;
   *) deny "veredito ilegível" ;;
 esac

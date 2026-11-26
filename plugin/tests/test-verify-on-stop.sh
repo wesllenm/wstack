@@ -51,6 +51,11 @@ expect 2 build-excecao-velha-ignorada 'é de outra sessão'
 printf 'build quebrado antes da tarefa\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
 expect 0 build-excecao-da-sessao
 grep -q 'Motivo registrado: build quebrado antes da tarefa' "$work/out" || fail_msg 'build-excecao-da-sessao: motivo fora do systemMessage'
+# uso único: a exceção é consumida; o próximo encerramento (e o código editado depois) volta ao gate
+[ ! -e "$proj/.claude/verify-blocked.md" ] || fail_msg 'build-excecao-da-sessao: exceção não foi consumida'
+printf 'editado depois da exceção\n' >> "$proj/a.txt"
+expect 2 build-depois-da-excecao 'Verificação falhou'
+grep -q 'aprovação dele' "$work/err" || fail_msg 'build-depois-da-excecao: mensagem não diz que a exceção é do desenvolvedor'
 rm -f "$proj/.claude/verify-blocked.md"
 # SessionStart avisa quando a exceção existe
 printf 'algo\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
@@ -159,7 +164,7 @@ grep -q 'Motivo registrado: entrada do Stop sem session_id' "$work/out" || fail_
 grep -q 'head:' "$work/out" && fail_msg 'sem-session-id-com-excecao: a linha de âncora apareceu no motivo'
 # session_id fora do alfabeto fechado conta como ausente (vira caminho de arquivo)
 rm -f "$blk"
-RAW_INPUT='{"session_id":"../../x"}' expect 2 session-id-invalido 'não traz session_id'
+RAW_INPUT='{"session_id":"../../x"}' expect 2 session-id-invalido 'fora do formato esperado'
 rm -f "$blk"
 # a exceção não libera divergência de conteúdo: isso o agente corrige na linha
 printf -- '- t — pedidos: 1 — princípios: ok (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
