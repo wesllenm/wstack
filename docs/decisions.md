@@ -484,3 +484,22 @@ disponíveis e se o repositório é de cliente. Sem CLI, o padrão é não ligar
 **Por quê:** o `interrogate.mjs` só roda com `interrogate_cmd` no `risk.conf`, e o bootstrap não tocava nessa chave.
 O revisor de outro fornecedor ficava desligado em todo projeto sem que ninguém tivesse decidido isso. Mandar código
 para terceiros continua sendo decisão do projeto; o que muda é que ela passa a ser tomada e registrada.
+
+## 2026-11-26: Stop confere o conteúdo do Registro; interrogate falha fechado
+
+**Decisão (Stop):** com `transcript_path` na entrada (campo comum dos hooks, documentado), o gate de aprendizado roda o
+`principles.mjs --cited` sobre a lista de `princípios:` da linha de Registro e o `permission-asks.mjs` sobre a
+transcrição da sessão e dos subagentes (`<sessão>/subagents`). Bloqueia skill citada que não foi carregada e
+`pedidos:` ausente ou menor que a contagem da transcrição. Isso substitui a decisão do mesmo dia que conferia só a
+presença do campo.
+
+**Por quê:** a conferência só de texto passava com `princípios: ok`. Agora o gate roda o mesmo script que o fechamento
+manda rodar, e a garantia deixa de depender do modelo. `pedidos:` é conferido por baixo e não por igualdade, porque a
+transcrição pode estar atrasada em relação ao turno atual, o que só diminui a contagem; igualdade bloquearia por atraso.
+
+**Decisão (interrogate):** quando nenhum modelo responde no formato, a saída é `falhou: <modelo — motivo>; ...` com
+código 4, nunca `sem achados`. Na CRITICA isso bloqueia o commit até o desenvolvedor decidir; na COMPLEXA vai como
+pendência. Pasta de saída sem escrita sai 2 antes de chamar os modelos.
+
+**Por quê:** um modelo que estourava o prazo virava "sem achados", e um interrogatório que não aconteceu passava por
+um que não achou nada.

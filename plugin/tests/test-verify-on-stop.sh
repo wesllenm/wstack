@@ -22,7 +22,10 @@ novo() { # novo <linha do risk.conf>...
   printf 'x\n' > "$proj/a.txt"; gitc add -A; gitc commit -qm base
   gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
 }
-stop() { printf '{"session_id":"s1"}' | CLAUDE_PROJECT_DIR=$proj bash "$hook" > "$work/out" 2> "$work/err"; echo $?; }
+stop() { # com TRANSCRIPT, a entrada traz transcript_path, como o Claude Code manda ao Stop
+  jq -cn --arg t "${TRANSCRIPT:-}" '{session_id:"s1"} + (if $t == "" then {} else {transcript_path:$t} end)' |
+    CLAUDE_PROJECT_DIR=$proj bash "$hook" > "$work/out" 2> "$work/err"; echo $?
+}
 expect() { # expect <código> <caso> [texto que o stderr precisa ter]
   local rc; rc=$(stop)
   [ "$rc" = "$1" ] || { echo "FALHOU [$2]: esperado código $1, obtido $rc: $(head -c 300 "$work/err")"; fails=$((fails + 1)); return; }
@@ -66,6 +69,36 @@ printf -- '- registro — princípios: nenhum (carregadas: 0)\n' >> "$proj/docs/
 expect 0 aprendizado-principios-pendente
 gitc commit -qam registro-principios
 expect 0 aprendizado-registrado
+# conteúdo dos campos contra a transcrição: princípios só de skill carregada; pedidos não abaixo dos da transcrição
+tr=$work/sessao.jsonl
+{
+  jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"s",name:"Skill",input:{skill:"wstack:tdd"}}]}}'
+  jq -cn '{type:"user",message:{role:"user",content:[{type:"tool_result",tool_use_id:"s",content:"ok"}]}}'
+  jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"b",name:"Bash",input:{command:"ls .claude/hooks"}}]}}'
+  jq -cn --arg o '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"path-guard: trava"}}' \
+    '{type:"attachment",uuid:"u1",attachment:{type:"hook_success",hookName:"PreToolUse:Bash",hookEvent:"PreToolUse",toolUseID:"b",stdout:$o,exitCode:0}}'
+} > "$tr"
+gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
+printf 'codigo2\n' >> "$proj/a.txt" && gitc commit -qam codigo2
+printf -- '- t — princípios: ok (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 2 principios-conteudo-falso 'NÃO CARREGADA: ok'
+expect 0 principios-sem-transcricao-so-campo
+sed -i '$d' "$proj/docs/review-calibration.md"
+printf -- '- t — pedidos: 1 — princípios: security (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 2 principios-skill-nao-carregada 'NÃO CARREGADA: security'
+sed -i '$d' "$proj/docs/review-calibration.md"
+printf -- '- t — pedidos: 0 — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 2 pedidos-abaixo 'a transcrição tem 1 pedido'
+sed -i '$d' "$proj/docs/review-calibration.md"
+printf -- '- t — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 2 pedidos-ausente "registrado 'ausente'"
+sed -i '$d' "$proj/docs/review-calibration.md"
+printf -- '- t — pedidos: 1 (path-guard 1) — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 0 campos-conferem
+sed -i '$d' "$proj/docs/review-calibration.md"
+printf -- '- t — pedidos: 1 — princípios: nenhum (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 0 principios-nenhum
+gitc commit -qam registro3
 # os arquivos que a escada de aprendizado grava (gotchas por área, complemento da rubrica) não contam como código:
 # commitados depois do registro não pedem outro, e pendentes não rodam o build
 mkdir -p "$proj/docs/gotchas" && printf -- '- fato\n' > "$proj/docs/gotchas/area.md" && printf '## Projeto\n' > "$proj/docs/review-rubric.md"
