@@ -110,7 +110,8 @@ grep -q 'teta-interrogate-2' "$work/saida.txt" && fail 'item incompleto: foi par
 printf '%s' "$err" | grep -q '1 sem campo obrigatório descartado' || fail "item incompleto: descarte não informado ($err)"
 
 conf "interrogate_cmd = iota bash $work/bin/oco.sh"
-run "$work/pacote.txt"; expect 'todos os itens incompletos' 3
+run "$work/pacote.txt"; expect 'todos os itens incompletos' 4
+grep -q '^falhou: iota — ' "$work/saida.txt" || fail 'todos os itens incompletos: saída sem "falhou:"'
 
 conf "interrogate_cmd = kapa bash $work/bin/pontuado.sh"
 run "$work/pacote.txt"; expect '"sem achados" pontuado' 0
@@ -127,11 +128,24 @@ printf '%s' "$err" | grep -q 'gama — saiu com código 1' || fail 'um modelo fa
 
 conf "interrogate_cmd = delta bash $work/bin/lento.sh" 'interrogate_timeout = 1'
 inicio=$SECONDS
-run "$work/pacote.txt"; expect 'prazo esgotado' 3
+run "$work/pacote.txt"; expect 'prazo esgotado' 4
+grep -q '^falhou: delta — esgotou o prazo' "$work/saida.txt" || fail 'prazo esgotado: saída sem "falhou:"'
+grep -q 'sem achados' "$work/saida.txt" && fail 'prazo esgotado: falha virou "sem achados"'
 [ $((SECONDS - inicio)) -lt 4 ] || fail 'prazo esgotado: não matou o modelo no prazo'
 
 conf "interrogate_cmd = eps bash $work/bin/prosa.sh"
-run "$work/pacote.txt"; expect 'resposta fora do formato' 3
+run "$work/pacote.txt"; expect 'resposta fora do formato' 4
+
+# dois modelos, os dois falham: a saída nomeia os dois
+conf "interrogate_cmd = gama bash $work/bin/quebra.sh" "interrogate_cmd = eps bash $work/bin/prosa.sh"
+run "$work/pacote.txt"; expect 'todos os modelos falham' 4
+grep -q '^falhou: gama — .*; eps — ' "$work/saida.txt" || fail "todos os modelos falham: saída ($(cat "$work/saida.txt"))"
+
+# pasta da saída inexistente: código 2 antes de chamar os modelos, não exceção
+conf "interrogate_cmd = alfa bash $work/bin/ataca.sh"
+err=$(cd "$repo" && CLAUDE_PROJECT_DIR=$repo node "$script" "$work/pacote.txt" "$work/nao-existe/saida.txt" 2>&1 > /dev/null); code=$?
+expect 'pasta da saída inexistente' 2
+printf '%s' "$err" | grep -q 'pasta da saída sem escrita' || fail "pasta da saída inexistente: motivo ($err)"
 
 conf 'interrogate_cmd = Nome-Inválido bash x'
 run "$work/pacote.txt"; expect 'nome inválido' 2

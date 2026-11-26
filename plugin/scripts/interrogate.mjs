@@ -13,10 +13,14 @@
 //   interrogate_timeout = <segundos>     prazo por modelo (padrão 600)
 // Ligar é decisão do projeto: o pacote sai da máquina para o fornecedor do modelo (docs/decisions.md do projeto).
 // Só passam itens com categoria, severidade, local, trecho e cenário; prosa antes ou depois da lista é cortada.
+// Saída quando nenhum modelo respondeu dentro do formato: "falhou: <modelo — motivo>; ...", nunca "sem achados" (um
+// interrogatório que não aconteceu não pode passar por um que não achou nada).
 // Código: 0 todos responderam; 10 nada configurado; 3 algum modelo falhou, esgotou o prazo ou respondeu fora do
-// formato (a saída traz os que responderam); 2 uso errado.
+// formato, e outro respondeu (a saída traz os que responderam); 4 nenhum modelo respondeu (a saída é "falhou: ...");
+// 2 uso errado, pacote ilegível ou pasta de saída sem escrita.
 import { execFileSync, spawn } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { confValues } from '../hooks/risk-conf.mjs';
 
 const die = (code, msg) => { console.error(`interrogate: ${msg}`); process.exit(code); };
@@ -34,6 +38,10 @@ if (!models.length) { console.error('interrogate: nenhum interrogate_cmd no risk
 const tv = confValues('interrogate_timeout').at(-1);
 const timeoutS = tv === undefined ? 600 : Number(tv);
 if (!Number.isInteger(timeoutS) || timeoutS < 1) die(2, `interrogate_timeout inválido: ${tv}`);
+
+// A pasta da saída precisa existir e aceitar escrita antes de gastar a chamada aos modelos.
+try { accessSync(dirname(outPath), constants.W_OK); } catch (e) { die(2, `pasta da saída sem escrita: ${e.code ?? e.message}`); }
+const write = (p, text) => { try { writeFileSync(p, text); } catch (e) { die(2, `não foi possível gravar ${p}: ${e.code ?? e.message}`); } };
 
 let pkg;
 try { pkg = readFileSync(pkgPath, 'utf8'); } catch (e) { die(2, `não foi possível ler o pacote: ${e.code ?? e.message}`); }
@@ -125,9 +133,10 @@ function parse(text) {
 
 const results = await Promise.all(models.map(ask));
 const blocks = [];
+const failures = []; // "<modelo> — <motivo>"
 let failed = 0;
 for (const r of results) {
-  writeFileSync(`${outPath}.${r.name}.bruto`, r.out);
+  write(`${outPath}.${r.name}.bruto`, r.out);
   let status = r.problem;
   if (!status) {
     const p = parse(r.out);
@@ -138,7 +147,12 @@ for (const r of results) {
     else if (NONE.test(r.out)) status = 'sem achados';
     else { status = 'resposta fora do formato da review-rubric'; failed++; }
   } else failed++;
+  if (failed > failures.length) failures.push(`${r.name} — ${status}`);
   console.error(`interrogate: ${r.name} — ${status}`);
 }
-writeFileSync(outPath, blocks.length ? `${blocks.join('\n')}\n` : 'sem achados\n');
+if (failed === results.length) {
+  write(outPath, `falhou: ${failures.join('; ')}\n`);
+  process.exit(4);
+}
+write(outPath, blocks.length ? `${blocks.join('\n')}\n` : 'sem achados\n');
 process.exit(failed ? 3 : 0);

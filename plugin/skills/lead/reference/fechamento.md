@@ -65,7 +65,7 @@ Revisões:
 - lentes: review-simplicity (obrigatória); review-failures, review-domain — executada ou não aplicável — motivo
 - review-verifier (Opus) — candidatos: N — confirmados: N — plausíveis: N — refutados: N
 - review-critical (Opus) — executado ou não — motivo
-- interrogate — não configurado | não aplicável (nível) | modelo — candidatos: N — descartados na ancoragem: N — confirmados: N | falhou: motivo
+- interrogate — não configurado | não aplicável (nível) | modelo — candidatos: N — descartados na ancoragem: N — confirmados: N | falhou: modelos — motivo — decisão (CRITICA: commit esperou o desenvolvedor)
 - security-agent (Opus) — executado ou não aplicável
 - rodadas de correção: N
 Achados confirmados: id — severidade — categoria — arquivo:linha — destino (corrigido | recusado: motivo | não aplicável)
