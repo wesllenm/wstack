@@ -51,6 +51,9 @@ expect ask 'git status && git push -u origin chore/a'
 mkdir -p "$hermetic/.claude/.session" && printf 'verificação verde (sessão s2)\nhead: abc\n' > "$hermetic/.claude/.session/unverified-s2"
 printf 'checkpoint\n' > "$hermetic/.claude/.session/checkpoint-ok-x"
 expect deny 'git push -u origin chore/permissoes'
+out=$(payload 'git push -u origin feat/x' | bash "$guard" 2>&1 > /dev/null)
+grep -qF 'rm -f .claude/.session/unverified-s2' <<< "$out" || { echo "FALHOU: recusa sem o comando de destravar: $out"; fails=$((fails + 1)); }
+grep -q 'checkpoint-ok' <<< "$out" && { echo "FALHOU: comando de destravar apaga o checkpoint: $out"; fails=$((fails + 1)); }
 rm -f "$hermetic/.claude/.session/unverified-s2"
 expect ok 'git push -u origin chore/permissoes'
 printf 'verificação verde (sessão s1, HEAD abc)\n' > "$hermetic/.claude/.session/unverified"

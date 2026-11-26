@@ -83,7 +83,7 @@ function verdict(cmd, cwd) {
   if (pending) {
     const strict = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? R().STRICT.exec(cmd.trim()) : null;
     const onlyWip = strict && strict[2].trim().split(/ +/).every((x) => /:refs\/heads\/wip\/[A-Za-z0-9._-]+$/.test(x));
-    if (!onlyWip) return `DENY verificação pendente: um turno foi encerrado pela exceção de verificação (${pending}); o push espera um encerramento da mesma sessão com build e testes verdes; marcador de sessão encerrada, só o desenvolvedor apaga (.claude/.session/unverified-*), ou ele faz o push`;
+    if (!onlyWip) return `DENY verificação pendente: o push espera um encerramento da mesma sessão com build e testes verdes sobre a árvore limpa (turno encerrado pela exceção de verificação: ${pending}`;
   }
   if (joined !== cmd) return 'ASK barra no fim de linha num comando com push';
   const m = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? R().STRICT.exec(cmd.trim()) : null;
@@ -113,9 +113,13 @@ function unverified(cwd) {
   let names;
   try { names = existsSync(dir) ? readdirSync(dir).filter((n) => /^unverified(?:-|$)/.test(n)) : []; } catch { return 'pasta .claude/.session ilegível'; }
   if (!names.length) return '';
-  return names.map((n) => {
+  const reasons = names.map((n) => {
     try { return readFileSync(join(dir, n), 'utf8').split('\n')[0].slice(0, 200).trim() || n; } catch { return `${n} ilegível`; }
   }).join('; ');
+  // o comando de destravar vai na mensagem: marcador preso (commit da exceção reescrito por amend ou rebase, sessão
+  // encerrada, formato antigo) só o desenvolvedor tira, e o path-guard recusa o comando ao agente
+  const files = names.map((n) => `.claude/.session/${n}`).join(' ');
+  return `${reasons}). Para liberar sem nova verificação, o desenvolvedor roda fora do agente, na raiz do projeto: rm -f ${files}`;
 }
 
 // O que o push publica, da origem de cada refspec (antes do ":", ou o próprio nome) até o merge-base com

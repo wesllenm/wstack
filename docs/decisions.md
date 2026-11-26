@@ -622,3 +622,16 @@ passa, como nas outras travas por texto (ver Riscos aceitos em `docs/harness-cap
 - O verde sobre a árvore de trabalho apagava o marcador mesmo com o conserto sem commit, e o push levava o HEAD
   vermelho.
 - Sem aviso, o push recusado não tinha explicação.
+
+## 2026-11-26: o marcador preso diz como destravar
+
+**Decisão:** a recusa do `push-guard` e o aviso do `SessionStart` trazem o comando que apaga os marcadores
+(`rm -f .claude/.session/unverified-<sessão>`), para o desenvolvedor rodar fora do agente. O `Stop` verde sobre a
+árvore limpa, quando o HEAD gravado no marcador saiu do histórico (amend, rebase, reset), mantém o marcador e mostra o
+mesmo comando no `systemMessage`. Marcador sem a linha `head:` (repositório sem commit na hora da exceção) sai com o
+verde sobre a árvore limpa, sem a conferência de histórico.
+
+**Por quê:** depois de reescrever o commit da exceção, o marcador não sai mais naquela sessão, e o agente não pode
+apagá-lo. Sem o comando na mensagem, o primeiro caso vira investigação. Um script de destravar no plugin seria
+chamável pelo agente (o `path-guard` libera os scripts do plugin na raiz), então a mensagem traz o `rm`, que o
+`path-guard` recusa ao agente.
