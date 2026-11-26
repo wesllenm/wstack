@@ -53,15 +53,33 @@ expect 0 build-excecao-da-sessao
 grep -q 'Motivo registrado: build quebrado antes da tarefa' "$work/out" || fail_msg 'build-excecao-da-sessao: motivo fora do systemMessage'
 # uso único: a exceção é consumida; o próximo encerramento (e o código editado depois) volta ao gate
 [ ! -e "$proj/.claude/verify-blocked.md" ] || fail_msg 'build-excecao-da-sessao: exceção não foi consumida'
-[ -s "$proj/.claude/.session/unverified" ] || fail_msg 'build-excecao-da-sessao: sem o marcador de verificação pendente (segura o push)'
+mark=$proj/.claude/.session/unverified-s1
+[ -s "$mark" ] || fail_msg 'build-excecao-da-sessao: sem o marcador de verificação pendente (segura o push)'
+grep -q '^head: ' "$mark" || fail_msg 'build-excecao-da-sessao: marcador sem o HEAD que ele cobre'
 printf 'editado depois da exceção\n' >> "$proj/a.txt"
 expect 2 build-depois-da-excecao 'Verificação falhou'
 grep -q 'aprovação dele' "$work/err" || fail_msg 'build-depois-da-excecao: mensagem não diz que a exceção é do desenvolvedor'
-[ -e "$proj/.claude/.session/unverified" ] || fail_msg 'build-depois-da-excecao: encerramento que falhou apagou o marcador'
-# encerramento com todos os gates verdes apaga o marcador (e libera o push)
+[ -e "$mark" ] || fail_msg 'build-depois-da-excecao: encerramento que falhou apagou o marcador'
+# o fluxo do lead: commitar e encerrar. Árvore limpa não conta como verde: com o marcador, o build roda no commitado
+gitc add a.txt && gitc commit -qm 'código ainda vermelho'
+expect 2 arvore-limpa-com-marcador-roda-build 'Verificação falhou'
+[ -e "$mark" ] || fail_msg 'arvore-limpa-com-marcador-roda-build: árvore limpa apagou o marcador sem verificação'
+# encerramento com build e testes verdes apaga o marcador (e libera o push)
 sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
 expect 0 verde-depois-da-excecao
-[ ! -e "$proj/.claude/.session/unverified" ] || fail_msg 'verde-depois-da-excecao: marcador de verificação pendente não foi apagado'
+[ ! -e "$mark" ] || fail_msg 'verde-depois-da-excecao: marcador de verificação pendente não foi apagado'
+# sem comandos de verificação não há verde: o marcador fica (o desenvolvedor libera)
+printf 'x (sessão s1)\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$mark"
+sed -i 's/^verify_build = .*/verify_build = /' "$proj/.claude/risk.conf"
+expect 0 sem-comandos-marcador-fica
+[ -e "$mark" ] || fail_msg 'sem-comandos-marcador-fica: marcador apagado sem verificação'
+sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
+# marcador de outra sessão não é apagado pelo verde desta
+printf 'y (sessão s2)\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$proj/.claude/.session/unverified-s2"
+expect 0 verde-desta-sessao
+[ -e "$proj/.claude/.session/unverified-s2" ] || fail_msg 'verde-desta-sessao: apagou o marcador da sessão s2'
+[ ! -e "$mark" ] || fail_msg 'verde-desta-sessao: não apagou o marcador desta sessão'
+rm -f "$proj/.claude/.session/unverified-s2"
 rm -f "$proj/.claude/verify-blocked.md"
 # SessionStart avisa quando a exceção existe
 printf 'algo\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"
@@ -168,6 +186,7 @@ printf 'head: %s\n' "$(git -C "$proj" rev-parse HEAD)" >> "$blk"
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 sem-session-id-com-excecao
 grep -q 'Motivo registrado: entrada do Stop sem session_id' "$work/out" || fail_msg 'sem-session-id-com-excecao: motivo fora do systemMessage'
 grep -q 'head:' "$work/out" && fail_msg 'sem-session-id-com-excecao: a linha de âncora apareceu no motivo'
+[ -s "$proj/.claude/.session/unverified-sem-sessao" ] || fail_msg 'sem-session-id-com-excecao: sem o marcador unverified-sem-sessao'
 # session_id fora do alfabeto fechado conta como ausente (vira caminho de arquivo)
 rm -f "$blk"
 RAW_INPUT='{"session_id":"../../x"}' expect 2 session-id-invalido 'fora do formato esperado'
@@ -214,6 +233,8 @@ TRANSCRIPT=$tr expect 2 permission-asks-saida-vazia 'Não consegui verificar o c
 printf 'process.exit(2)\n' > "$broken/scripts/permission-asks.mjs"
 TRANSCRIPT=$tr expect 2 permission-asks-codigo-2 'saiu com código 2'
 hook=$hook_ok
+# as exceções acima deixaram marcadores; daqui em diante os casos esperam árvore sem pendência
+rm -f "$proj/.claude/.session/unverified-"*
 gitc commit -qam registro3
 # os arquivos que a escada de aprendizado grava (gotchas por área, complemento da rubrica) não contam como código:
 # commitados depois do registro não pedem outro, e pendentes não rodam o build

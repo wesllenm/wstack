@@ -31,8 +31,12 @@ mkdir -p "$proj/.claude/hooks" "$proj/.claude/skills/x" "$proj/src" "$work/fora"
 verdict() {
   local -a remote=(-u CLAUDE_CODE_REMOTE)
   [ -n "${REMOTE:-}" ] && remote=("CLAUDE_CODE_REMOTE=$REMOTE")
-  jq -cn --arg c "$1" --arg d "${VCWD:-$proj}" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
-    env "${remote[@]}" CLAUDE_PROJECT_DIR=$proj ${PROOT:+CLAUDE_PLUGIN_ROOT=$PROOT} bash "$hook" 2> /dev/null | jq -r '.hookSpecificOutput.permissionDecision // empty' 2> /dev/null
+  local out rc
+  out=$(jq -cn --arg c "$1" --arg d "${VCWD:-$proj}" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
+    env "${remote[@]}" CLAUDE_PROJECT_DIR=$proj ${PROOT:+CLAUDE_PLUGIN_ROOT=$PROOT} bash "$hook" 2> /dev/null); rc=$?
+  # exit 2 é deny (o hook nega sem JSON)
+  if [ "$rc" -eq 2 ]; then echo deny; return; fi
+  printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // empty' 2> /dev/null
 }
 expect() { # expect <livre|ask> <comando>
   local got; got=$(verdict "$2"); got=${got:-livre}
@@ -157,7 +161,7 @@ nuvem() { # nuvem <livre|ask> <comando>
   [ "$got" = "$1" ] || { echo "FALHOU (nuvem): esperado $1, obtido $got: $2 (cwd ${VCWD:-projeto})"; fails=$((fails + 1)); }
 }
 for t in .claude/hooks/push-guard.sh .claude/settings.json .claude/risk.conf .claude/scripts/checkpoint.sh .claude/cloud/setup.sh \
-  .claude/agents/x.md .claude/skills/lead/SKILL.md .claude/.verify-ok .claude/.session/checkpoint-ok-abc .mcp.json .gitignore \
+  .claude/agents/x.md .claude/skills/lead/SKILL.md .claude/.verify-ok .mcp.json .gitignore \
   .github/workflows/ci.yml .claude/; do
   nuvem livre "cp /tmp/x $t"
   nuvem livre "sed -i s/^/x/ $t"
@@ -171,6 +175,15 @@ for c in 'cp /dev/null .cl""aude/hooks/pre.sh' 'ls .claude' 'grep -rl ask .claud
   "cp /tmp/x $plug/hooks/push-guard.sh" "bash $plug/scripts/checkpoint.sh a 1 b && cp x $plug/hooks/push-guard.sh"; do
   nuvem livre "$c"
 done
+# o marcador de verificação pendente e a exceção seguram o push, que é o que a nuvem confere: lá também é deny
+for c in 'rm -f .claude/.session/unverified-s1' 'rm .claude/.session/*' 'find .claude/.session -delete' 'cp /tmp/x .claude/.session/checkpoint-ok-abc' \
+  'tee .claude/.session/unverified-s1' 'cd .claude/.session && ls unverified*' 'printf "sessão: x" > .claude/verify-blocked.md' \
+  'sed -i 1d .claude/verify-blocked.md'; do
+  nuvem deny "$c"
+done
+mkdir -p "$proj/.claude/.session"
+VCWD=$proj/.claude/.session nuvem deny 'rm -f unverified-s1'
+VCWD=$proj/.claude/.session nuvem deny 'rm -f ./*'
 VCWD=$proj/.claude/hooks nuvem livre 'cp a push-guard.sh'
 VCWD=$proj/.claude/skills/x nuvem livre 'ls'
 VCWD=$proj/.github/workflows nuvem livre 'cp a ci.yml'
@@ -241,7 +254,7 @@ globs=$(jq -r '.permissions.ask[], .permissions.deny[] | select(startswith("Edit
 while IFS= read -r g; do
   [ -n "$g" ] || continue
   sample=${g#./}; sample=${sample#\~/}; sample=${sample//\*\*/x}; sample=${sample//\*/x}
-  got=$(verdict "cp /tmp/x $sample"); [ "$got" = ask ] || { echo "FALHOU: glob do settings.json sem regra no path-guard: $g (amostra $sample)"; fails=$((fails + 1)); }
+  got=$(verdict "cp /tmp/x $sample"); [ "$got" = ask ] || [ "$got" = deny ] || { echo "FALHOU: glob do settings.json sem regra no path-guard: $g (amostra $sample)"; fails=$((fails + 1)); }
 done <<< "$globs"
 
 if [ "$fails" -eq 0 ]; then echo "test-path-guard: todos os casos passaram"; exit 0; fi

@@ -26,10 +26,18 @@ LEARN_FILE="docs/review-calibration.md"
 LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/gotchas" "docs/review-rubric.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
 
 BLOCKED=".claude/verify-blocked.md"
-UNVERIFIED=".claude/.session/unverified"
-# Encerramento com todos os gates verdes (código 0 sem exceção) apaga o marcador de verificação pendente
+# Marcador de verificação pendente (um por sessão, .claude/.session/unverified-<sessão>): o Stop grava ao liberar um
+# encerramento pela exceção, e o push-guard recusa o push enquanto existir qualquer um. Só sai quando o build e os
+# testes rodaram de verdade e passaram (verified=1), cobrindo o HEAD gravado nele (ancestral do HEAD atual). Árvore
+# limpa, carimbo antigo ou falta de comandos de verificação não contam como verde.
 exception_used=0
-trap 'rc=$?; [ "$rc" -eq 0 ] && [ "$exception_used" -eq 0 ] && rm -f "$UNVERIFIED"' EXIT
+verified=0
+clear_unverified() {
+  [ "$verified" -eq 1 ] && [ "$exception_used" -eq 0 ] && [ -f "$UNVERIFIED" ] || return 0
+  local mh; mh=$(sed -n 's/^head: //p' "$UNVERIFIED" | head -1)
+  if [ -z "$mh" ] || git merge-base --is-ancestor "$mh" HEAD 2> /dev/null; then rm -f "$UNVERIFIED"; fi
+}
+trap 'rc=$?; [ "$rc" -eq 0 ] && clear_unverified' EXIT
 STAMP=".claude/.verify-ok"
 CODE=(-- .)
 for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
@@ -40,6 +48,7 @@ sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\
 # o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
 raw_sid=$sid
 [[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || sid=""
+UNVERIFIED=".claude/.session/unverified-${sid:-sem-sessao}"
 
 # Telemetria do workflow: só se .claude/telemetry existir; nunca falha o hook nem grava conteúdo.
 emit() {
@@ -78,7 +87,7 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
   # O marcador segura o push (push-guard) até um Stop com todos os gates verdes, de qualquer sessão: na nuvem o agente
   # consegue gravar a exceção pelo Bash sem pedir, e a garantia fica no que sai da máquina.
   mkdir -p .claude/.session
-  printf '%s (sessão %s, HEAD %s)\n' "$1" "${sid:-?}" "$(git rev-parse --short HEAD 2> /dev/null)" > "$UNVERIFIED"
+  printf '%s (sessão %s)\nhead: %s\n' "$1" "${sid:-?}" "$(git rev-parse --verify -q HEAD)" > "$UNVERIFIED"
   exception_used=1
   rm -f "$BLOCKED"
   printf '{"systemMessage": "⚠ Turno encerrado sem %s, por exceção aprovada (consumida). Motivo registrado: %s"}\n' "$1" "$reason"
@@ -120,7 +129,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
       {
         echo "Aprendizado não registrado: há commit de código nesta sessão depois do último registro em $LEARN_FILE."
         echo "Faça o passo Aprendizado da skill lead (uma linha em Registro, mesmo que seja 'sem aprendizado') e tente encerrar de novo."
-        echo "Se esses commits não são desta sessão (troca de branch, commit manual), regrave $base_file com o HEAD atual."
+        echo "Se esses commits não são desta sessão (troca de branch, commit manual), peça ao desenvolvedor para regravar $base_file com o HEAD atual."
       } >&2
       exit 2
     fi
@@ -209,7 +218,8 @@ fi
 blocked_valid && blocked_exit 'verificação verde'
 
 # Gate 2: build, formato e testes no working tree atual, ignorando mudanças só em arquivos de aprendizado.
-[ -z "$(git status --porcelain "${CODE[@]}")" ] && exit 0
+# Árvore limpa dispensa a verificação, salvo com verificação pendente desta sessão: aí ela roda no que está commitado
+[ -z "$(git status --porcelain "${CODE[@]}")" ] && [ ! -f "$UNVERIFIED" ] && exit 0
 
 # Sem os comandos no risk.conf, ou enquanto o arquivo do projeto não existir, não há o que verificar.
 [ -n "$SOLUTION" ] && [ -n "$BUILD_CMD" ] && [ -n "$TEST_CMD" ] || exit 0
@@ -221,7 +231,8 @@ blocked_valid && blocked_exit 'verificação verde'
 untracked=$(git ls-files --others --exclude-standard "${CODE[@]}")
 fingerprint=$( { git diff HEAD "${CODE[@]}" 2> /dev/null; printf '%s\n' "$untracked"
   [ -z "$untracked" ] || printf '%s\n' "$untracked" | git hash-object --stdin-paths; } | git hash-object --stdin 2> /dev/null )
-if [ -n "$fingerprint" ] && [ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$fingerprint" ]; then
+# O carimbo é do diff contra o HEAD: com verificação pendente ele não prova nada (outro HEAD dá o mesmo diff)
+if [ -n "$fingerprint" ] && [ ! -f "$UNVERIFIED" ] && [ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$fingerprint" ]; then
   exit 0
 fi
 
@@ -240,5 +251,6 @@ fi
 
 rm -f "$log"
 [ -z "$fingerprint" ] || echo "$fingerprint" > "$STAMP"
+verified=1
 emit verification_passed
 exit 0

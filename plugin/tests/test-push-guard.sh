@@ -47,7 +47,13 @@ expect ok 'git push origin abc123:refs/heads/wip/permissoes-1'
 expect ok 'git push -u origin chore/a:chore/a'
 expect ask 'git status && git push -u origin chore/a'
 # verificação pendente (o Stop encerrou um turno pela exceção): push de branch recusado, checkpoint wip/ segue
-mkdir -p "$hermetic/.claude/.session" && printf 'verificação verde (sessão s1, HEAD abc)\n' > "$hermetic/.claude/.session/unverified"
+# um marcador por sessão: qualquer um deles segura o push
+mkdir -p "$hermetic/.claude/.session" && printf 'verificação verde (sessão s2)\nhead: abc\n' > "$hermetic/.claude/.session/unverified-s2"
+printf 'checkpoint\n' > "$hermetic/.claude/.session/checkpoint-ok-x"
+expect deny 'git push -u origin chore/permissoes'
+rm -f "$hermetic/.claude/.session/unverified-s2"
+expect ok 'git push -u origin chore/permissoes'
+printf 'verificação verde (sessão s1, HEAD abc)\n' > "$hermetic/.claude/.session/unverified"
 expect deny 'git push -u origin chore/permissoes'
 expect deny 'git status && git push -u origin chore/a'
 expect ok 'git push origin abc123:refs/heads/wip/permissoes-1'

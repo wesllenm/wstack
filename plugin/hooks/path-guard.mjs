@@ -87,6 +87,16 @@ const SECRET = [
   ['.claude/.credentials', /\.claude\/\.credentials/i],
   ['.nuget/NuGet', /\.nuget\/NuGet/i],
 ];
+// Recusas que valem também na nuvem, onde a trava de texto pede pouco (ninguém responde ao pedido): o marcador de
+// verificação pendente, que segura o push (pelo nome, por glob na pasta, ou rm/mv/find nela), e, só na nuvem, a exceção
+// de verificação, que fora dela pede aprovação pelo GUARD. Deny, não ask: na nuvem um pedido sem resposta trava a sessão.
+const LOCKED = [
+  ['marcador de verificação pendente (.claude/.session)', /\.claude\/\.session\/(?:unverified|[*?[])|\.claude\/\.session\b[\s\S]*\bunverified|\b(?:rm|mv|cp|find|rsync|truncate|unlink|shred|ln)\b[^\n;&|]*\.claude\/\.session/i, false],
+  ['exceção de verificação (.claude/verify-blocked.md)', /\.claude\/verify-blocked/i, true],
+];
+const SESSION_CWD = /^\.claude\/\.session(?:\/|$)/i;
+const SESSION_CWD_TEXT = /\bunverified|\b(?:rm|mv|cp|find|rsync|truncate|unlink|shred|ln)\b/i;
+
 // O script do plugin no começo do comando, pela pasta do plugin (ROOTS_RE, acima)
 const SCRIPT =new RegExp(`^(?:bash(?: -n)? |node )?${ROOTS_RE}/(?:scripts|hooks|cloud)/[A-Za-z0-9._-]+(?=\\s|$)`);
 // Programa na posição de comando: começo, depois de ; & | ( { crase $( aspas, quebra de linha, palavra-chave do bash
@@ -131,7 +141,9 @@ export function verdict(cmd, cwd) {
   const here = real(cwd);
   // a pasta do comando, relativa à raiz do repositório dela (uma worktree em .claude/worktrees/ tem raiz própria)
   const rel = top ? relative(top, here).replace(/\\/g, '/') : here;
-  const guards = process.env.CLAUDE_CODE_REMOTE === 'true' ? GUARD.filter(([, , cloud]) => cloud) : GUARD;
+  const remote = process.env.CLAUDE_CODE_REMOTE === 'true';
+  const guards = remote ? GUARD.filter(([, , cloud]) => cloud) : GUARD;
+  if (SESSION_CWD.test(rel) && SESSION_CWD_TEXT.test(text)) return `DENY comando na pasta .claude/.session mexendo no estado dos hooks: só os hooks gravam ali`;
   const inCwd = hit(guards, rel) ?? hit(SECRET, rel);
   if (inCwd) return `ASK a pasta do comando é uma trava ou guarda segredo (${inCwd}): ${here}`;
   // o script do plugin no começo, rodando na raiz do projeto: o nome dele não conta como citação de trava (os
@@ -141,6 +153,8 @@ export function verdict(cmd, cwd) {
   const implicit = hit(IMPLICIT, text);
   if (implicit) return `ASK ${implicit} muda config que executa programa ou mostra credencial sem citar o caminho`;
   if (READONLY.test(text)) return '';
+  const locked = LOCKED.find(([, re, cloudOnly]) => (!cloudOnly || remote) && re.test(text));
+  if (locked) return `DENY o comando mexe em ${locked[0]}: só os hooks (ou o desenvolvedor, fora do agente) gravam ali`;
   const guard = hit(guards, text);
   if (guard) return `ASK o comando cita uma trava do harness (${guard}): no modo automático o Claude Code não aplica o ask de Edit a comandos de terminal`;
   return '';

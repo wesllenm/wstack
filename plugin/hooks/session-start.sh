@@ -27,8 +27,12 @@ fi
 # Exceção de verificação esquecida: ela só vale para a sessão que a gravou (linha "sessão: <id>"), mas o arquivo parado
 # confunde e esconde o motivo; avisar para ler e apagar ao retomar.
 if [ -f .claude/verify-blocked.md ]; then
-  echo "AVISO: .claude/verify-blocked.md existe (exceção de verificação de uma sessão anterior: vale só para a sessão que a gravou). Ler o motivo e apagar o arquivo ao retomar."
+  echo "AVISO: .claude/verify-blocked.md existe (exceção de verificação de uma sessão anterior: vale só para a sessão que a gravou). Ler o motivo e pedir ao desenvolvedor para apagar o arquivo."
 fi
+# Marcador de verificação pendente de outra sessão: segura o push de todas, e só a sessão dele (verde) ou o desenvolvedor o tira
+for f in .claude/.session/unverified*; do
+  [ -f "$f" ] && echo "AVISO: verificação pendente em $f ($(head -1 "$f" | cut -c1-200)): o push de branch fica recusado até a sessão dele encerrar com build e testes verdes, ou o desenvolvedor apagar o arquivo."
+done
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 [[ $sid =~ ^[A-Za-z0-9_-]+$ ]] || exit 0

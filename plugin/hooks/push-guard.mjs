@@ -13,7 +13,7 @@
 // recusadas, e o ccr-<id>-<id> da nuvem da Anthropic e o wip/ do checkpoint são embutidos. Valor fora do alfabeto fechado é
 // ignorado e nunca entra numa regex; sem nenhum prefixo válido, só o ccr- e o wip/ passam sem pedir.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { foreignRepo, git, left, projectRepo } from './git-repo.mjs';
 import { commitOf, defaultBranches, exactRefCommit, list, protectedChanged } from './protected-paths.mjs';
@@ -76,14 +76,14 @@ function verdict(cmd, cwd) {
   if (!/\bpush\b/.test(joined)) return 'OK';
   const v = scan(cmd, cwd);
   if (v.startsWith('DENY')) return v;
-  // Turno encerrado pela exceção de verificação (o Stop grava .claude/.session/unverified; só um Stop com todos os gates
-  // verdes o apaga): nada sem verificação sai num push que vira PR. Fica o checkpoint wip/, que não vira PR. Recusa,
+  // Turno encerrado pela exceção de verificação (o Stop grava .claude/.session/unverified-<sessão>; só um Stop da mesma
+  // sessão em que o build e os testes rodaram e passaram o apaga): nada sem verificação sai num push que vira PR. Fica o checkpoint wip/, que não vira PR. Recusa,
   // não pergunta: na nuvem ninguém responde, e a aprovação da exceção não é aprovação do push.
   const pending = unverified(cwd);
   if (pending) {
     const strict = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? R().STRICT.exec(cmd.trim()) : null;
     const onlyWip = strict && strict[2].trim().split(/ +/).every((x) => /:refs\/heads\/wip\/[A-Za-z0-9._-]+$/.test(x));
-    if (!onlyWip) return `DENY verificação pendente: um turno foi encerrado pela exceção de verificação (${pending}); o push espera um encerramento com todos os gates verdes, ou o desenvolvedor faz o push`;
+    if (!onlyWip) return `DENY verificação pendente: um turno foi encerrado pela exceção de verificação (${pending}); o push espera um encerramento da mesma sessão com build e testes verdes; marcador de sessão encerrada, só o desenvolvedor apaga (.claude/.session/unverified-*), ou ele faz o push`;
   }
   if (joined !== cmd) return 'ASK barra no fim de linha num comando com push';
   const m = /^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd) ? R().STRICT.exec(cmd.trim()) : null;
@@ -104,13 +104,18 @@ function verdict(cmd, cwd) {
 }
 
 // Exceção de verificação usada e ainda não seguida de verificação verde: o motivo (primeira linha do marcador), ou ''.
-// O marcador fica na raiz do projeto ($CLAUDE_PROJECT_DIR, ou a raiz git do cwd) e vale para qualquer sessão.
+// Os marcadores ficam na raiz do projeto ($CLAUDE_PROJECT_DIR, ou a raiz git do cwd), um por sessão.
 function unverified(cwd) {
   let root = process.env.CLAUDE_PROJECT_DIR;
   if (!root) { try { root = git(cwd, 'rev-parse', '--show-toplevel'); } catch { return ''; } }
-  const f = join(root, '.claude', '.session', 'unverified');
-  if (!existsSync(f)) return '';
-  try { return readFileSync(f, 'utf8').split('\n')[0].slice(0, 200).trim() || 'sem motivo registrado'; } catch { return 'marcador ilegível'; }
+  // um marcador por sessão (unverified-<sessão>): qualquer um segura o push, de qualquer sessão
+  const dir = join(root, '.claude', '.session');
+  let names;
+  try { names = existsSync(dir) ? readdirSync(dir).filter((n) => /^unverified(?:-|$)/.test(n)) : []; } catch { return 'pasta .claude/.session ilegível'; }
+  if (!names.length) return '';
+  return names.map((n) => {
+    try { return readFileSync(join(dir, n), 'utf8').split('\n')[0].slice(0, 200).trim() || n; } catch { return `${n} ilegível`; }
+  }).join('; ');
 }
 
 // O que o push publica, da origem de cada refspec (antes do ":", ou o próprio nome) até o merge-base com
