@@ -91,6 +91,22 @@ expect 0 verde-desta-sessao
 [ -e "$proj/.claude/.session/unverified-s2" ] || fail_msg 'verde-desta-sessao: apagou o marcador da sessão s2'
 [ ! -e "$mark" ] || fail_msg 'verde-desta-sessao: não apagou o marcador desta sessão'
 rm -f "$proj/.claude/.session/unverified-s2"
+# commit da exceção reescrito (amend): o HEAD gravado sai do histórico; o verde não apaga e diz como destravar
+gitc commit -q --allow-empty -m 'commit da exceção'
+printf 'z (sessão s1)\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$mark"
+gitc commit -q --amend --allow-empty -m 'commit da exceção, reescrito'
+expect 0 head-reescrito-marcador-preso
+[ -e "$mark" ] || fail_msg 'head-reescrito-marcador-preso: apagou o marcador de um HEAD fora do histórico'
+grep -qF "rm -f .claude/.session/unverified-s1" "$work/out" || fail_msg 'head-reescrito-marcador-preso: systemMessage sem o comando de destravar'
+jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'head-reescrito-marcador-preso: systemMessage não é JSON válido'
+# sem a linha head: (repositório sem commit na hora da exceção), vale o verde sobre a árvore limpa
+printf 'w (sessão s1)\n' > "$mark"
+printf 'mudou sem commit\n' >> "$proj/a.txt"
+expect 0 sem-head-arvore-suja
+[ -e "$mark" ] || fail_msg 'sem-head-arvore-suja: apagou sem árvore limpa'
+gitc commit -qam 'sem head'
+expect 0 sem-head-verde
+[ ! -e "$mark" ] || fail_msg 'sem-head-verde: verde sobre a árvore limpa não apagou'
 rm -f "$proj/.claude/verify-blocked.md"
 # SessionStart avisa quando a exceção existe
 printf 'algo\nsessão: s1\n' > "$proj/.claude/verify-blocked.md"

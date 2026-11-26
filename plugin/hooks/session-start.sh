@@ -31,7 +31,7 @@ if [ -f .claude/verify-blocked.md ]; then
 fi
 # Marcador de verificação pendente de outra sessão: segura o push de todas, e só a sessão dele (verde) ou o desenvolvedor o tira
 for f in .claude/.session/unverified*; do
-  [ -f "$f" ] && echo "AVISO: verificação pendente em $f ($(head -1 "$f" | cut -c1-200)): o push de branch fica recusado até a sessão dele encerrar com build e testes verdes, ou o desenvolvedor apagar o arquivo."
+  [ -f "$f" ] && echo "AVISO: verificação pendente em $f ($(head -1 "$f" | cut -c1-200)): o push de branch fica recusado até a sessão dele encerrar com build e testes verdes, ou o desenvolvedor rodar, fora do agente: rm -f $f"
 done
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')

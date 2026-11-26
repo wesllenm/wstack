@@ -36,8 +36,12 @@ verified=0
 clear_unverified() {
   [ "$verified" -eq 1 ] && [ "$exception_used" -eq 0 ] && [ -f "$UNVERIFIED" ] || return 0
   [ -z "$(git status --porcelain "${CODE[@]}")" ] || return 0
+  # sem a linha head: (repositório sem commit na hora da exceção), vale o verde sobre a árvore limpa, já conferido acima
   local mh; mh=$(sed -n 's/^head: //p' "$UNVERIFIED" | head -1)
-  if [ -z "$mh" ] || git merge-base --is-ancestor "$mh" HEAD 2> /dev/null; then rm -f "$UNVERIFIED"; fi
+  if [ -z "$mh" ] || git merge-base --is-ancestor "$mh" HEAD 2> /dev/null; then rm -f "$UNVERIFIED"; return 0; fi
+  # verde, mas o HEAD da exceção saiu do histórico (amend, rebase, reset): o marcador fica preso e só o desenvolvedor o
+  # tira; dizer como, em vez de deixar o push recusado sem explicação
+  printf '{"systemMessage": "⚠ Build e testes passaram, mas o commit da exceção (%s) não está no histórico do HEAD (amend, rebase ou reset): a verificação pendente de %s não sai sozinha e o push de branch segue recusado. Para liberar, o desenvolvedor roda fora do agente, na raiz do projeto: rm -f %s"}\n' "$(printf '%s' "$mh" | tr -cd '0-9a-f' | cut -c1-12)" "$UNVERIFIED" "$UNVERIFIED"
 }
 trap 'rc=$?; [ "$rc" -eq 0 ] && clear_unverified' EXIT
 STAMP=".claude/.verify-ok"
