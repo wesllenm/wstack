@@ -13,6 +13,9 @@ ID:
 Escopo:
 Arquivos autorizados:
 Critérios de aceitação:
+Esboço da fatia (COMPLEXA e CRITICA): uso primeiro, depois as assinaturas derivadas dele
+  uso: <como o chamador usa a fatia: a requisição e a resposta, o comando, a mensagem>
+  assinaturas: <request, response, handler ou service, endpoint ou consumidor: tipos e métodos, corpos vazios>
 Testes:
 Testes existentes que podem ser alterados: nenhum | lista com motivo
 Comando de verificação:
@@ -26,7 +29,9 @@ Modelo:
 Ferramentas permitidas:
 ```
 
-O subagente retorna resumo, arquivos, testes, decisões, blockers, resultado e a lista do que criou fora do diff; quando roda em worktree, também o caminho, a branch, o SHA de partida e os commits que fez.
+**Esboço da fatia.** Em COMPLEXA e CRITICA o `lead` escreve o esboço antes do contrato: primeiro o uso (como o chamador usa a fatia, do ponto de vista de quem consome), depois os tipos e as assinaturas que saem dele, com corpos vazios que a implementação preenche. O `implementer` segue o esboço e sinaliza qualquer desvio no retorno (`desvio do esboço: <o quê> — por quê`), em vez de absorvê-lo em silêncio. Desvio que muda a assinatura pública ou o uso volta ao `lead` antes de seguir. Atrito que se repete na mesma área (o `iteration-guard` avisa) é sinal de esboço errado: descartá-lo e voltar ao plano, não remendar.
+
+O subagente retorna resumo, arquivos, testes, decisões, desvios do esboço, blockers, resultado e a lista do que criou fora do diff; quando roda em worktree, também o caminho, a branch, o SHA de partida e os commits que fez.
 
 Revisores nunca recebem a justificativa do implementer: só diff, contrato, critérios, resultados de teste e pontos de foco.
 

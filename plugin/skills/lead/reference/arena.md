@@ -12,11 +12,14 @@ A arena compara propostas independentes antes da aprovação única. Ela custa v
 
    Cada proposta volta neste formato: modelo ou contrato (tipos, assinaturas, payload); como atende a cada critério; o que fica difícil depois; riscos; o que só se decide rodando.
 3. **Protótipo só para o que só se decide rodando.** Quando um critério depende de fato observável (desempenho, ergonomia do contrato num teste, plano de execução), até dois `implementer` com `isolation: worktree`, a partir do HEAD commitado, com sprint contract de protótipo descartável: só o esqueleto e um teste que exercita o critério (`delegacao.md`). Protótipo não é integrado; a worktree sai na limpeza.
-4. **Comparar.** Uma tabela critério × proposta, cada célula com a evidência (trecho da proposta, resultado do protótipo). Escolher uma. Combinar partes de propostas diferentes só quando elas tocam invariantes diferentes; a combinação é uma proposta nova e passa pelos critérios de novo.
-5. **Levar ao plano.** O plano apresenta a tabela, a escolha e o porquê, e a aprovação única decide. A escolha aprovada vai para `docs/decisions.md` do projeto, com as alternativas descartadas.
+4. **Divergência demais reenquadra.** Se as propostas respondem a perguntas diferentes (cada uma resolveu outro problema), a pergunta estava mal posta: reescrevê-la com as restrições que faltaram e rodar o passo 2 de novo, uma vez. Na segunda vez, segue com o que veio.
+5. **Juiz independente.** Um `planner` novo, somente leitura, que não gerou nenhuma proposta, recebe a pergunta, os critérios com peso e as propostas (sem dizer qual postura gerou qual), pontua cada uma de 0 a 10 por critério com a evidência e recomenda uma.
+6. **Pontuação do `lead`, sem ver a do juiz.** O `lead` monta a própria tabela critério × proposta, cada célula com a nota e a evidência (trecho da proposta, resultado do protótipo), e escolhe uma antes de abrir a do juiz.
+7. **Comparar as duas.** Escolhas iguais: confirmada. Escolhas diferentes: o `lead` relê as propostas nos critérios em que as notas divergem e manda ao juiz a divergência para ele reler também; o plano mostra as duas tabelas, a divergência e a escolha final com o porquê. Combinar partes de propostas diferentes só quando elas protegem invariantes diferentes; a combinação é uma proposta nova e passa pelos critérios de novo, nas duas pontuações.
+8. **Levar ao plano.** O plano apresenta as tabelas, a escolha e o porquê, e a aprovação única decide. A escolha aprovada vai para `docs/decisions.md` do projeto, com as alternativas descartadas e as duas notas (do `lead` e do juiz).
 
 No relatório:
 
 ```text
-Arena: <pergunta> — propostas: N (posturas) — protótipos: N — escolhida: <proposta> — critério decisivo
+Arena: <pergunta> — propostas: N (posturas) — reenquadrada: não | sim (motivo) — protótipos: N — juiz: <proposta> (nota) — lead: <proposta> (nota) — escolhida: <proposta> — critério decisivo
 ```

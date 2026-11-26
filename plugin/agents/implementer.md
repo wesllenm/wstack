@@ -28,4 +28,6 @@ Saídas de teste, arquivos de conferência e scripts avulsos vão para a pasta t
 
 No retorno, liste tudo o que você criou fora do diff (arquivos, containers, branches, worktrees) para o `lead` limpar.
 
-Retorne resumo, arquivos, testes, decisões e blockers. Sinalize explicitamente qualquer incerteza — isso aciona `review-critical`.
+Quando o contrato trouxer o esboço da fatia (uso e assinaturas), implemente dentro dele. Se o código pedir outra assinatura, outro tipo ou outro uso, não absorva: siga só se for interno à fatia e liste no retorno como `desvio do esboço: <o quê> — por quê`; se mudar a assinatura pública ou o uso, pare e reporte como blocker.
+
+Retorne resumo, arquivos, testes, decisões, desvios do esboço e blockers. Sinalize explicitamente qualquer incerteza — isso aciona `review-critical`.

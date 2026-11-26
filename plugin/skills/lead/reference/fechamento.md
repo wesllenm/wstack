@@ -76,7 +76,7 @@ Calibração: nenhuma | categoria — refutados/recusados — proposta para Não
 Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do PR — critério do review-critical atendido
 Queries (query-plan): não aplicável | comando (arquivo:método) — veredito — evidência — referência oficial
 Decisões: nenhuma | aguardando aprovação
-Arena: não aplicável | pergunta — propostas — escolhida — critério decisivo
+Arena: não aplicável | pergunta — propostas — reenquadrada — juiz: proposta (nota) — lead: proposta (nota) — escolhida — critério decisivo
 Aprendizado: nenhum | aceitas: lição — destino | rejeitadas: lição — motivo | backlog: lição — mecanismo proposto (linha em Backlog de mecanismo); falha recorrente — onde foi promovida | proposta; correções na sessão: nenhuma | fato — degrau — aplicado | proposta | recusado; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
 Limpeza: removido / mantido (motivo) / preexistente aguardando decisão
 Riscos e limitações:
