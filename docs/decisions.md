@@ -503,3 +503,13 @@ pendência. Pasta de saída sem escrita sai 2 antes de chamar os modelos.
 
 **Por quê:** um modelo que estourava o prazo virava "sem achados", e um interrogatório que não aconteceu passava por
 um que não achou nada.
+
+## 2026-11-26: conferência do Registro no Stop falha fechada
+
+**Decisão:** na conferência contra a transcrição, o `Stop` só passa quando o `principles.mjs` sai 0 e o
+`permission-asks.mjs` sai 0 com a contagem. Qualquer outro código (script ausente, arquivo ilegível, uso errado, node
+ausente) bloqueia com "não consegui verificar". A transcrição ausente continua como aviso, não bloqueio.
+
+**Por quê:** só o código 3 bloqueava, e o `permission-asks.mjs` com saída vazia pulava a checagem: o gate passava
+justamente quando não conseguia conferir. Transcrição ausente é outro caso: acontece em Claude Code sem
+`transcript_path` e em execução manual, e bloquear ali travaria sessões legítimas.

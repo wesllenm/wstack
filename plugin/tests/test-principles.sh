@@ -15,8 +15,12 @@ trap 'rm -rf "$work"' EXIT
 fails=0
 fail() { echo "FALHOU: $1"; fails=$((fails + 1)); }
 
-use() { # use <ferramenta> <input JSON>: chamada de ferramenta do assistente
-  jq -cn --arg n "$1" --argjson i "$2" '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"t",name:$n,input:$i}]}}'
+n_use=0
+use() { # use <ferramenta> <input JSON>: chamada de ferramenta do assistente e o resultado bem-sucedido dela, como na
+  # transcrição real (Skill e Read só contam com resultado)
+  n_use=$((n_use + 1))
+  jq -cn --arg n "$1" --argjson i "$2" --arg id "t$n_use" '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:$id,name:$n,input:$i}]}}'
+  jq -cn --arg id "t$n_use" '{type:"user",message:{role:"user",content:[{type:"tool_result",tool_use_id:$id,content:"ok"}]}}'
 }
 user() { jq -cn --arg t "$1" '{type:"user",message:{role:"user",content:$t}}'; }
 said() { jq -cn --arg t "$1" '{type:"assistant",message:{role:"assistant",content:[{type:"text",text:$t}]}}'; }
@@ -121,6 +125,16 @@ node "$script" "$main" --cited 'tdd, security' > /dev/null; [ $? = 3 ] || fail '
 node "$script" "$main" --cited 'nenhum, tdd' > /dev/null; [ $? = 3 ] || fail '--cited nenhum junto de outro passou'
 node "$script" "$main" --cited '' > /dev/null; [ $? = 3 ] || fail '--cited vazio passou'
 node "$script" "$main" --cited tdd --report "$rel" > /dev/null 2>&1; [ $? = 2 ] || fail '--cited e --report juntos: código diferente de 2'
+
+# Skill sem resultado na transcrição (chamada interrompida) não conta como carregada
+jq -cn '{type:"assistant",message:{role:"assistant",content:[{type:"tool_use",id:"z1",name:"Skill",input:{skill:"wstack:ux"}}]}}' > "$work/sem-resultado.jsonl"
+out=$(node "$script" "$work/sem-resultado.jsonl" --agent explore)
+printf '%s\n' "$out" | grep '^carregadas:' | grep -qw ux && fail 'Skill sem resultado contou como carregada'
+# hífen sem espaço depois de uma skill carregada separa; o nome da skill com hífen continua inteiro
+printf 'Princípios aplicados: tdd-vermelho antes\n- query-plan-plano no banco\nReferências lidas: nenhuma\n' > "$rel"
+out=$(node "$script" "$main" --report "$rel"); code=$?
+[ "$code" = 0 ] || fail "hífen sem espaço: código $code ($out)"
+printf '%s\n' "$out" | grep -q '^citadas: query-plan, tdd$' || fail "hífen sem espaço: citadas erradas ($out)"
 
 printf 'Princípios aplicados: nenhum\nReferências lidas: nenhuma\n' > "$rel"
 node "$script" "$main" --report "$rel" > /dev/null; code=$?

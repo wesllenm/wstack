@@ -67,27 +67,28 @@ const refs = new Set();   // <skill>/<reference|playbooks>/<arquivo>.md
 const add = (skill, origin) => { if (skill && !loaded.has(skill)) loaded.set(skill, origin); };
 for (const s of preloads(agent)) add(s, `pré-carga de ${agent}`);
 
-// Chamada de ferramenta que falhou (tool_result com is_error) não conta: Skill recusada não carregou nada, Read que
-// falhou não leu. O id da chamada liga o tool_use ao resultado dele, no mesmo arquivo.
-function failedIds(entries) {
+// Skill e Read só contam com resultado bem-sucedido na transcrição (tool_result do mesmo id, sem is_error): chamada
+// recusada não carregou nada, e chamada sem resultado (interrompida) não se sabe se carregou. O id liga o tool_use ao
+// resultado dele, no mesmo arquivo.
+function okIds(entries) {
   const ids = new Set();
   for (const e of entries) {
     const content = e.message?.content;
     if (!Array.isArray(content)) continue;
-    for (const b of content) if (b?.type === 'tool_result' && b.is_error === true && b.tool_use_id) ids.add(b.tool_use_id);
+    for (const b of content) if (b?.type === 'tool_result' && b.is_error !== true && b.tool_use_id) ids.add(b.tool_use_id);
   }
   return ids;
 }
 
 function collect(entries) {
-  const failed = failedIds(entries);
+  const ok = okIds(entries);
   for (const e of entries) {
     const content = e.message?.content;
     const texts = typeof content === 'string' ? [content] : [];
     if (Array.isArray(content)) {
       for (const b of content) {
         if (b?.type === 'text' && e.message?.role === 'user') texts.push(String(b.text ?? ''));
-        if (b?.type !== 'tool_use' || failed.has(b.id)) continue;
+        if (b?.type !== 'tool_use' || ((b.name === 'Skill' || b.name === 'Read') && !ok.has(b.id))) continue;
         const input = b.input ?? {};
         if (b.name === 'Skill' && input.skill) add(short(input.skill), 'ferramenta Skill');
         if ((b.name === 'Agent' || b.name === 'Task') && input.subagent_type) {
@@ -151,7 +152,13 @@ if (principles === null) missing.push(['CAMPO AUSENTE', '"Princípios aplicados:
 for (const item of principles ?? []) {
   // travessão e meia-risca separam com ou sem espaço ("lead—motivo"); hífen só com espaço, porque nome de skill tem
   // hífen (query-plan)
-  const skill = short(item.split(/\s*[—–]\s*|\s+-\s+/)[0].replace(/`/g, ''));
+  let skill = short(item.split(/\s*[—–]\s*|\s+-\s+/)[0].replace(/`/g, ''));
+  // hífen sem espaço ("tdd-motivo"): nome de skill também tem hífen, então só separa quando o começo é uma skill
+  // carregada e o resto não é (a mais longa vence: "query-plan-x" é query-plan, não query)
+  if (!loaded.has(skill)) {
+    const prefix = [...loaded.keys()].filter((k) => skill.startsWith(`${k}-`)).sort((a, b) => b.length - a.length)[0];
+    if (prefix) skill = prefix;
+  }
   cited.add(skill);
   if (!loaded.has(skill)) missing.push(['NÃO CARREGADA', `${skill} citada em Princípios aplicados`]);
 }
