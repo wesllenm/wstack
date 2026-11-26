@@ -98,6 +98,20 @@ TRANSCRIPT=$tr expect 0 campos-conferem
 sed -i '$d' "$proj/docs/review-calibration.md"
 printf -- '- t — pedidos: 1 — princípios: nenhum (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
 TRANSCRIPT=$tr expect 0 principios-nenhum
+# transcrição indisponível: aviso, não bloqueio (só a presença do campo vale)
+TRANSCRIPT=$work/nao-existe.jsonl expect 0 transcricao-ausente-aviso 'Aviso: transcrição da sessão indisponível'
+# script que não roda: bloqueia com "não consegui verificar" (cópia do plugin com o script trocado)
+broken=$work/plugin-quebrado
+cp -r "$(dirname "$hook")/.." "$broken"
+printf 'process.exit(1)\n' > "$broken/scripts/principles.mjs"
+hook_ok=$hook; hook=$broken/hooks/verify-on-stop.sh
+TRANSCRIPT=$tr expect 2 principles-quebrado 'Não consegui verificar o campo princípios:'
+cp "$(dirname "$hook_ok")/../scripts/principles.mjs" "$broken/scripts/principles.mjs"
+printf 'process.exit(0)\n' > "$broken/scripts/permission-asks.mjs"
+TRANSCRIPT=$tr expect 2 permission-asks-saida-vazia 'Não consegui verificar o campo pedidos:'
+printf 'process.exit(2)\n' > "$broken/scripts/permission-asks.mjs"
+TRANSCRIPT=$tr expect 2 permission-asks-codigo-2 'saiu com código 2'
+hook=$hook_ok
 gitc commit -qam registro3
 # os arquivos que a escada de aprendizado grava (gotchas por área, complemento da rubrica) não contam como código:
 # commitados depois do registro não pedem outro, e pendentes não rodam o build

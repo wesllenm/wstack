@@ -80,29 +80,47 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
     # O conteúdo do campo, conferido contra a transcrição da sessão (transcript_path da entrada do Stop; os subagentes
     # ficam em <sessão>/subagents): cada skill de "princípios:" precisa ter sido carregada (principles.mjs --cited), e
     # "pedidos:" não pode ser menor que os pedidos de hook da transcrição (permission-asks.mjs). Menor, e não diferente:
-    # a transcrição pode estar atrasada em relação ao turno atual, o que só diminui a contagem. Sem transcrição ou sem
-    # node, só o campo é conferido (Claude Code antigo, execução manual).
+    # a transcrição pode estar atrasada em relação ao turno atual, o que só diminui a contagem.
+    # Falha fechada: script que não roda ou sai com código inesperado bloqueia com "não consegui verificar". Só a
+    # transcrição ausente (Claude Code sem transcript_path, execução manual, arquivo que não existe) fica como aviso,
+    # porque bloquear ali travaria sessões legítimas; nesse caso vale só a presença do campo, conferida acima.
+    unverified() { # unverified <o que> <detalhe>: bloqueia por não conseguir conferir
+      emit learning_blocked
+      {
+        echo "Não consegui verificar o campo $1 da linha de Registro contra a transcrição da sessão: $2"
+        echo "Corrija a causa (node, o script do plugin, a transcrição) e tente encerrar de novo; se for do ambiente, registre em .claude/verify-blocked.md."
+      } >&2
+      exit 2
+    }
     transcript=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{process.stdout.write(String(JSON.parse(d).transcript_path??""))}catch{}})' 2> /dev/null)
     transcript=${transcript/#\~/$HOME}
-    if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+    if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
+      emit registry_unverified
+      echo "Aviso: transcrição da sessão indisponível (${transcript:-sem transcript_path}); os campos princípios: e pedidos: foram conferidos só pela presença." >&2
+    else
       scripts="$(cd "$(dirname "$0")/.." && pwd)/scripts"
       subdir="${transcript%.jsonl}/subagents"
       sub=(); [ -d "$subdir" ] && sub=("$subdir")
       line=$(grep 'princípios:' <<< "$added" | tail -1)
       cited=$(sed -e 's/.*princípios:[[:space:]]*//' -e 's/[[:space:]]*(.*//' -e 's/[[:space:]]*—.*//' <<< "$line")
       out=$(node "$scripts/principles.mjs" "$transcript" "${sub[@]}" --cited "$cited" 2>&1); rc=$?
-      if [ "$rc" -eq 3 ]; then
-        emit learning_blocked
-        {
-          echo "O campo princípios: da linha de Registro não confere com a transcrição da sessão:"
-          grep '^NÃO CARREGADA\|^CAMPO AUSENTE' <<< "$out"
-          echo "Cite só skill carregada nesta sessão (ou 'nenhum'), na forma que o principles.mjs devolve; não carregue a skill agora só para citá-la."
-        } >&2
-        exit 2
-      fi
+      case "$rc" in
+        0) ;;
+        3)
+          emit learning_blocked
+          {
+            echo "O campo princípios: da linha de Registro não confere com a transcrição da sessão:"
+            grep '^NÃO CARREGADA\|^CAMPO AUSENTE' <<< "$out"
+            echo "Cite só skill carregada nesta sessão (ou 'nenhum'), na forma que o principles.mjs devolve; não carregue a skill agora só para citá-la."
+          } >&2
+          exit 2 ;;
+        *) unverified 'princípios:' "principles.mjs saiu com código $rc: $(tail -1 <<< "$out")" ;;
+      esac
       registered=$(grep -o 'pedidos:[[:space:]]*[0-9]\+' <<< "$line" | grep -o '[0-9]\+' | tail -1)
-      asks=$(node "$scripts/permission-asks.mjs" "$transcript" "${sub[@]}" 2> /dev/null | sed -n '1s/^pedidos: \([0-9]\+\).*/\1/p')
-      if [ -n "$asks" ] && { [ -z "$registered" ] || [ "$registered" -lt "$asks" ]; }; then
+      out=$(node "$scripts/permission-asks.mjs" "$transcript" "${sub[@]}" 2>&1); rc=$?
+      asks=$(sed -n '1s/^pedidos: \([0-9]\+\).*/\1/p' <<< "$out")
+      [ "$rc" -eq 0 ] && [ -n "$asks" ] || unverified 'pedidos:' "permission-asks.mjs saiu com código $rc: $(tail -1 <<< "$out")"
+      if [ -z "$registered" ] || [ "$registered" -lt "$asks" ]; then
         emit learning_blocked
         {
           echo "O campo pedidos: da linha de Registro está ausente ou abaixo da transcrição: registrado '${registered:-ausente}', a transcrição tem $asks pedido(s) de hook."
