@@ -98,6 +98,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.13: a skill lead vira núcleo com leitura sob demanda (`reference/`) e playbooks por tipo de tarefa; entram as
   skills `correct`, `how`, `why` e `unslop`, a revisão por outro fornecedor (`interrogate.mjs`), a arena de design e os
   princípios citados no relatório (`principles.mjs`).
+- 0.0.14: o núcleo da skill lead cai de 6.926 para 4.939 palavras (`pipeline.md` e `fechamento.md` novos); o `Stop`
+  exige o campo `princípios:` na linha de Registro; o bootstrap pergunta se o projeto liga a revisão por outro
+  fornecedor; `interrogate.mjs` e `principles.mjs` ficam robustos ao texto de modelo (acentos, prosa, pontuação,
+  chamada que falhou).
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
