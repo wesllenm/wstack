@@ -227,7 +227,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 
 | Evento | Hook | O que faz |
 |---|---|---|
-| `PreToolUse` Edit/Write | `write-guard` | a ferramenta de escrita não grava em `.git`, na config do git nem na pasta do plugin |
+| `PreToolUse` Edit/Write | `write-guard` | a ferramenta de escrita não grava em `.git`, na config do git nem na pasta do plugin, e pede a sua aprovação para gravar a exceção do `Stop` (`.claude/verify-blocked.md`) |
 | `PreToolUse` Bash | `push-guard` | push só na forma exata, para branch de atividade, nunca na padrão; pede aprovação se publica caminho protegido |
 | | `path-guard` | pede aprovação para comando que cita trava (`settings.json`, `risk.conf`, `.git`, workflows, a pasta do plugin) ou segredo |
 | | `redirect-guard` | pede aprovação para `>` fora das formas fechadas |
