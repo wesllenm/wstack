@@ -184,6 +184,10 @@ sed -i '$d' "$proj/docs/review-calibration.md"
 printf -- '- t — pedidos: 1 (path-guard 1) — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
 TRANSCRIPT=$tr expect 0 campos-conferem
 sed -i '$d' "$proj/docs/review-calibration.md"
+# a linha completa no formato da skill lead, com a triagem das lições (aceitas, rejeitadas, backlog) no aprendizado:
+printf -- '- 2026-11-26 — t — SIMPLES — achados: 1 confirmados, 0 refutados, 0 recusados, 0 escaparam — aprendizado: aceitas 1 (gotcha), rejeitadas 1, backlog 1 (proposta (escada 2)) — pedidos: 1 (path-guard 1) — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+TRANSCRIPT=$tr expect 0 registro-com-triagem
+sed -i '$d' "$proj/docs/review-calibration.md"
 printf -- '- t — pedidos: 1 — princípios: nenhum (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
 TRANSCRIPT=$tr expect 0 principios-nenhum
 # transcrição indisponível: aviso, não bloqueio (só a presença do campo vale)

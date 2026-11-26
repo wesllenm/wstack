@@ -45,7 +45,7 @@ Na mesma hora, gravar o relatório num arquivo da pasta temporária e rodar `nod
 # Resultado
 
 Status: implementado | verificado | bloqueado | ativo
-Tipo: feature | bug | performance | refatoração | auditoria de testes | manutenção do aprendizado — playbook lido
+Tipo: feature | bug | performance | refatoração | auditoria de testes | manutenção do aprendizado | sem playbook — playbook lido
 
 Resumo:
 Objetivo e menor mudança: as duas linhas da primeira mensagem — entregue além delas: nada | item — motivo
@@ -77,7 +77,7 @@ Segunda opinião: não aplicável | sugestão de `/code-review ultra` antes do P
 Queries (query-plan): não aplicável | comando (arquivo:método) — veredito — evidência — referência oficial
 Decisões: nenhuma | aguardando aprovação
 Arena: não aplicável | pergunta — propostas — escolhida — critério decisivo
-Aprendizado: nenhum | falha recorrente — onde foi promovida | proposta; correções na sessão: nenhuma | fato — degrau — aplicado | proposta | recusado; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
+Aprendizado: nenhum | aceitas: lição — destino | rejeitadas: lição — motivo | backlog: lição — mecanismo proposto (linha em Backlog de mecanismo); falha recorrente — onde foi promovida | proposta; correções na sessão: nenhuma | fato — degrau — aplicado | proposta | recusado; linha adicionada em docs/review-calibration.md; feedback de PR: não lido | PRs #… — N comentários — escaparam: categorias — recusados: categorias; manutenção: não necessária | sugerida — motivo
 Limpeza: removido / mantido (motivo) / preexistente aguardando decisão
 Riscos e limitações:
 Follow-ups: candidatos de test-audit e itens fora do escopo

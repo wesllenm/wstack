@@ -253,7 +253,7 @@ O `review-verifier` devolve:
 - id: <id original; ids fundidos separados por vírgula>
   veredito: confirmado | plausível | refutado
   prova: <degrau 1 a 5, Degraus de prova>
-  execução: <comando rodado> → <trecho da saída> | não rodou: <motivo> | sem prova
+  execução: <comando rodado> → <trecho da saída> — VERIFICADO (reproduziu a falha) | NÃO VERIFICADO (não reproduziu: refutado por execução) | INCONCLUSIVO (não rodou ou não decide: motivo) | sem prova
   severidade final: bloqueante | importante | nit
   motivo: <uma ou duas linhas, com arquivo:linha; "refutado por execução" quando a prova não reproduziu>
   como provar: <teste ou execução que confirmaria, só para plausível>

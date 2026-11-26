@@ -4,8 +4,9 @@ description: >
   Registra na hora uma correção que o desenvolvedor fez ao agente no meio da sessão e propõe em qual degrau da
   escada de correção ela entra (código, análise estática, orientação, revisão ou registro). Carregar sempre que o
   desenvolvedor corrigir o que o agente fez ou ia fazer ("não é assim", "já falei", "use X, não Y", "de novo isso"),
-  ou quando ele chamar /correct.
-argument-hint: <a correção, nas palavras do desenvolvedor>
+  ou quando ele chamar /correct. Com o argumento "historico", procura no histórico do repositório os erros que se
+  repetem (reverts, correções, comentários de revisão) e sobe cada classe na escada.
+argument-hint: <a correção, nas palavras do desenvolvedor> | historico
 ---
 
 # Correct
@@ -49,6 +50,30 @@ Não conta: resposta a uma pergunta do plano, decisão nova de produto (é mudan
    Degrau: N — <destino> — aplicado | proposta para o relatório
    No trabalho em curso: <o que mudou | nada a mudar>
    ```
+
+## Regras e garantias
+
+O `CLAUDE.md` do projeto tem a seção Regras e garantias, uma tabela `regra | garantia | origem`. Garantia é `hook`, `lint`, `teste`, `revisão`, `texto` ou `impossível` (o tipo, a compilação ou um hook torna o erro irrepresentável). Toda correção que sobe de degrau atualiza a linha da regra, ou cria uma, com a origem (`correct AAAA-MM-DD`, ou o commit). Quando a garantia vira `impossível`, o texto da regra sai do `CLAUDE.md` (e de onde mais estiver escrito) e fica só a linha da tabela: regra que o código garante não precisa ser lida.
+
+## Modo histórico (`/correct historico`)
+
+A mesma escada aplicada ao que o repositório já errou, não à correção desta sessão. Tarefa própria, classificada pelo `lead` como as outras (a correção que ela aplica passa pelo pipeline do nível).
+
+1. **Fontes**, desde a última execução deste modo (data em `docs/review-calibration.md`, seção Backlog de mecanismo) ou dos últimos 90 dias: `git log --oneline --since=<data>`, reverts (`git log --grep='^Revert' --oneline`), commits `fix:`, comentários de revisão nos PRs (`gh pr list --state merged` e `gh pr view <n> --json reviews,comments`, como no Feedback externo do `aprendizado.md` da `lead`), `docs/review-calibration.md` (Registro, Totais e Backlog de mecanismo), `docs/gotchas/`, `CLAUDE.md` e os `MARCADOR` do `diff-smells.mjs --base <commit de partida> --text`. Sem `gh` autenticado, seguir sem PR e dizer isso.
+2. **Classes.** Um erro vira classe quando aparece duas vezes, em commits, PRs ou linhas diferentes. Ocorrência única fica como fato em `docs/gotchas/<área>.md`, sem escada.
+3. **Degrau.** Para cada classe, a escada dos Passos (item 4), parando no degrau mais alto que funciona; dizer numa frase por que cada degrau acima não serviu.
+4. **Prova contra o passado.** Toda checagem nova (degraus 1 e 2) precisa falhar num erro real do histórico: rodar a checagem no commit antigo (`git worktree add <pasta temporária> <sha>` ou `git stash` e checkout) e mostrar a falha. Checagem que não falha no caso real não corrige nada. O mesmo comando roda local e no CI: se só roda em um lugar, não é a checagem.
+5. **Um commit por correção**, cada um com a classe, a evidência e o commit antigo em que ela teria falhado.
+6. **Saída:**
+
+   ```text
+   Classe: <o erro, em uma linha> — ocorrências: <sha ou PR>, <sha ou PR>
+   Degrau: N — <destino> — por que não o de cima: <uma frase por degrau acima>
+   Prova: <comando> no commit <sha> → <falha mostrada>
+   Commit: <hash curto> | proposta (degrau 1 ou 2 sem aprovação)
+   ```
+
+O que não for aplicado agora (mecanismo sem aprovação, texto de skill do plugin) vai para a seção Backlog de mecanismo de `docs/review-calibration.md`, com a classe e as ocorrências, e para o relatório como proposta. A linha Regras e garantias de cada classe aplicada é atualizada no mesmo commit.
 
 ## No fim da tarefa
 

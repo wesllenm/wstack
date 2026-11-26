@@ -713,3 +713,37 @@ modelos ficou fora da `blast-radius`, como o documento pede.
 **Limite:** carregar a `blast-radius` no plano é orientação do `pipeline.md`; o `principles.mjs` confere que ela foi
 carregada só quando o Registro a cita. O mecanismo deste lote é o `map-staleness.mjs`, com teste, e o modelo da
 `verify-<app>`, conferido pelo `test-bootstrap.sh`.
+
+## 2026-11-26: aprendizado com histórico, exceções que vencem, regras e garantias, triagem e tarefa sem playbook
+
+Lote 3 das melhorias trazidas do pstack (skills `correct`, `reflect` e `figure-it-out`).
+
+**Decisão:**
+- **`/correct historico`.** Modo da skill `correct` sobre o histórico: reverts, commits `fix:`, comentários de revisão
+  dos PRs, `docs/review-calibration.md`, `docs/gotchas/`, `CLAUDE.md` e marcadores do `diff-smells.mjs`. Erro visto duas
+  vezes vira classe, cada classe sobe ao degrau mais alto que funciona, toda checagem nova falha num commit antigo real
+  (mostrado na saída) e roda igual local e no CI, e cada correção é um commit.
+- **Exceções com validade.** `allow_module`, `review_exclude` e `smell_exclude` só valem com `| vence: AAAA-MM-DD |
+  motivo: <texto>`. Sem data, data passada ou inválida, ou sem motivo, o leitor ignora a exceção (`conf-exception.mjs`,
+  usado pelo `path-guard`, pelo `review-dispatch.mjs` e pelo `diff-smells.mjs`) e o `SessionStart` avisa.
+- **Regras e garantias.** O `CLAUDE.md` do modelo ganha a tabela `regra | garantia | origem`; o `correct` atualiza a
+  linha quando a regra sobe de degrau, e a regra que vira `impossível` sai do texto.
+- **Triagem das lições.** Cada lição termina Aceita (texto do projeto agora), Rejeitada (com motivo) ou Backlog (deveria
+  virar hook, lint ou teste); o Backlog vai para a seção Backlog de mecanismo de `docs/review-calibration.md`, que o
+  `/correct historico` lê. O campo `aprendizado:` da linha de Registro traz as três contagens.
+- **Tipo "sem playbook".** Linha nova na tabela Tipo de tarefa e `playbooks/sem-playbook.md`: condição de pronto
+  testável com nível de rigor, unidades com a incógnita mais arriscada primeiro, linha de base antes da primeira, e cada
+  unidade com veredito VERIFICADO, NÃO VERIFICADO ou INCONCLUSIVO. O mesmo vocabulário vale para a linha `execução:` do
+  verificador e para o fato de segurança da `blast-radius`.
+
+**Por quê:** a escada de correção só via a correção feita na sessão, e o erro que voltava pelo histórico não subia. As
+exceções do `risk.conf` não venciam, então a liberação de uma ocasião virava permanente. Não se sabia quais regras eram
+garantidas por mecanismo. O aprendizado registrava lições sem separar o que deveria virar mecanismo.
+
+**Divergências do documento de trabalho:** o `classify-diff.sh` não tem exceção (ele só sobe o nível), então a validade
+foi para as chaves que afrouxam um gate de fato, nos scripts que as leem; o aviso ficou no `session-start.sh`. A
+triagem não mudou a forma da linha de Registro que o hook confere: ela entra no campo `aprendizado:`, que o hook não
+lê, e um teste confirma que a linha completa no formato novo passa.
+
+**Risco aceito:** `allow_module = dotnet` sem data deixa de valer na atualização, e as formas do dotnet voltam a pedir
+aprovação até o desenvolvedor acrescentar `| vence: ... | motivo: ...` (`docs/migracao.md`, 0.0.29).

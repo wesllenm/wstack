@@ -10,6 +10,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, posix } from 'node:path';
+import { validValues } from '../hooks/conf-exception.mjs';
 
 function die(code, msg) { console.error(`review-dispatch: ${msg}`); process.exit(code); }
 const argv = process.argv.slice(2);
@@ -48,7 +49,7 @@ if (existsSync(confPath)) {
       const r = /^(.+?)\s*->\s*(.+)$/.exec(value);
       if (!r) die(3, `review_rule sem "->": ${line}`);
       pathRules.push({ glob: r[1].trim(), file: r[2].trim() });
-    } else if (key === 'review_exclude') userExclude.push(value.trim());
+    } else if (key === 'review_exclude') userExclude.push(...validValues([value])); // exceção com validade
     else if (key === 'review_include') userInclude.push(value.trim());
     else if (key in conf) conf[key] = key === 'base' ? value.trim() : Number(value);
   }
