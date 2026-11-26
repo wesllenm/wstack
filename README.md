@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.17.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.18.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -139,7 +139,8 @@ fato 1), e cada sessão começa num contêiner novo; o setup roda a cada contêi
 
 Também funciona no terminal, no desktop ou na IDE: instalar o plugin com `/plugin marketplace add wesllenm/wstack` e
 `/plugin install wstack@wstack`, e seguir do passo 3. O setup script é só da nuvem; localmente, as ferramentas da stack
-são as da sua máquina.
+são as da sua máquina. Os hooks precisam de bash, git e node no PATH (no Windows, pelo Git Bash): sem o node, o `Stop`
+não consegue conferir o registro de aprendizado e bloqueia o encerramento depois de commit de código.
 
 ### Cobertura por stack
 
@@ -236,7 +237,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 | `TaskCompleted` | `checkpoint-tests` | idem, ao fechar uma tarefa |
 | `PostToolUse` edição | `edit-check` | lint e formatação do arquivo recém-editado |
 | | `iteration-guard` | lembra a regra das três tentativas a cada N edições sem commit |
-| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão |
+| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão; quando não consegue conferir (script, node ou entrada quebrados), bloqueia em vez de passar |
 | `SessionStart` | `session-start`, `sessions.sh`, `map-staleness`, `cloud-services` | versão em uso, registro da sessão, aviso de mapa de features velho, serviços da nuvem |
 | `SessionEnd` | `sessions.sh` | tira a sessão do registro |
 | `Notification` | `notify` | aviso do sistema operacional quando a sessão espera você |
