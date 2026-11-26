@@ -113,6 +113,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.18: o `Stop` deixa de pular a verificação por falta de ferramenta: a impressão digital vem do `git hash-object`
   (sem `sha1sum` nem `xargs` GNU, que o macOS padrão não tem), aviso do node não vira caminho de transcrição, e entrada
   sem `session_id` bloqueia o gate de aprendizado.
+- 0.0.19: no `Stop`, o `.claude/verify-blocked.md` libera o que o ambiente impediu de conferir (sem `session_id`,
+  script ou node quebrados), com o motivo visível ao desenvolvedor; divergência de conteúdo no Registro continua
+  bloqueando. Sem o HEAD do início da sessão, o gate de aprendizado avisa.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
