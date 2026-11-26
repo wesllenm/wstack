@@ -134,12 +134,42 @@ PATH="$work/node-falante:$PATH" TRANSCRIPT=$tr expect 2 node-com-aviso-confere '
 sed -i '$d' "$proj/docs/review-calibration.md"
 # sem session_id, com o gate adotado: bloqueia em vez de pular o gate de aprendizado
 RAW_INPUT='{"hook_event_name":"Stop"}' expect 2 sem-session-id 'não traz session_id'
+# problema de ambiente registrado em verify-blocked.md libera, com o motivo visível; sem isso o agente ficaria em loop
+blk=$proj/.claude/verify-blocked.md
+printf 'entrada do Stop sem session_id neste ambiente\n' > "$blk"
+RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 sem-session-id-com-excecao
+grep -q 'Motivo registrado: entrada do Stop sem session_id' "$work/out" || fail_msg 'sem-session-id-com-excecao: motivo fora do systemMessage'
+rm -f "$blk"
+# a exceção não libera divergência de conteúdo: isso o agente corrige na linha
+printf -- '- t — pedidos: 1 — princípios: ok (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
+printf 'qualquer coisa\n' > "$blk"
+TRANSCRIPT=$tr expect 2 excecao-nao-libera-conteudo 'NÃO CARREGADA: ok'
+rm -f "$blk"; sed -i '$d' "$proj/docs/review-calibration.md"
+# motivo com acento cortado em 300 bytes: o systemMessage continua JSON válido
+{ printf '%0299d' 0 | tr 0 a; printf 'éééé\n'; } > "$blk"
+RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 excecao-utf8
+# o jq e o Node não recusam o byte partido: trocam por U+FFFD. O que se confere é que ele não sobra.
+node -e 'process.exit(require("fs").readFileSync(process.argv[1],"utf8").includes("\uFFFD")?1:0)' "$work/out" \
+  || fail_msg 'excecao-utf8: caractere partido no systemMessage (vira U+FFFD)'
+jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'excecao-utf8: systemMessage não é JSON válido'
+printf 'quebra "com aspas" e\ttab\n' > "$blk"
+RAW_INPUT='{"hook_event_name":"Stop"}' expect 0 excecao-aspas
+jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'excecao-aspas: systemMessage não é JSON válido'
+rm -f "$blk"
+# sem o HEAD do início da sessão: aviso, não silêncio
+mv "$proj/.claude/.session/s1.base" "$work/base.bak"
+expect 0 sem-base-aviso 'Aviso: sem .claude/.session/s1.base'
+mv "$work/base.bak" "$proj/.claude/.session/s1.base"
 # script que não roda: bloqueia com "não consegui verificar" (cópia do plugin com o script trocado)
 broken=$work/plugin-quebrado
 cp -r "$(dirname "$hook")/.." "$broken"
 printf 'process.exit(1)\n' > "$broken/scripts/principles.mjs"
 hook_ok=$hook; hook=$broken/hooks/verify-on-stop.sh
 TRANSCRIPT=$tr expect 2 principles-quebrado 'Não consegui verificar o campo princípios:'
+printf 'node quebrado no ambiente da nuvem\n' > "$blk"
+TRANSCRIPT=$tr expect 0 principles-quebrado-com-excecao
+grep -q 'sem conferir o campo princípios:' "$work/out" || fail_msg 'principles-quebrado-com-excecao: aviso não diz o que ficou sem conferir'
+rm -f "$blk"
 cp "$(dirname "$hook_ok")/../scripts/principles.mjs" "$broken/scripts/principles.mjs"
 printf 'process.exit(0)\n' > "$broken/scripts/permission-asks.mjs"
 TRANSCRIPT=$tr expect 2 permission-asks-saida-vazia 'Não consegui verificar o campo pedidos:'
