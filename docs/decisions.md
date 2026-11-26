@@ -524,3 +524,16 @@ com o arquivo de calibração, o gate de aprendizado bloqueia em vez de ser pula
 **Por quê:** no macOS padrão não há `sha1sum`; a impressão ficava vazia, casava com o carimbo vazio da passada
 anterior, e build e testes eram pulados sem aviso. Os outros dois casos também passavam sem conferir. Na nuvem (Linux)
 o primeiro não acontecia, mas o hook roda igual no terminal local.
+
+## 2026-11-26: `verify-blocked.md` libera o que o ambiente não deixou conferir
+
+**Decisão:** os bloqueios de "não consegui verificar" (entrada sem `session_id`, script de conferência ou node
+quebrados) passam a ser liberados por `.claude/verify-blocked.md`, como o build já era, com o motivo no
+`systemMessage` para o desenvolvedor. Divergência de conteúdo no Registro (skill citada sem carga, `pedidos:` abaixo
+ou ausente, campo `princípios:` ausente) continua bloqueando com o arquivo presente. Sem o HEAD do início da sessão, o
+gate de aprendizado avisa em vez de ser pulado em silêncio. O motivo vai cortado em 300 bytes sem partir caractere.
+
+**Por quê:** as mensagens mandavam registrar o motivo no arquivo, mas o bloqueio saía antes de ele ser lido: com o
+ambiente quebrado, o agente registrava, tentava encerrar e era bloqueado de novo, até alguém consertar à mão.
+Divergência de conteúdo fica de fora porque o agente resolve corrigindo a linha, e liberar por arquivo seria o
+contorno que o gate existe para impedir. O corte antigo em bytes partia a letra acentuada, que chegava como U+FFFD.

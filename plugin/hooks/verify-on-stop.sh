@@ -40,15 +40,39 @@ emit() {
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sid" "$1" >> ".claude/telemetry/sessions/$sid.jsonl" 2> /dev/null || true
 }
 
+# Saída pela exceção registrada em $BLOCKED: encerra o turno com o motivo visível ao desenvolvedor (systemMessage).
+# O motivo vai cortado em 300 bytes sem partir caractere UTF-8 (o JSON precisa ser válido) e sem caractere de controle,
+# aspas nem barra invertida. Sem node: a exceção existe justamente para o ambiente quebrado.
+blocked_exit() { # blocked_exit <o que ficou sem verificar>
+  emit verification_exception
+  local reason full partial
+  full=$(tr '\n\r\t"\\' '     ' < "$BLOCKED" | LC_ALL=C tr -d '\000-\037')
+  reason=$(printf '%s' "$full" | head -c 300)
+  # truncado: o último caractere pode ter ficado partido; tira a sequência UTF-8 do fim (no máximo um caractere)
+  if [ "$reason" != "$full" ]; then
+    partial=$(printf '[\300-\377][\200-\277]*$')
+    reason=$(printf '%s' "$reason" | LC_ALL=C sed "s/$partial//")
+  fi
+  printf '{"systemMessage": "⚠ Turno encerrado sem %s. Motivo registrado: %s"}\n' "$1" "$reason"
+  exit 0
+}
+
 # Gate 1: aprendizado registrado depois do último commit de código da sessão.
 # Sem session_id não há como achar o HEAD do início da sessão: com o arquivo de calibração (gate adotado), bloqueia em
 # vez de pular o gate inteiro. O Claude Code sempre manda o campo; vazio é entrada quebrada.
 if [ -z "$sid" ] && [ -f "$LEARN_FILE" ]; then
+  [ -f "$BLOCKED" ] && blocked_exit 'verificar o aprendizado (entrada sem session_id)'
   echo "Não consegui verificar o aprendizado: a entrada do Stop não traz session_id, então não dá para achar o início da sessão." >&2
-  echo "Se for do ambiente, registre o motivo em $BLOCKED e reporte ao desenvolvedor." >&2
+  echo "É problema do ambiente: registre o motivo em $BLOCKED (libera o encerramento com aviso ao desenvolvedor) e reporte." >&2
   exit 2
 fi
 base_file=".claude/.session/$sid.base"
+# Sem o HEAD do início da sessão (o SessionStart não gravou), não dá para saber se houve commit de código nesta sessão:
+# aviso e telemetria, não bloqueio, porque o caso vem de sessão aberta antes do plugin ou de hook que falhou.
+if [ -n "$sid" ] && [ ! -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
+  emit learning_unverified
+  echo "Aviso: sem $base_file (HEAD do início da sessão), o gate de aprendizado não foi conferido nesta sessão." >&2
+fi
 if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
   base=$(cat "$base_file")
   if git cat-file -e "$base^{commit}" 2> /dev/null && [ "$(git rev-list --count "$base"..HEAD "${CODE[@]}")" -gt 0 ]; then
@@ -91,11 +115,13 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
     # Falha fechada: script que não roda, ou sai com código inesperado, e caminho que não dá para ler bloqueiam com "não
     # consegui verificar". Só a transcrição ausente (entrada sem transcript_path, arquivo que não existe) fica como aviso,
     # porque bloquear ali travaria sessões legítimas; nesse caso vale só a presença do campo, conferida acima.
-    unverified() { # unverified <o que> <detalhe>: bloqueia por não conseguir conferir
+    unverified() { # unverified <o que> <detalhe>: bloqueia por não conseguir conferir; a exceção registrada libera
+      [ -f "$BLOCKED" ] && blocked_exit "conferir o campo $1 do Registro"
       emit learning_blocked
       {
         echo "Não consegui verificar o campo $1 da linha de Registro contra a transcrição da sessão: $2"
-        echo "Corrija a causa (node, o script do plugin, a transcrição) e tente encerrar de novo; se for do ambiente, registre em .claude/verify-blocked.md."
+        echo "Corrija a causa (node, o script do plugin, a transcrição) e tente encerrar de novo. Se for do ambiente e não"
+        echo "der para corrigir agora, registre o motivo em $BLOCKED: isso libera o encerramento com aviso ao desenvolvedor."
       } >&2
       exit 2
     }
@@ -147,12 +173,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
 fi
 
 # Exceção de verificação (só depois do gate de aprendizado: ela dispensa build e testes, não o registro).
-if [ -f "$BLOCKED" ]; then
-  emit verification_exception
-  reason=$(head -c 300 "$BLOCKED" | tr '\n"\\' '   ')
-  printf '{"systemMessage": "⚠ Turno encerrado sem verificação verde. Motivo registrado: %s"}\n' "$reason"
-  exit 0
-fi
+[ -f "$BLOCKED" ] && blocked_exit 'verificação verde'
 
 # Gate 2: build, formato e testes no working tree atual, ignorando mudanças só em arquivos de aprendizado.
 [ -z "$(git status --porcelain "${CODE[@]}")" ] && exit 0
