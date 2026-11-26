@@ -22,10 +22,12 @@ novo() { # novo <linha do risk.conf>...
   printf 'x\n' > "$proj/a.txt"; gitc add -A; gitc commit -qm base
   gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
 }
-stop() { # com TRANSCRIPT, a entrada traz transcript_path, como o Claude Code manda ao Stop
-  jq -cn --arg t "${TRANSCRIPT:-}" '{session_id:"s1"} + (if $t == "" then {} else {transcript_path:$t} end)' |
+stop() { # com TRANSCRIPT, a entrada traz transcript_path, como o Claude Code manda ao Stop; RAW_INPUT a substitui
+  { if [ -n "${RAW_INPUT:-}" ]; then printf '%s' "$RAW_INPUT"
+    else jq -cn --arg t "${TRANSCRIPT:-}" '{session_id:"s1"} + (if $t == "" then {} else {transcript_path:$t} end)'; fi; } |
     CLAUDE_PROJECT_DIR=$proj bash "$hook" > "$work/out" 2> "$work/err"; echo $?
 }
+fail_msg() { echo "FALHOU [$1]"; fails=$((fails + 1)); }
 expect() { # expect <código> <caso> [texto que o stderr precisa ter]
   local rc; rc=$(stop)
   [ "$rc" = "$1" ] || { echo "FALHOU [$2]: esperado código $1, obtido $rc: $(head -c 300 "$work/err")"; fails=$((fails + 1)); return; }
@@ -92,6 +94,7 @@ TRANSCRIPT=$tr expect 2 pedidos-abaixo 'a transcrição tem 1 pedido'
 sed -i '$d' "$proj/docs/review-calibration.md"
 printf -- '- t — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
 TRANSCRIPT=$tr expect 2 pedidos-ausente "registrado 'ausente'"
+grep -q 'mesma linha de princípios:' "$work/err" || fail_msg 'pedidos-ausente: mensagem não diz onde o campo é procurado'
 sed -i '$d' "$proj/docs/review-calibration.md"
 printf -- '- t — pedidos: 1 (path-guard 1) — princípios: tdd (carregadas: 1)\n' >> "$proj/docs/review-calibration.md"
 TRANSCRIPT=$tr expect 0 campos-conferem
@@ -100,6 +103,12 @@ printf -- '- t — pedidos: 1 — princípios: nenhum (carregadas: 1)\n' >> "$pr
 TRANSCRIPT=$tr expect 0 principios-nenhum
 # transcrição indisponível: aviso, não bloqueio (só a presença do campo vale)
 TRANSCRIPT=$work/nao-existe.jsonl expect 0 transcricao-ausente-aviso 'Aviso: transcrição da sessão indisponível'
+expect 0 sem-transcript-path-aviso 'Aviso: transcrição da sessão indisponível'
+# não conseguir ler o caminho bloqueia: entrada que não é JSON, e node ausente (um node falso que sai 127 na frente do
+# PATH, porque o node real fica em pastas diferentes aqui e no CI)
+RAW_INPUT='{"session_id":"s1", quebrado' expect 2 entrada-nao-json 'não consegui ler transcript_path'
+mkdir -p "$work/sem-node" && printf '#!/bin/sh\nexit 127\n' > "$work/sem-node/node" && chmod +x "$work/sem-node/node"
+PATH="$work/sem-node:$PATH" TRANSCRIPT=$tr expect 2 node-ausente 'node saiu com código 127'
 # script que não roda: bloqueia com "não consegui verificar" (cópia do plugin com o script trocado)
 broken=$work/plugin-quebrado
 cp -r "$(dirname "$hook")/.." "$broken"
