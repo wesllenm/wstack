@@ -511,5 +511,5 @@ um que não achou nada.
 ausente) bloqueia com "não consegui verificar". A transcrição ausente continua como aviso, não bloqueio.
 
 **Por quê:** só o código 3 bloqueava, e o `permission-asks.mjs` com saída vazia pulava a checagem: o gate passava
-justamente quando não conseguia conferir. Transcrição ausente é outro caso: acontece em Claude Code sem
+justamente quando não conseguia conferir. Ler o `transcript_path` também conta como conferência: node ausente ou entrada que não é JSON bloqueia, em vez de cair no aviso. Transcrição ausente é outro caso: acontece em Claude Code sem
 `transcript_path` e em execução manual, e bloquear ali travaria sessões legítimas.

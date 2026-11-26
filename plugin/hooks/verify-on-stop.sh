@@ -81,8 +81,8 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
     # ficam em <sessão>/subagents): cada skill de "princípios:" precisa ter sido carregada (principles.mjs --cited), e
     # "pedidos:" não pode ser menor que os pedidos de hook da transcrição (permission-asks.mjs). Menor, e não diferente:
     # a transcrição pode estar atrasada em relação ao turno atual, o que só diminui a contagem.
-    # Falha fechada: script que não roda ou sai com código inesperado bloqueia com "não consegui verificar". Só a
-    # transcrição ausente (Claude Code sem transcript_path, execução manual, arquivo que não existe) fica como aviso,
+    # Falha fechada: script que não roda, ou sai com código inesperado, e caminho que não dá para ler bloqueiam com "não
+    # consegui verificar". Só a transcrição ausente (entrada sem transcript_path, arquivo que não existe) fica como aviso,
     # porque bloquear ali travaria sessões legítimas; nesse caso vale só a presença do campo, conferida acima.
     unverified() { # unverified <o que> <detalhe>: bloqueia por não conseguir conferir
       emit learning_blocked
@@ -92,7 +92,10 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
       } >&2
       exit 2
     }
-    transcript=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{process.stdout.write(String(JSON.parse(d).transcript_path??""))}catch{}})' 2> /dev/null)
+    # Ler o caminho é parte da conferência: node ausente ou entrada que não é JSON bloqueia (sai diferente de 0); só a
+    # entrada válida sem transcript_path, ou o arquivo que não existe, vira aviso.
+    transcript=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{let j;try{j=JSON.parse(d)}catch{process.exit(2)}process.stdout.write(String(j?.transcript_path??""))})' 2>&1); rc=$?
+    [ "$rc" -eq 0 ] || unverified 'princípios: e pedidos:' "não consegui ler transcript_path da entrada do Stop (node saiu com código $rc: node ausente ou entrada que não é JSON)"
     transcript=${transcript/#\~/$HOME}
     if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
       emit registry_unverified
@@ -103,7 +106,7 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
       sub=(); [ -d "$subdir" ] && sub=("$subdir")
       line=$(grep 'princípios:' <<< "$added" | tail -1)
       cited=$(sed -e 's/.*princípios:[[:space:]]*//' -e 's/[[:space:]]*(.*//' -e 's/[[:space:]]*—.*//' <<< "$line")
-      out=$(node "$scripts/principles.mjs" "$transcript" "${sub[@]}" --cited "$cited" 2>&1); rc=$?
+      out=$(node "$scripts/principles.mjs" "$transcript" ${sub[@]+"${sub[@]}"} --cited "$cited" 2>&1); rc=$?
       case "$rc" in
         0) ;;
         3)
@@ -117,13 +120,14 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
         *) unverified 'princípios:' "principles.mjs saiu com código $rc: $(tail -1 <<< "$out")" ;;
       esac
       registered=$(grep -o 'pedidos:[[:space:]]*[0-9]\+' <<< "$line" | grep -o '[0-9]\+' | tail -1)
-      out=$(node "$scripts/permission-asks.mjs" "$transcript" "${sub[@]}" 2>&1); rc=$?
+      out=$(node "$scripts/permission-asks.mjs" "$transcript" ${sub[@]+"${sub[@]}"} 2>&1); rc=$?
       asks=$(sed -n '1s/^pedidos: \([0-9]\+\).*/\1/p' <<< "$out")
       [ "$rc" -eq 0 ] && [ -n "$asks" ] || unverified 'pedidos:' "permission-asks.mjs saiu com código $rc: $(tail -1 <<< "$out")"
       if [ -z "$registered" ] || [ "$registered" -lt "$asks" ]; then
         emit learning_blocked
         {
           echo "O campo pedidos: da linha de Registro está ausente ou abaixo da transcrição: registrado '${registered:-ausente}', a transcrição tem $asks pedido(s) de hook."
+          echo "O campo é procurado na mesma linha de princípios: (a última linha acrescentada com ele): '— pedidos: N — princípios: ...' numa linha só."
           echo "Rode o permission-asks.mjs como manda o fechamento.md da skill lead e corrija a linha."
         } >&2
         exit 2
