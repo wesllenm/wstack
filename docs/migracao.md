@@ -124,6 +124,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   porque o `Stop` a apaga ao usar.
 - 0.0.22: turno encerrado pela exceção de verificação segura o push: o `Stop` grava `.claude/.session/unverified`, e o
   `push-guard` recusa o push de branch até um encerramento com todos os gates verdes (o checkpoint `wip/` segue).
+- 0.0.23: o marcador de verificação pendente só sai quando o build e os testes rodaram e passaram cobrindo o HEAD
+  gravado nele (árvore limpa não conta; com o marcador, o build roda sobre o commitado). Um marcador por sessão
+  (`unverified-<sessão>`), e qualquer um segura o push; o `SessionStart` avisa do de outra sessão. Gravar em
+  `.claude/.session/` é recusado pelo `write-guard` e pelo `path-guard`, também na nuvem, onde o `path-guard` recusa
+  ainda comando que cita `.claude/verify-blocked.md`.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
