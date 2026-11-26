@@ -5,7 +5,9 @@
 // Com --report, confere o relatório: cada skill citada em "Princípios aplicados:" precisa ter sido carregada, e cada
 // arquivo de "Referências lidas:" precisa ter sido lido. Sem dependências.
 //   node <pasta do plugin>/scripts/principles.mjs <transcrição.jsonl> [<pasta de subagentes>] [--agent <nome>]
-//        [--report <relatório>]
+//        [--report <relatório> | --cited <skills citadas, separadas por vírgula, ou nenhum>]
+// --cited: confere só a lista do campo "princípios:" da linha de Registro (o hook Stop usa); sai 3 se alguma não foi
+// carregada.
 // A transcrição fica em ~/.claude/projects/<projeto>/<sessão>.jsonl e os subagentes em <sessão>/subagents/*.jsonl.
 // --agent: o agente da sessão principal (padrão lead, o "agent" do settings.json que o bootstrap gera).
 // Saída: "carregadas:", "referências:", "AVISO:" com linhas ilegíveis e, com --report, "citadas:" e uma linha por
@@ -18,16 +20,18 @@ import { fileURLToPath } from 'node:url';
 
 const fail = (code, msg) => { console.error(`principles: ${msg}`); process.exit(code); };
 const pos = [];
-let agent = 'lead', report = null;
+let agent = 'lead', report = null, citedArg = null;
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], v = () => (i + 1 < argv.length ? argv[++i] : fail(2, `${a} sem valor`));
   if (a === '--agent') agent = v();
   else if (a === '--report') report = v();
+  else if (a === '--cited') citedArg = v();
   else if (a.startsWith('--')) fail(2, `opção desconhecida: ${a}`);
   else pos.push(a);
 }
-if (pos.length < 1 || pos.length > 2) fail(2, 'uso: principles.mjs <transcrição.jsonl> [<pasta de subagentes>] [--agent <nome>] [--report <relatório>]');
+if (pos.length < 1 || pos.length > 2) fail(2, 'uso: principles.mjs <transcrição.jsonl> [<pasta de subagentes>] [--agent <nome>] [--report <relatório> | --cited <lista>]');
+if (report !== null && citedArg !== null) fail(2, '--report e --cited são exclusivos');
 if (!/^[a-z0-9-]+$/.test(agent)) fail(2, `--agent inválido: ${agent}`);
 const [file, subDir] = pos;
 
@@ -117,6 +121,16 @@ const sorted = (it) => [...it].sort();
 console.log(`carregadas: ${loaded.size ? sorted(loaded.keys()).join(', ') : 'nenhuma'}`);
 console.log(`referências: ${refs.size ? sorted(refs).join(', ') : 'nenhuma'}`);
 if (unreadable) console.log(`AVISO: ${unreadable} linha(s) da transcrição não são JSON e foram ignoradas: o que estava nelas não conta como leitura`);
+// --cited: a lista da linha de Registro ("tdd, query-plan" ou "nenhum"); cada nome precisa ter sido carregado
+if (citedArg !== null) {
+  const names = citedArg.split(',').map((x) => short(x.replace(/`/g, ''))).filter(Boolean);
+  if (!names.length) { console.log('CAMPO AUSENTE: lista de princípios vazia (use "nenhum")'); process.exit(3); }
+  const bad = names.filter((n) => !/^nenhum[a]?$/i.test(n) && !loaded.has(n));
+  if (names.some((n) => /^nenhum[a]?$/i.test(n)) && names.length > 1) bad.push('"nenhum" junto de outros nomes');
+  console.log(`citadas: ${names.join(', ')}`);
+  for (const b of bad) console.log(`NÃO CARREGADA: ${b} citada em princípios: da linha de Registro`);
+  process.exit(bad.length ? 3 : 0);
+}
 if (!report) process.exit(0);
 
 // Relatório: o campo é a linha "Princípios aplicados:" e as linhas seguintes que começam com "-", até o próximo campo.
@@ -135,13 +149,15 @@ const cited = new Set();
 const principles = field('Princípios aplicados');
 if (principles === null) missing.push(['CAMPO AUSENTE', '"Princípios aplicados:" não está no relatório']);
 for (const item of principles ?? []) {
-  // separador: travessão, meia-risca ou hífen com espaços em volta (o modelo troca um pelo outro); nome de skill tem
-  // hífen sem espaço (query-plan), que não separa
-  const skill = short(item.split(/\s+[—–-]\s+/)[0].replace(/`/g, ''));
+  // travessão e meia-risca separam com ou sem espaço ("lead—motivo"); hífen só com espaço, porque nome de skill tem
+  // hífen (query-plan)
+  const skill = short(item.split(/\s*[—–]\s*|\s+-\s+/)[0].replace(/`/g, ''));
   cited.add(skill);
   if (!loaded.has(skill)) missing.push(['NÃO CARREGADA', `${skill} citada em Princípios aplicados`]);
 }
-for (const item of field('Referências lidas') ?? []) {
+const readRefs = field('Referências lidas');
+if (readRefs === null) missing.push(['CAMPO AUSENTE', '"Referências lidas:" não está no relatório']);
+for (const item of readRefs ?? []) {
   for (const m of item.matchAll(/([a-z0-9-]+\/)?(reference|playbooks)\/([^\s`—–;,]+\.md)/g)) {
     // sem o nome da skill, a referência é da skill do agente da sessão (--agent, padrão lead: o relatório do lead
     // escreve "reference/revisao.md"); referência de outra skill leva o nome dela ("performance/reference/dotnet.md"),

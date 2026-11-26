@@ -70,7 +70,7 @@ build, formato e testes verdes antes de a sessão encerrar.
    - preparar: `diff-smells.mjs` limpa código comentado e marcadores, e `review-dispatch.mjs` agrupa os arquivos e
      indica a regra de cada caminho;
    - achar: as lentes rodam em paralelo e, em COMPLEXA e CRITICA, modelos de outro fornecedor tentam quebrar o diff
-     quando o projeto os configura (`interrogate.mjs`);
+     quando o projeto os configura (`interrogate.mjs`); se nenhum responde, em CRITICA o commit espera a sua decisão;
    - verificar: `check-findings.mjs` descarta o achado cujo trecho não existe no código, e o `review-verifier` tenta
      refutar cada candidato;
    - corrigir: só o confirmado é corrigido, e o delta é revisto de novo (no máximo duas rodadas).
@@ -79,7 +79,8 @@ build, formato e testes verdes antes de a sessão encerrar.
 7. **Limpeza e aprendizado.** Remove o que a sessão criou (worktrees, branches temporárias, contêineres) e registra o
    que aprendeu em `docs/gotchas/` e em `docs/review-calibration.md`, que calibra a revisão ao longo do tempo. A
    correção que você faz no meio da sessão é registrada na hora (skill `correct`) e sobe na escada de correção no fim.
-   O relatório diz qual regra de qual skill mudou qual decisão, e o `principles.mjs` confere que a skill foi lida.
+   O relatório diz qual regra de qual skill mudou qual decisão, e o hook `Stop` confere na transcrição da sessão que
+   cada skill citada foi carregada e que os pedidos de permissão registrados batem.
 
 ### Níveis de risco
 
@@ -235,7 +236,7 @@ performance), escolhidas depois da classificação de risco: o risco decide os g
 | `TaskCompleted` | `checkpoint-tests` | idem, ao fechar uma tarefa |
 | `PostToolUse` edição | `edit-check` | lint e formatação do arquivo recém-editado |
 | | `iteration-guard` | lembra a regra das três tentativas a cada N edições sem commit |
-| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado (com o campo `princípios:`) depois de commit de código |
+| `Stop` | `verify-on-stop` | não encerra com build, formato ou teste vermelho, nem sem registro de aprendizado depois de commit de código; os campos `princípios:` e `pedidos:` do registro são conferidos contra a transcrição da sessão |
 | `SessionStart` | `session-start`, `sessions.sh`, `map-staleness`, `cloud-services` | versão em uso, registro da sessão, aviso de mapa de features velho, serviços da nuvem |
 | `SessionEnd` | `sessions.sh` | tira a sessão do registro |
 | `Notification` | `notify` | aviso do sistema operacional quando a sessão espera você |

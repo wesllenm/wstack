@@ -103,6 +103,25 @@ printf -- '---\r\nname: crlf\r\nskills:\r\n  - security\r\n---\r\n# x\r\n' > "$p
 out=$(node "$plug/scripts/principles.mjs" "$main" --agent crlf)
 printf '%s\n' "$out" | grep '^carregadas:' | grep -qw security || fail "frontmatter CRLF: pré-carga ignorada ($out)"
 
+# travessão sem espaço separa; hífen sem espaço não (é parte do nome da skill)
+printf 'Princípios aplicados: tdd—vermelho antes—teste\nReferências lidas: nenhuma\n' > "$rel"
+node "$script" "$main" --report "$rel" > /dev/null; code=$?
+[ "$code" = 0 ] || fail "travessão sem espaço: código $code"
+# campo Referências lidas ausente acusa, como o de Princípios aplicados
+printf 'Princípios aplicados: nenhum\n' > "$rel"
+out=$(node "$script" "$main" --report "$rel"); code=$?
+[ "$code" = 3 ] || fail "Referências lidas ausente: código $code"
+printf '%s\n' "$out" | grep -q '^CAMPO AUSENTE: "Referências lidas:"' || fail "Referências lidas ausente: rótulo ($out)"
+# --cited (o que o hook Stop usa): lista da linha de Registro contra o que foi carregado
+node "$script" "$main" --cited 'tdd, query-plan' > /dev/null; [ $? = 0 ] || fail '--cited carregadas: código diferente de 0'
+node "$script" "$main" --cited 'nenhum' > /dev/null; [ $? = 0 ] || fail '--cited nenhum: código diferente de 0'
+out=$(node "$script" "$main" --cited 'ok'); [ $? = 3 ] || fail "--cited 'ok' passou"
+printf '%s\n' "$out" | grep -q '^NÃO CARREGADA: ok' || fail "--cited 'ok': rótulo ($out)"
+node "$script" "$main" --cited 'tdd, security' > /dev/null; [ $? = 3 ] || fail '--cited com skill não carregada passou'
+node "$script" "$main" --cited 'nenhum, tdd' > /dev/null; [ $? = 3 ] || fail '--cited nenhum junto de outro passou'
+node "$script" "$main" --cited '' > /dev/null; [ $? = 3 ] || fail '--cited vazio passou'
+node "$script" "$main" --cited tdd --report "$rel" > /dev/null 2>&1; [ $? = 2 ] || fail '--cited e --report juntos: código diferente de 2'
+
 printf 'Princípios aplicados: nenhum\nReferências lidas: nenhuma\n' > "$rel"
 node "$script" "$main" --report "$rel" > /dev/null; code=$?
 [ "$code" = 0 ] || fail "nenhum princípio: código $code"
