@@ -105,6 +105,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.15: o `Stop` confere os campos `princípios:` e `pedidos:` da linha de Registro contra a transcrição da sessão
   (`principles.mjs --cited` e `permission-asks.mjs`); o `interrogate.mjs` grava `falhou: ...` e sai 4 quando nenhum
   modelo responde, e na CRITICA isso segura o commit.
+- 0.0.16: a conferência do Registro no `Stop` falha fechada: script de conferência que não roda ou sai com código
+  inesperado bloqueia ("não consegui verificar"), e só a transcrição ausente fica como aviso; o `principles.mjs` não
+  conta Skill ou Read sem resultado na transcrição.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
