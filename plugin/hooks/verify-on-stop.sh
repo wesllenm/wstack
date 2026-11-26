@@ -28,12 +28,14 @@ LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/gotchas" "docs/review-rubric.
 BLOCKED=".claude/verify-blocked.md"
 # Marcador de verificação pendente (um por sessão, .claude/.session/unverified-<sessão>): o Stop grava ao liberar um
 # encerramento pela exceção, e o push-guard recusa o push enquanto existir qualquer um. Só sai quando o build e os
-# testes rodaram de verdade e passaram (verified=1), cobrindo o HEAD gravado nele (ancestral do HEAD atual). Árvore
-# limpa, carimbo antigo ou falta de comandos de verificação não contam como verde.
+# testes rodaram de verdade e passaram (verified=1), sobre a árvore limpa (o verificado é o HEAD, que é o que o push
+# leva, e não um conserto ainda sem commit), cobrindo o HEAD gravado nele (ancestral do HEAD atual). Árvore limpa sem
+# verificação, carimbo antigo ou falta de comandos de verificação não contam como verde.
 exception_used=0
 verified=0
 clear_unverified() {
   [ "$verified" -eq 1 ] && [ "$exception_used" -eq 0 ] && [ -f "$UNVERIFIED" ] || return 0
+  [ -z "$(git status --porcelain "${CODE[@]}")" ] || return 0
   local mh; mh=$(sed -n 's/^head: //p' "$UNVERIFIED" | head -1)
   if [ -z "$mh" ] || git merge-base --is-ancestor "$mh" HEAD 2> /dev/null; then rm -f "$UNVERIFIED"; fi
 }
@@ -41,8 +43,9 @@ trap 'rc=$?; [ "$rc" -eq 0 ] && clear_unverified' EXIT
 STAMP=".claude/.verify-ok"
 CODE=(-- .)
 for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
-# estado dos hooks (HEAD do início da sessão, marcador de verificação pendente) nunca é código, mesmo sem o .gitignore
-CODE+=(":(exclude).claude/.session")
+# estado dos hooks (HEAD do início da sessão, marcador de verificação pendente, carimbo) nunca é código, mesmo sem o
+# .gitignore: o carimbo não rastreado deixaria a árvore sempre suja e o marcador nunca sairia
+CODE+=(":(exclude).claude/.session" ":(exclude)$STAMP")
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 # o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
@@ -84,8 +87,8 @@ blocked_exit() { # blocked_exit <o que ficou sem verificar>
     reason=$(printf '%s' "$reason" | LC_ALL=C sed "s/$partial//")
   fi
   # uso único: a exceção libera este encerramento e sai; o próximo Stop, e o código editado depois, voltam aos gates.
-  # O marcador segura o push (push-guard) até um Stop com todos os gates verdes, de qualquer sessão: na nuvem o agente
-  # consegue gravar a exceção pelo Bash sem pedir, e a garantia fica no que sai da máquina.
+  # O marcador segura o push (push-guard) até um Stop desta sessão com build e testes verdes sobre a árvore limpa: a
+  # garantia fica no que sai da máquina.
   mkdir -p .claude/.session
   printf '%s (sessão %s)\nhead: %s\n' "$1" "${sid:-?}" "$(git rev-parse --verify -q HEAD)" > "$UNVERIFIED"
   exception_used=1
@@ -221,9 +224,15 @@ blocked_valid && blocked_exit 'verificação verde'
 # Árvore limpa dispensa a verificação, salvo com verificação pendente desta sessão: aí ela roda no que está commitado
 [ -z "$(git status --porcelain "${CODE[@]}")" ] && [ ! -f "$UNVERIFIED" ] && exit 0
 
+# Saída sem verificar com o marcador desta sessão: o push continua recusado, e o desenvolvedor vê por quê.
+pending_exit() { # pending_exit <motivo, sem aspas nem barra invertida>
+  [ -f "$UNVERIFIED" ] && printf '{"systemMessage": "⚠ Verificação pendente desta sessão (%s) continua: %s. O push de branch segue recusado."}\n' "$UNVERIFIED" "$1"
+  exit 0
+}
+
 # Sem os comandos no risk.conf, ou enquanto o arquivo do projeto não existir, não há o que verificar.
-[ -n "$SOLUTION" ] && [ -n "$BUILD_CMD" ] && [ -n "$TEST_CMD" ] || exit 0
-[ -f "$SOLUTION" ] || exit 0
+[ -n "$SOLUTION" ] && [ -n "$BUILD_CMD" ] && [ -n "$TEST_CMD" ] || pending_exit 'o risk.conf não tem verify_solution, verify_build e verify_test, e sem eles não há verificação que a libere'
+[ -f "$SOLUTION" ] || pending_exit 'o arquivo de verify_solution do risk.conf não existe, e sem ele não há verificação que a libere'
 
 # Impressão digital do working tree (diff e conteúdo dos não rastreados), calculada pelo próprio git: sha1sum e xargs -r
 # não existem no macOS padrão. Vazia é falha no cálculo: roda a verificação e não grava carimbo, em vez de casar com
@@ -253,4 +262,5 @@ rm -f "$log"
 [ -z "$fingerprint" ] || echo "$fingerprint" > "$STAMP"
 verified=1
 emit verification_passed
+[ -z "$(git status --porcelain "${CODE[@]}")" ] || pending_exit 'build e testes passaram, mas com mudança sem commit; o push leva o HEAD, então commite e encerre de novo'
 exit 0

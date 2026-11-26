@@ -604,3 +604,21 @@ livre, então o agente apagava o marcador pelo Bash sem pedir.
 
 **Limite:** a trava do Bash continua sendo por texto. Um comando que monta o caminho para esconder (variável, `eval`)
 passa, como nas outras travas por texto (ver Riscos aceitos em `docs/harness-capabilities.md`).
+
+## 2026-11-26: todo o estado dos hooks fora do alcance do agente, e marcador só com a árvore limpa
+
+**Decisão:** completa a entrada anterior.
+- O `path-guard` recusa, também na nuvem, comando que cita qualquer coisa em `.claude/.session/` ou o carimbo
+  `.claude/.verify-ok`, inclusive `.session/` de dentro de `.claude` e glob logo abaixo de `.claude/`. Leitura pura
+  (`cat`, `ls`, `grep`) segue livre. O `write-guard` recusa gravar o `.verify-ok` além de `.claude/.session/`.
+- O `Stop` só apaga o marcador com a árvore limpa. Verde com mudança sem commit mantém o marcador e pede o commit no
+  `systemMessage`. O carimbo deixa de contar como código.
+- Saída sem verificação com o marcador desta sessão (sem comandos `verify_*`, sem o arquivo da solução) avisa no
+  `systemMessage` que o push segue recusado.
+
+**Por quê:**
+- O `checkpoint-ok` e o `.verify-ok` ficavam só na entrada geral do `path-guard`, que o modo nuvem desliga: um `touch`
+  pulava os testes do checkpoint, e um carimbo forjado pulava os do `Stop`.
+- O verde sobre a árvore de trabalho apagava o marcador mesmo com o conserto sem commit, e o push levava o HEAD
+  vermelho.
+- Sem aviso, o push recusado não tinha explicação.

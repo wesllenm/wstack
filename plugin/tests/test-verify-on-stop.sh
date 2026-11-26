@@ -64,16 +64,27 @@ grep -q 'aprovação dele' "$work/err" || fail_msg 'build-depois-da-excecao: men
 gitc add a.txt && gitc commit -qm 'código ainda vermelho'
 expect 2 arvore-limpa-com-marcador-roda-build 'Verificação falhou'
 [ -e "$mark" ] || fail_msg 'arvore-limpa-com-marcador-roda-build: árvore limpa apagou o marcador sem verificação'
-# encerramento com build e testes verdes apaga o marcador (e libera o push)
+# conserto sem commit: o verde é da árvore de trabalho, e o push levaria o HEAD vermelho; o marcador fica, com aviso
 sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
+expect 0 verde-com-arvore-suja
+[ -e "$mark" ] || fail_msg 'verde-com-arvore-suja: verde sobre conserto sem commit apagou o marcador'
+grep -q 'mudança sem commit' "$work/out" || fail_msg 'verde-com-arvore-suja: systemMessage não pede o commit'
+# commitado o conserto, o encerramento verde sobre a árvore limpa apaga o marcador (e libera o push)
+gitc add -A && gitc commit -qm 'conserto'
 expect 0 verde-depois-da-excecao
 [ ! -e "$mark" ] || fail_msg 'verde-depois-da-excecao: marcador de verificação pendente não foi apagado'
-# sem comandos de verificação não há verde: o marcador fica (o desenvolvedor libera)
+# sem comandos de verificação não há verde: o marcador fica (o desenvolvedor libera), com aviso
 printf 'x (sessão s1)\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$mark"
 sed -i 's/^verify_build = .*/verify_build = /' "$proj/.claude/risk.conf"
 expect 0 sem-comandos-marcador-fica
 [ -e "$mark" ] || fail_msg 'sem-comandos-marcador-fica: marcador apagado sem verificação'
+grep -q 'Verificação pendente desta sessão' "$work/out" || fail_msg 'sem-comandos-marcador-fica: saída silenciosa com o marcador'
+jq -e .systemMessage "$work/out" > /dev/null 2>&1 || fail_msg 'sem-comandos-marcador-fica: systemMessage não é JSON válido'
 sed -i 's/^verify_build = .*/verify_build = true/' "$proj/.claude/risk.conf"
+mv "$proj/sol.txt" "$work/sol.bak"
+expect 0 sem-solucao-marcador-fica
+grep -q 'verify_solution do risk.conf não existe' "$work/out" || fail_msg 'sem-solucao-marcador-fica: saída silenciosa com o marcador'
+mv "$work/sol.bak" "$proj/sol.txt"
 # marcador de outra sessão não é apagado pelo verde desta
 printf 'y (sessão s2)\nhead: %s\n' "$(git -C "$proj" rev-parse HEAD)" > "$proj/.claude/.session/unverified-s2"
 expect 0 verde-desta-sessao

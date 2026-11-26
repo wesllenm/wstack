@@ -23,9 +23,11 @@ process.stdin.on('data', (c) => (d += c)).on('end', () => {
     out(`DENY gravação na pasta do plugin wstack (muda por atualização do plugin, não por edição): ${file}`);
     return;
   }
-  // Estado dos hooks (HEAD do início da sessão, marcador de verificação pendente que segura o push): o agente nunca grava
-  if (/(?:^|\/)\.claude\/\.session\//i.test(p) || /(?:^|\/)\.claude\/\.session\//i.test(r)) {
-    out(`DENY estado dos hooks do wstack (.claude/.session): só os hooks gravam ali: ${file}`);
+  // Estado dos hooks (HEAD do início da sessão, marcador de verificação pendente que segura o push, checkpoint-ok e o
+  // carimbo .verify-ok, que fazem o checkpoint e o Stop pularem os testes): o agente nunca grava
+  const state = /(?:^|\/)\.claude\/(?:\.session\/|\.verify-ok$)/i;
+  if (state.test(p) || state.test(r)) {
+    out(`DENY estado dos hooks do wstack (.claude/.session, .claude/.verify-ok): só os hooks gravam ali: ${file}`);
     return;
   }
   // A exceção de verificação libera o Stop: o agente pode propor, quem cria é o desenvolvedor, aprovando a gravação.

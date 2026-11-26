@@ -40,6 +40,8 @@ expect ask Write "$repo/sub/../.claude/verify-blocked.md"
 expect deny Write "$repo/.claude/.session/unverified-s1"
 expect deny Edit .claude/.session/unverified-s1
 expect deny Write "$repo/sub/../.claude/.session/checkpoint-ok-x"
+expect deny Write "$repo/.claude/.verify-ok"
+expect deny Edit .claude/.verify-ok
 expect ok Write "$repo/.claude/outro.md"
 expect ok Edit src/a.cs
 expect ok Write "$repo/.gitignore"

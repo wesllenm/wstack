@@ -60,9 +60,9 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const ROOTS_RE = `(?:${pluginRoots().map(escape).join('|')})`;
 const GUARD = [
   ['pasta do plugin wstack', new RegExp(`${ROOTS_RE}(?=$|[/\\s;&|)'"\`])`)],
-  // os marcadores .verify-ok e .session/checkpoint-ok-* fazem o Stop e o checkpoint pularem build e testes, e a exceção
-  // verify-blocked.md libera o Stop: só com aprovação do desenvolvedor
-  ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, marcadores', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|\.verify-ok|verify-blocked|\.session\/checkpoint-ok)/i],
+  // a exceção verify-blocked.md libera o Stop: só com aprovação do desenvolvedor (os marcadores .verify-ok e .session
+  // são recusados em LOCKED, abaixo)
+  ['.claude/plugins, hooks, settings, risk.conf, scripts, cloud, exceção', /\.claude\/(?:plugins|hooks|settings|risk\.conf|scripts|cloud|verify-blocked)/i],
   ['pasta .claude', /\.claude\/?(?=$|[\s;&|)'"`])/i],
   ['~/.claude.json', /\.claude\.json/i, true],
   ['.mcp.json', /\.mcp\.json/i],
@@ -87,15 +87,17 @@ const SECRET = [
   ['.claude/.credentials', /\.claude\/\.credentials/i],
   ['.nuget/NuGet', /\.nuget\/NuGet/i],
 ];
-// Recusas que valem também na nuvem, onde a trava de texto pede pouco (ninguém responde ao pedido): o marcador de
-// verificação pendente, que segura o push (pelo nome, por glob na pasta, ou rm/mv/find nela), e, só na nuvem, a exceção
-// de verificação, que fora dela pede aprovação pelo GUARD. Deny, não ask: na nuvem um pedido sem resposta trava a sessão.
+// Recusas que valem também na nuvem, onde a trava de texto pede pouco (ninguém responde ao pedido): o estado dos hooks
+// (.claude/.session: o marcador de verificação pendente, que segura o push, e o checkpoint-ok, que faz o checkpoint
+// pular os testes; .claude/.verify-ok, que faz o Stop pular build e testes), citado por qualquer caminho (também
+// ".session/" de dentro de .claude, ou glob logo abaixo de .claude/), e, só na nuvem, a exceção de verificação, que
+// fora dela pede aprovação pelo GUARD. Leitura pura (READONLY) segue livre. Deny, não ask: na nuvem um pedido sem
+// resposta trava a sessão.
 const LOCKED = [
-  ['marcador de verificação pendente (.claude/.session)', /\.claude\/\.session\/(?:unverified|[*?[])|\.claude\/\.session\b[\s\S]*\bunverified|\b(?:rm|mv|cp|find|rsync|truncate|unlink|shred|ln)\b[^\n;&|]*\.claude\/\.session/i, false],
+  ['estado dos hooks (.claude/.session, .claude/.verify-ok)', /(?<![\w-])\.session\b|(?<![\w-])\.verify-ok\b|\.claude\/\.?[*?[]|\.claude\/\.s[\w-]*[*?[]/i, false],
   ['exceção de verificação (.claude/verify-blocked.md)', /\.claude\/verify-blocked/i, true],
 ];
 const SESSION_CWD = /^\.claude\/\.session(?:\/|$)/i;
-const SESSION_CWD_TEXT = /\bunverified|\b(?:rm|mv|cp|find|rsync|truncate|unlink|shred|ln)\b/i;
 
 // O script do plugin no começo do comando, pela pasta do plugin (ROOTS_RE, acima)
 const SCRIPT =new RegExp(`^(?:bash(?: -n)? |node )?${ROOTS_RE}/(?:scripts|hooks|cloud)/[A-Za-z0-9._-]+(?=\\s|$)`);
@@ -143,7 +145,7 @@ export function verdict(cmd, cwd) {
   const rel = top ? relative(top, here).replace(/\\/g, '/') : here;
   const remote = process.env.CLAUDE_CODE_REMOTE === 'true';
   const guards = remote ? GUARD.filter(([, , cloud]) => cloud) : GUARD;
-  if (SESSION_CWD.test(rel) && SESSION_CWD_TEXT.test(text)) return `DENY comando na pasta .claude/.session mexendo no estado dos hooks: só os hooks gravam ali`;
+  if (SESSION_CWD.test(rel) && !READONLY.test(text)) return `DENY comando na pasta .claude/.session mexendo no estado dos hooks: só os hooks gravam ali`;
   const inCwd = hit(guards, rel) ?? hit(SECRET, rel);
   if (inCwd) return `ASK a pasta do comando é uma trava ou guarda segredo (${inCwd}): ${here}`;
   // o script do plugin no começo, rodando na raiz do projeto: o nome dele não conta como citação de trava (os
