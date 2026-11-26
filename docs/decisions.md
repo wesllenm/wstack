@@ -513,3 +513,14 @@ ausente) bloqueia com "não consegui verificar". A transcrição ausente continu
 **Por quê:** só o código 3 bloqueava, e o `permission-asks.mjs` com saída vazia pulava a checagem: o gate passava
 justamente quando não conseguia conferir. Ler o `transcript_path` também conta como conferência: node ausente ou entrada que não é JSON bloqueia, em vez de cair no aviso. Transcrição ausente é outro caso: acontece em Claude Code sem
 `transcript_path` e em execução manual, e bloquear ali travaria sessões legítimas.
+
+## 2026-11-26: Stop portável e sem falha aberta por ambiente
+
+**Decisão:** a impressão digital que dispensa nova verificação passa a ser do `git hash-object` (o hook já exige o
+git), sem `sha1sum` nem `xargs -r`; impressão vazia não dispensa a verificação nem grava carimbo. O stderr do node que
+lê o `transcript_path` vai para outro arquivo, para um aviso do node não virar caminho. Sem `session_id` na entrada,
+com o arquivo de calibração, o gate de aprendizado bloqueia em vez de ser pulado.
+
+**Por quê:** no macOS padrão não há `sha1sum`; a impressão ficava vazia, casava com o carimbo vazio da passada
+anterior, e build e testes eram pulados sem aviso. Os outros dois casos também passavam sem conferir. Na nuvem (Linux)
+o primeiro não acontecia, mas o hook roda igual no terminal local.
