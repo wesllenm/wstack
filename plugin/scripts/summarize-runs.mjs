@@ -1,13 +1,14 @@
 // Resume a telemetria do workflow: custo, tokens e requisições da telemetria nativa do Claude Code (otlp-sink.mjs),
-// eventos de gate dos hooks e as linhas de Registro de docs/review-calibration.md. Sem dependências.
+// eventos de gate dos hooks e as linhas de Registro de docs/review-calibration.md (ou do doc_calibration do risk.conf).
 //   node <pasta do plugin>/scripts/summarize-runs.mjs [--since AAAA-MM-DD] [--json]
 // Custo é a estimativa da própria plataforma, não a fatura. Campo sem fonte aparece como null.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { docPaths } from "../hooks/doc-paths.mjs";
 
 const since = (() => { const i = process.argv.indexOf("--since"); return i > 0 ? process.argv[i + 1] : null; })();
 const asJson = process.argv.includes("--json");
-const OTEL = ".claude/telemetry/otel", HOOKS = ".claude/telemetry/sessions", REG = "docs/review-calibration.md";
+const OTEL = ".claude/telemetry/otel", HOOKS = ".claude/telemetry/sessions", REG = docPaths().calibration; // doc_calibration do risk.conf
 
 const jsonl = (d) => (existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".jsonl")).sort() : [])
   .flatMap((f) => readFileSync(join(d, f), "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }))

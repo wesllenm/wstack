@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { GIT_ENV, left } from './git-repo.mjs';
 import { validValues } from './conf-exception.mjs';
 
-function projectDir() {
+export function projectDir() {
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
   try {
     return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();

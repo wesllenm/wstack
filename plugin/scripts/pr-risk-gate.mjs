@@ -11,6 +11,7 @@
 // Saída: JSON com o veredito. Código: 0 aprovações suficientes, 1 faltam aprovações, 2 entrada inválida.
 import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
+import { docPaths } from '../hooks/doc-paths.mjs';
 
 function die(msg) { console.error(`pr-risk-gate: ${msg}`); process.exit(2); }
 const args = {};
@@ -53,9 +54,10 @@ function globRe(glob) {
 const matcher = (g) => { const re = globRe(g); return g.includes('/') ? (p) => re.test(p) : (p) => re.test(posix.basename(p)); };
 const docs = (process.env.DOCS_GLOBS || 'docs/**,*.md,*.txt,*.png,*.jpg,*.svg').split(',').map((s) => s.trim()).filter(Boolean).map(matcher);
 // instruções e configuração de agente nunca são "só documentação": mudam o comportamento do workflow
-// Também nunca são documentação: o que os agentes carregam como instrução em toda sessão (docs/gotchas.md é
-// importado pelo CLAUDE.md), a constitution verificada por teste, os ADRs e o corpus de avaliação.
-const NEVER_DOCS = ['CLAUDE.md', 'AGENTS.md', 'REVIEW.md', '.claude/**', '.github/**', 'docs/gotchas.md',
+// Também nunca são documentação: o que os agentes carregam como instrução em toda sessão (o núcleo dos gotchas,
+// docs/gotchas.md ou o doc_gotchas do risk.conf da base, é importado pelo CLAUDE.md), a constitution verificada por
+// teste, os ADRs e o corpus de avaliação.
+const NEVER_DOCS = ['CLAUDE.md', 'AGENTS.md', 'REVIEW.md', '.claude/**', '.github/**', ...new Set(['docs/gotchas.md', docPaths().gotchas]),
   'docs/constitution*', 'docs/adr/**', 'evals/**', 'ci/**', 'schemas/**', 'profiles/**'].map(matcher);
 const isDoc = (f) => !NEVER_DOCS.some((m) => m(f)) && docs.some((m) => m(f));
 

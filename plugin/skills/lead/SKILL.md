@@ -16,6 +16,10 @@ O `lead` é o coordenador técnico. Ele não é sinônimo de `implementer`.
 
 Os scripts citados pelo nome nesta skill (`classify-diff.sh`, `quality-signals.sh`, `bench-compare.sh`, `sessions.sh`, `diff-smells.mjs`, `review-dispatch.mjs`, `check-findings.mjs` e os demais) ficam em `${CLAUDE_PLUGIN_ROOT}/scripts/`, e os hooks em `${CLAUDE_PLUGIN_ROOT}/hooks/`; nenhum fica no `.claude/` do projeto. Chamar sempre pelo caminho inteiro, sozinho na chamada e a partir da raiz do projeto, com o interpretador do script: `bash` para `.sh` (o `classify-diff.sh`, o `bench-compare.sh`, o `sessions.sh` e o `worktree-env.sh` também rodam direto) e `node` para `.mjs`. Nessa forma o hook `script-allow` do plugin aprova sem pedido; o `nova-atividade.sh`, o `enviar-nuvem.sh`, o `recall.mjs`, o `permission-asks.mjs` e o `principles.mjs` pedem aprovação de propósito.
 
+## Destinos de documento
+
+As skills e agentes do plugin citam os caminhos padrão: `docs/decisions.md`, `docs/gotchas.md` e `docs/gotchas/`, `docs/review-calibration.md` e `docs/review-rubric.md`. O projeto pode apontar cada um para outro arquivo pelas chaves `doc_*` do `.claude/risk.conf`, e o `SessionStart` lista no início da sessão os que foram trocados. Onde uma skill cita o caminho padrão, ler e gravar no destino configurado. O contrato de cada subagente leva os destinos trocados. Com `doc_state`, a pendência e o "onde paramos" vão para o arquivo dele, versionado e commitado com a tarefa, e não para o `.claude/SESSION.md` (`sessao.md`).
+
 ## Leitura sob demanda
 
 Este arquivo é o núcleo: o que vale em toda tarefa. O detalhe de cada assunto que só aparece em parte das tarefas está em `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/`, e é lido com o Read, inteiro, no momento indicado, não antes. Ler de novo depois de uma compactação. Nesses arquivos os scripts aparecem como `<plugin>/scripts/<nome>`, e `<plugin>` é `${CLAUDE_PLUGIN_ROOT}`: a forma de chamar é a desta seção acima.

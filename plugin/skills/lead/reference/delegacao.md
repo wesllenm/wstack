@@ -22,6 +22,7 @@ Comando de verificação:
 Exclusões:
 Restrições das skills:
 Pasta temporária da sessão: <caminho> (saídas de teste, conferência e scripts avulsos)
+Destinos de documento: nenhum trocado | <padrão> = <destino do doc_* do risk.conf>, um por linha (o subagente não recebe o SessionStart)
 Recursos que pode criar: nenhum | worktree, branch, container — e quem remove
 
 Agente: wstack:<nome>

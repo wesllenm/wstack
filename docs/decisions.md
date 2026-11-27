@@ -1035,3 +1035,23 @@ save containerd pid to disk: process with PID 227 is still running`. Apagado o a
 **Limite:** o `deny` de `gh pr merge` do modelo do `settings.json` não cobre o merge pela REST
 (`gh api -X PUT .../pulls/<n>/merge`), e as regras do Claude Code casam pelo começo do comando. O `lead` não faz merge
 por regra de texto; a fronteira é a proteção de branch do repositório.
+
+## 2026-11-27: destinos de documento configuráveis
+
+**Decisão:** chaves `doc_decisions`, `doc_gotchas`, `doc_gotchas_dir`, `doc_calibration`, `doc_rubric` e `doc_state` no
+`risk.conf`, lidas por um módulo só (`doc-paths.mjs`), com o caminho de antes como padrão. Leem o módulo: o
+`verify-on-stop` (o gate de aprendizado olha o `doc_calibration`, e nenhum destino conta como código), o
+`summarize-runs`, o `pr-risk-gate` (o núcleo dos gotchas configurado nunca é "só documentação"), o `bootstrap.sh` (cria
+os modelos no destino e troca as citações do padrão) e o `SessionStart`, que lista os destinos trocados e avisa valor
+inválido ou arquivo ausente. Com `doc_state`, a pendência e o "onde paramos" vão para o arquivo versionado, e o
+`SESSION.md` fica com o estado local da sessão.
+
+**Por quê:** pedido do HostAzul, que já tem um lugar para cada fato (decisões em `.claude/decisions.md`, pendência no
+`docs/ESTADO.md`, armadilhas no `docs/SINTOMAS.md`). Manter dois arquivos para o mesmo fato faz um deles envelhecer. O
+`SESSION.md` não é versionado e some com a VM da nuvem; pendência ali não chega ao outro dev.
+
+**Alternativa descartada:** reescrever os cerca de 50 arquivos de skill e agente que citam os caminhos. O texto
+continua citando o padrão, com uma regra de leitura no núcleo da `lead` e os destinos no contrato de cada subagente,
+que não recebe o `SessionStart`. O que precisa ser garantido (o gate de aprendizado, o que conta como código, o que
+entra sozinho no merge) está no código. O runbook de teste do HostAzul não virou chave: o plugin não grava "caminho de
+teste", e a skill `verify-<app>` do projeto aponta para ele.

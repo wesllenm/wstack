@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.41.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.42.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -123,7 +123,7 @@ flowchart LR
    | `.claude/project.md`, `.claude/architecture.md` | produto, domínios (com a skill de cada um) e arquitetura |
    | `.claude/cloud/hosts.conf` | hosts que a nuvem precisa por stack |
    | `docs/review-rubric.md` | complemento da rubrica: Sempre verificar, Não reportar, Projeto |
-   | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto |
+   | `docs/review-calibration.md`, `docs/gotchas.md`, `docs/decisions.md` | aprendizado e decisões do projeto; o projeto que já tem lugar para esses fatos aponta as chaves `doc_*` do `risk.conf` (com `doc_state`, a pendência vai para um arquivo versionado, fora do `SESSION.md`) |
    | `.claude/skills/verify-<app>/` | esqueleto da skill que sobe a aplicação e prova comportamento (só com aplicação) |
 
    A proposta também pergunta se o projeto liga a revisão por outro fornecedor (`interrogate_cmd`): o diff de COMPLEXA

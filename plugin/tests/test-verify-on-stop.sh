@@ -282,6 +282,22 @@ novo '# sem verificação'
 printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
 expect 0 sem-calibracao
 
+# destino trocado (doc_calibration do risk.conf): o gate de aprendizado lê e cita o arquivo configurado
+novo '# sem verificação' 'doc_calibration = docs/calibracao.md'
+mkdir -p "$proj/docs" && printf '# Calibração\n' > "$proj/docs/calibracao.md" && gitc add -A && gitc commit -qm calib
+gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
+printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
+expect 2 doc-calibration-bloqueia 'último registro em docs/calibracao.md'
+printf -- '- registro — princípios: nenhum (carregadas: 0)\n' >> "$proj/docs/calibracao.md" && gitc commit -qam registro
+expect 0 doc-calibration-registrado
+# doc_state: mudança só na pendência versionada não é código, e o build (que falharia) não roda; sem a chave, roda
+for c in 'doc_state = docs/ESTADO.md' '# sem doc_state'; do
+  novo 'verify_solution = sol.txt' 'verify_build = false' 'verify_test = true' "$c"
+  printf 's\n' > "$proj/sol.txt" && gitc add -A && gitc commit -qm sol
+  mkdir -p "$proj/docs" && printf 'onde paramos\n' > "$proj/docs/ESTADO.md"
+  if [ "$c" = '# sem doc_state' ]; then expect 2 sem-doc-state-conta-como-codigo; else expect 0 doc-state-nao-e-codigo; fi
+done
+
 if [ "$fails" -eq 0 ]; then echo "test-verify-on-stop: todos os casos passaram"; exit 0; fi
 echo "test-verify-on-stop: $fails falha(s)"
 exit 1
