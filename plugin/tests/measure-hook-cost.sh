@@ -78,3 +78,4 @@ node -e '
   }
   console.log(worstSum < 1e6 ? "Resultado: abaixo de ~1 s por comando, mesmo em série." : "Resultado: acima de ~1 s por comando em série; ver o hook mais lento acima.");
 ' "$work/tempos.tsv"
+# teste de nuvem: dois repositórios na mesma sessão (pode apagar)
