@@ -1,4 +1,7 @@
 // Veredito do dotnet-allow.sh (payload do PreToolUse em Bash na entrada padrão). Imprime ALLOW ou nada.
+// Só com allow_module = dotnet válido no .claude/risk.conf do projeto (com vence: futuro e motivo:, allowModules do
+// risk-conf.mjs, a mesma regra do path-guard): o allow de hook passa por cima do ask do settings.json, então sem a
+// declaração, vencida, sem motivo ou sem risk.conf (plugin inerte) o hook fica calado e vale o pedido normal.
 // dotnet build, test, restore, format e ef migrations saíram do allow por prefixo do settings.json: o prefixo aceitava
 // opção que grava arquivo onde o agente quiser (-flp:logfile=, -bl:, -o, -p:OutputPath=, --logger, --results-directory,
 // --diag, --report, ef migrations script -o). Gravado num hook, o log vira comando (provado: -flp:logfile= sobre o
@@ -21,6 +24,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { inTempDir } from './closed-forms.mjs';
+import { allowModules } from './risk-conf.mjs';
 
 const PATH = '(?!-)(?!/)[A-Za-z0-9._/-]+';
 const NAME = '[A-Za-z][A-Za-z0-9_]*';
@@ -66,6 +70,7 @@ if (basename(process.argv[1] ?? '') === 'dotnet-allow.mjs') {
   process.stdin.on('data', (c) => (d += c)).on('end', () => {
     let j;
     try { j = JSON.parse(d); } catch { return; }
+    if (!allowModules().includes('dotnet')) return;
     if (allowed(j?.tool_input?.command, String(j?.cwd ?? process.cwd()))) process.stdout.write('ALLOW');
   });
 }

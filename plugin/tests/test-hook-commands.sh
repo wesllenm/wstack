@@ -72,6 +72,18 @@ expect '2|' "$(run "$pg" "$plugin" '{"tool_name":"Bash","cwd":"/tmp","tool_input
 expect '0|' "$(run "$ct" "$plugin" "$bash_payload")" 'checkpoint-tests presente não diz nada fora de commit'
 expect '0|ask' "$(run "$pa" "$plugin" '{"tool_name":"Bash","cwd":"/tmp","tool_input":{"command":"cp /tmp/x .claude/settings.json"}}')" 'path-guard presente pede aprovação para trava'
 
+# dotnet-allow: hook de allow, então ausente fica calado (o pedido normal vale); presente, só libera com
+# allow_module = dotnet válido no risk.conf do projeto (o modelo traz a linha comentada)
+da=$(cmd_of Bash dotnet-allow.sh)
+[ -n "$da" ] || { echo "FALHOU: dotnet-allow fora do PreToolUse em Bash"; fails=$((fails + 1)); }
+dotnet_payload='{"tool_name":"Bash","cwd":"/tmp","tool_input":{"command":"dotnet build App.slnx"}}'
+expect '0|' "$(run "$da" "$work/vazio" "$dotnet_payload")" 'dotnet-allow ausente fica calado'
+expect '0|' "$(run "$da" "$plugin" "$dotnet_payload")" 'dotnet-allow sem allow_module = dotnet fica calado'
+printf 'allow_module = dotnet | vence: 2099-12-31 | motivo: teste\n' >> "$proj/.claude/risk.conf"
+expect '0|allow' "$(run "$da" "$plugin" "$dotnet_payload")" 'dotnet-allow com allow_module = dotnet libera a forma fechada'
+expect '0|' "$(run "$da" "$plugin" '{"tool_name":"Bash","cwd":"/tmp","tool_input":{"command":"dotnet nuget push x.nupkg"}}')" 'dotnet-allow não libera dotnet nuget push'
+git -C "$proj" checkout -q -- .claude/risk.conf
+
 # SessionStart: a primeira linha diz a versão do plugin em uso (é como se confere a atualização automática), também
 # fora de repositório git e sem projeto
 ss=$(jq -r '.hooks.SessionStart[].hooks[].command | select(contains("session-start.sh"))' "$hooks")

@@ -23,7 +23,7 @@ Todo plano SIMPLES ou COMPLEXO define os testes por esta skill.
 - Arquitetura (NetArchTest/ArchUnitNET): regras de slice e dependência — rodam no hook
 - Mutação (Stryker.NET): nos slices tocados, no CI, para pegar testes escritos "para passar" [TST-06]
 - E2E (`[Trait("Category", "E2E")]`, Playwright for .NET): fluxos críticos do usuário — poucos e estáveis [ENV-03]
-- Avaliação (quando o produto usa modelo de IA): conjunto de avaliação com casos representativos, a cada mudança de prompt ou modelo
+- Avaliação (quando o produto usa modelo de IA): conjunto de avaliação com casos representativos, a cada mudança de prompt, skill ou modelo
 - Carga: quando volume, SLA ou concorrência forem parte do risco
 
 ## BDD-first para SIMPLES e COMPLEXA

@@ -46,7 +46,7 @@ mkdir -p "$solto/.claude/risk.conf"
 got=$(CLAUDE_PROJECT_DIR="$solto" probe "$proj" activity_branch)
 [ "${got%%|*}" = '' ] && [ -n "${got#*|}" ] || { echo "FALHOU [conf-pasta]: esperado vazio com motivo, obtido '$got'"; fails=$((fails + 1)); }
 # um risk.conf ao lado do módulo (a pasta do plugin) nunca é lido
-plug="$work/plugin"; mkdir -p "$plug/hooks" && cp "$mod" "$(dirname "$mod")/git-repo.mjs" "$plug/hooks/" && printf 'activity_branch = plugin/\n' > "$plug/risk.conf"
+plug="$work/plugin"; mkdir -p "$plug/hooks" && cp "$mod" "$(dirname "$mod")/git-repo.mjs" "$(dirname "$mod")/conf-exception.mjs" "$plug/hooks/" && printf 'activity_branch = plugin/\n' > "$plug/risk.conf"
 expect conf-do-plugin "$(mod="$plug/hooks/risk-conf.mjs" CLAUDE_PROJECT_DIR="$proj" probe "$solto" activity_branch)" 'feat/,fix/|'
 
 # confAbsent: só o projeto que não adotou o wstack (arquivo fora da árvore E do HEAD) é "sem risk.conf"

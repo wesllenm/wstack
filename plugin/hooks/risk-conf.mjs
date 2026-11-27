@@ -11,6 +11,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GIT_ENV, left } from './git-repo.mjs';
+import { validValues } from './conf-exception.mjs';
 
 function projectDir() {
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
@@ -42,6 +43,9 @@ function read() {
 
 // Valores da chave, na ordem do arquivo; [] se ela não aparece ou o arquivo não pôde ser lido.
 export const confValues = (key) => read().get(key) ?? [];
+// módulos de forma fechada que o projeto declarou (allow_module) com validade e motivo: a regra única que o path-guard
+// (não pede nas formas) e o dotnet-allow (devolve allow) leem, para os dois não divergirem
+export const allowModules = () => validValues(confValues('allow_module'));
 // Motivo de o .claude/risk.conf não ter sido lido (ex.: ENOENT, EISDIR); '' se foi lido.
 export const confError = () => (read(), error);
 

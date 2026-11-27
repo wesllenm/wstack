@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.39.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.40.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -297,6 +297,7 @@ veredito), escolhidas depois da classificação de risco: o risco decide os gate
 | | `verifier-guard` | nos comandos do `review-verifier`, que roda a prova escrita por uma lente: nega rede, pipe para interpretador, `eval` e `base64 -d`, deixa passar só executor de teste, script do repositório e `git log`/`show`/`blame` com flags listadas, e pede aprovação para o resto (o verifier lê código com Read, Grep e Glob) |
 | | `git-read-allow` | aprova `git log/diff/show` na forma fechada |
 | | `script-allow` | aprova os scripts do plugin na forma fechada |
+| | `dotnet-allow` | aprova `dotnet build/test/restore/format/ef/list package` na forma fechada, só com `allow_module = dotnet` válido no `risk.conf`; o `deny` e o `ask` do `settings.json` continuam valendo |
 | | `checkpoint-tests` | roda os testes da área antes do `git commit` |
 | `TaskCompleted` | `checkpoint-tests` | idem, ao fechar uma tarefa |
 | `PostToolUse` edição | `edit-check` | lint e formatação do arquivo recém-editado |
