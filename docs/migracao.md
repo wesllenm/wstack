@@ -207,6 +207,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   fechadas do `dotnet` passam sem pedido, sem regra exata no `allow` do `settings.json`. A `testing-strategy` volta a
   pedir avaliação a cada mudança de prompt, skill ou modelo. Projeto .NET com o `allow_module`: pode tirar do `allow`
   as regras exatas de `dotnet` que só existiam por falta do hook.
+- 0.0.41: as skills `commit`, `lead` (aprendizado e paralelo), `why`, `recall`, `correct` e `unslop` abrem, leem e
+  rotulam PR pela API REST (`gh api`), não pelo `gh pr`, que usa GraphQL e recebe 403 na nuvem. O `setup.sh --docker`
+  apaga também o PID velho do `containerd` gerenciado. Sem ação no projeto; regra `allow` para `gh pr ...` no
+  `settings.json` do projeto deixa de ser usada pelo plugin.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

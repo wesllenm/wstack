@@ -6,10 +6,10 @@ Os scripts aparecem como `<plugin>/scripts/<nome>`: `<plugin>` é a pasta do plu
 
 ## Feedback externo
 
-Na primeira tarefa de cada sessão, se o `gh` estiver autenticado e responder (na VM da nuvem o GraphQL do `gh` pode devolver 403, e aí segue sem registrar), delegar ao `explore` a leitura do feedback humano desde a última leitura:
+Na primeira tarefa de cada sessão, se o `gh` estiver autenticado e responder, delegar ao `explore` a leitura do feedback humano desde a última leitura, pela API REST (`gh api`; o `gh pr` usa GraphQL, que a sessão na nuvem recusa com 403):
 
-- PRs mergeados depois da data em Feedback de PR de `docs/review-calibration.md` (`gh pr list --state merged --search "merged:AAAA-MM-DD..*" --json number,title,mergedAt`, sem `>` no texto, que o hook `redirect-guard` leria como redirecionamento e pediria aprovação);
-- por PR, revisões e comentários (`gh pr view <n> --json reviews,comments` e `gh api --method GET repos/{owner}/{repo}/pulls/<n>/comments` para os de linha);
+- PRs mergeados depois da data em Feedback de PR de `docs/review-calibration.md` (`gh api -X GET search/issues -f q='repo:<owner>/<repo> is:pr is:merged merged:AAAA-MM-DD..*' --jq '.items[] | [.number, .title, .closed_at]'`, com o dono e o nome escritos, porque o `gh api` só preenche `{owner}/{repo}` no caminho, não dentro do `q`; com o intervalo `..*` e sem `>` no texto, que o hook `redirect-guard` leria como redirecionamento e pediria aprovação);
+- por PR, revisões e comentários (`gh api -X GET repos/{owner}/{repo}/pulls/<n>/reviews`, `.../issues/<n>/comments` e `.../pulls/<n>/comments` para os de linha);
 - ignorar comentários de bots, aprovações sem texto e conversa que não aponta defeito.
 
 O `explore` devolve só os comentários que apontam defeito ou pedem mudança, cada um com arquivo, linha e uma frase. O `lead` classifica cada um:

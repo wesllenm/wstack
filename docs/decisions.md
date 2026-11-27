@@ -1009,3 +1009,29 @@ necessária: sem ela, todo projeto com o plugin teria o `dotnet` liberado sem te
 no `-p` (pediu); com ele, roda; com `deny` ou com `ask` de `dotnet build` no `settings.json`, é recusado. O `allow` de
 hook não passa por cima nem do `deny` nem do `ask` do projeto, então quem quiser pedir aprovação para uma forma, mesmo
 com o módulo declarado, põe a regra no `ask`. A prova fica fora da suíte e roda à mão quando o Claude Code mudar.
+
+## 2026-11-27: PR pela API REST e o PID velho do containerd
+
+**Decisão:** as skills abrem, leem e rotulam PR pelo `gh api` (REST), não pelo `gh pr`. Abrir em draft é
+`gh api repos/{owner}/{repo}/pulls -f title=... -f head=... -f base=... -F body=@<arquivo> -F draft=true`; rótulo pela
+API de rótulos da issue; feedback de PR pela busca (`search/issues`) e pelas rotas de revisões e comentários. Tirar de
+draft fica com `gh pr ready` no terminal local e com a rota `.../pulls/<n>/ccr/ready_for_review` na nuvem, porque a REST
+pública não faz isso.
+
+**Por quê:** medido numa sessão na nuvem (avaliação do HostAzul): `gh pr list` e `gh pr view` devolvem
+`HTTP 403: GitHub GraphQL is not available from Claude Code sessions`, e o `gh pr create` também usa GraphQL; o
+`gh api repos/.../pulls/<n>` funciona. A REST funciona também no terminal local, então um caminho só serve aos dois.
+O `gh api` só preenche `{owner}/{repo}` no caminho do endpoint: dentro do `q` da busca, o dono e o nome vão escritos
+(com o marcador, a busca devolve 422).
+
+**Decisão:** o `setup.sh --docker` apaga também o arquivo de PID do `containerd` que o `dockerd` gerencia
+(`/var/run/docker/containerd/containerd.pid`) quando o PID gravado não é mais de um `containerd`, como já fazia com o do
+`dockerd`.
+
+**Por quê:** na mesma sessão, depois de a VM ser retomada, o daemon não subia: `failed to start containerd: failed to
+save containerd pid to disk: process with PID 227 is still running`. Apagado o arquivo, o `dockerd` subiu e o
+`postgres:17-alpine` ficou pronto em 1 s.
+
+**Limite:** o `deny` de `gh pr merge` do modelo do `settings.json` não cobre o merge pela REST
+(`gh api -X PUT .../pulls/<n>/merge`), e as regras do Claude Code casam pelo começo do comando. O `lead` não faz merge
+por regra de texto; a fronteira é a proteção de branch do repositório.

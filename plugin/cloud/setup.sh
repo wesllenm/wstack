@@ -58,17 +58,22 @@ conf() { [ -f .claude/risk.conf ] && sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:sp
 # ---------- Docker ----------
 docker_up() { command -v docker > /dev/null && docker info > /dev/null 2>&1; }
 docker_why=""
+stale_pid() { # stale_pid <arquivo de PID> <nome do processo>: apaga o arquivo se o PID não for desse processo
+  local pid
+  [ -f "$1" ] || return 0
+  pid=$(cat "$1" 2> /dev/null)
+  if ! [[ $pid =~ ^[0-9]+$ ]] || [ "$(cat "/proc/$pid/comm" 2> /dev/null)" != "$2" ]; then rm -f "$1"; fi
+}
 ensure_docker() {
   docker_up && return 0
   command -v dockerd > /dev/null || { docker_why="dockerd não instalado"; return 1; }
   [ "$(id -u)" = 0 ] || { docker_why="sem root para subir o dockerd"; return 1; }
   # PID gravado antes de a VM ser retomada pode estar ocupado por outro processo, e o dockerd se recusa a subir
-  # ("process with PID N is still running"): o arquivo só fica se o PID for mesmo de um dockerd.
-  local pidfile=${DOCKER_PIDFILE:-/var/run/docker.pid} pid
-  if [ -f "$pidfile" ]; then
-    pid=$(cat "$pidfile" 2> /dev/null)
-    if ! [[ $pid =~ ^[0-9]+$ ]] || [ "$(cat "/proc/$pid/comm" 2> /dev/null)" != dockerd ]; then rm -f "$pidfile"; fi
-  fi
+  # ("process with PID N is still running"): o arquivo só fica se o PID for mesmo do processo dele. Vale também para o
+  # containerd que o dockerd gerencia ("failed to start containerd: failed to save containerd pid to disk").
+  local pidfile=${DOCKER_PIDFILE:-/var/run/docker.pid}
+  stale_pid "$pidfile" dockerd
+  stale_pid "${CONTAINERD_PIDFILE:-/var/run/docker/containerd/containerd.pid}" containerd
   # sessão própria: o timeout do hook manda SIGTERM ao grupo de processos e mataria o daemon ainda subindo
   setsid nohup dockerd --pidfile "$pidfile" > /var/log/dockerd.log 2>&1 &
   for _ in $(seq 1 60); do docker_up && return 0; sleep 1; done
