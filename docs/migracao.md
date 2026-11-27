@@ -169,6 +169,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   seções Por quê, O que mudou, Escopo, Trade-offs, Raio de impacto e Verificação, conferido por `slop-check.mjs --pr`,
   e PR em draft com verificação pendente; `test-readme-counts.sh` no CI. Acompanhamento do PR (5.5) registrado como
   planejado para depois da 0.1.0. Sem ação no projeto.
+- 0.0.32: candidato sem severidade ou com severidade fora da lista exige prova; a saída esperada vai no campo
+  `esperado:` (`->` não separa mais); o verificador não grava arquivo e devolve `plausível — falta prova` para o lead
+  pedir o teste ao `implementer`; Limites da prova na `review-rubric`; `RESTRICAO` fora do `--gate` do `diff-smells` e
+  procurada também em `///`; escalas definidas na `blast-radius`; `slop-check --pr` aceita título sem acento. Sem ação
+  no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

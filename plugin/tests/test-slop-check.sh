@@ -64,6 +64,10 @@ prcheck 'sem Verificação' 3 'seção obrigatória ausente no PR: ## Verificaç
 prcheck 'longo' 3 'linhas de texto (máximo 40)' "$(printf '## Por quê\n'; for i in $(seq 1 40); do echo "linha $i"; done; printf '## Verificação\nok\n')"
 prcheck 'padrões continuam valendo' 3 'erro: autorreferência' $'## Por quê\nEste PR corrige o frete.\n\n## Verificação\nok'
 prcheck '### dentro de seção não conta' 0 - $'## Por quê\nx\n### Detalhe\ny\n\n## Verificação\nz'
+prcheck 'título sem acento' 0 - $'## Por que\nx\n\n## Verificacao\nz'
+# ``` dentro de um bloco ~~~ não fecha o bloco: o "## Testes" de dentro continua sendo exemplo, não seção
+prcheck 'bloco ~~~ com ``` dentro' 0 - $'## Por quê\nx\n~~~\n```\n## Testes\n~~~\n\n## Verificação\nz'
+check 'bloco ~~~ com ``` dentro, padrões' 0 - $'Exemplo:\n~~~\n```\nEste commit adiciona\n~~~\nFim.'
 # sem --pr, as seções não são conferidas
 printf '## Testes\nx\n' > "$work/pr.txt"; node "$script" "$work/pr.txt" > /dev/null 2>&1; [ $? = 0 ] || fail 'sem --pr: conferiu as seções'
 node "$script" --pr > /dev/null 2>&1; [ $? = 2 ] || fail '--pr sem arquivo: código diferente de 2'

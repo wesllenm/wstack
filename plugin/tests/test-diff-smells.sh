@@ -35,11 +35,21 @@ grep -q 'RESTRICAO=2' <<< "$out" || fail "restrição: total ($out)"
 printf 'class A {\n  // denaoexiste nunquinha\n}\n' > "$repo/src/A.cs"
 run --text
 grep -q '^RESTRICAO' <<< "$out" && fail "palavra parcial: virou RESTRICAO ($out)"
-# o limite de comentários conta a restrição junto: separar a categoria não afrouxa o --gate
-printf 'class A {\n  // nunca nulo aqui\n  // sempre em UTC\n}\n' > "$repo/src/A.cs"
+# RESTRICAO é só sinal: comentários descritivos ("sempre retorna uma lista") não bloqueiam o --gate
+printf 'class A {\n  // nunca nulo aqui\n  // sempre retorna uma lista\n  // deve vir ordenado\n}\n' > "$repo/src/A.cs"
 run --gate --text
-[ "$code" = 1 ] || fail "gate: duas restrições acima do limite 1 não reprovaram (código $code)"
-grep -q 'COMENTARIO 2 > 1' <<< "$out" || fail "gate: motivo ($out)"
+[ "$code" = 0 ] || fail "gate: três restrições acima do limite 1 reprovaram (código $code, $out)"
+grep -q 'RESTRICAO=3' <<< "$out" || fail "gate: restrições não sinalizadas ($out)"
+# o limite continua valendo para os comentários comuns
+printf 'class A {\n  // calcula o total\n  // soma o frete\n}\n' > "$repo/src/A.cs"
+run --gate --text
+[ "$code" = 1 ] && grep -q 'COMENTARIO 2 > 1' <<< "$out" || fail "gate: dois comentários comuns acima do limite 1 não reprovaram (código $code, $out)"
+# documentação (///, <remarks>) e continuação de bloco também são procuradas, como sinal
+printf 'class A {\n  /// <remarks>Deve ser chamado depois de Init().</remarks>\n  void M() { }\n  /* calcula o total\n   * nunca com lista vazia */\n}\n' > "$repo/src/A.cs"
+run --text
+grep -q '^RESTRICAO *src/A.cs:2  doc: deve ' <<< "$out" || fail "/// com restrição: sem o sinal ($out)"
+grep -q '^RESTRICAO *src/A.cs:5  nunca ' <<< "$out" || fail "continuação de bloco com restrição: sem o sinal ($out)"
+grep -q '^DOC *src/A.cs:2' <<< "$out" && fail "/// com restrição: contou como DOC em vez de RESTRICAO ($out)"
 # TODO continua MARCADOR (o gate mais estrito), mesmo com palavra de restrição
 printf 'class A {\n  // TODO não esquecer\n}\n' > "$repo/src/A.cs"
 run --text

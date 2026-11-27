@@ -39,16 +39,37 @@ grep -q '^  severidade: bloqueante$' <<< "$out" || fail 'com prova: severidade m
 grep -q 'situação:' <<< "$out" && fail 'com prova: ganhou situação a confirmar'
 grep -q '^  ancoragem: ancorado' <<< "$out" || fail "com prova: não ancorou ($out)"
 
-# bloqueante sem prova: fica, rebaixado a "a confirmar"; não é descartado
+# bloqueante sem prova: fica, com a severidade dele, marcado "a confirmar"; não é descartado
 { item lente-2 bloqueante correctness; echo 'status: achados'; } > "$work/sem-prova.txt"
 run "$work/sem-prova.txt"; expect_code 'sem prova' 0
 grep -q '^- id: lente-2$' <<< "$out" || fail 'sem prova: candidato descartado'
 grep -q '^  situação: a confirmar (sem prova:' <<< "$out" || fail "sem prova: sem situação a confirmar ($out)"
 grep -q '1 a confirmar sem prova' <<< "$err" || fail "sem prova: resumo não conta ($err)"
-# prova sem a saída esperada também rebaixa
+# prova sem a saída esperada também fica a confirmar
 { item lente-3 importante security 'dotnet test --filter Total'; echo 'status: achados'; } > "$work/prova-incompleta.txt"
 run "$work/prova-incompleta.txt"
 grep -q 'situação: a confirmar (prova: sem a saída esperada' <<< "$out" || fail "prova incompleta: não rebaixou ($out)"
+# saída esperada no campo próprio esperado:
+{ item lente-3b importante security 'dotnet test --filter Total'; printf '  esperado: Assert.Equal falhou\n'; echo 'status: achados'; } > "$work/esperado.txt"
+run "$work/esperado.txt"
+grep -q 'situação:' <<< "$out" && fail "esperado: campo próprio não contou ($out)"
+# "->" dentro do comando não é separador: sem esperado:, a prova continua incompleta
+{ item lente-3c bloqueante correctness "grep 'p->x' src/a.c"; echo 'status: achados'; } > "$work/seta-no-comando.txt"
+run "$work/seta-no-comando.txt"
+grep -q 'situação: a confirmar (prova: sem a saída esperada' <<< "$out" || fail "seta no comando: passou como prova completa ($out)"
+# severidade ausente ou fora da lista não dispensa a prova: conta como bloqueante
+printf -- '- id: lente-3d\n  categoria: correctness\n  confiança: 80\n  local: src/a.cs:2\n  trecho: |\n    var total = itens.Sum(i => i.Preco);\n  evidência: src/a.cs:2 — x\n  cenário: x → y\nstatus: achados\n' > "$work/sem-severidade.txt"
+run "$work/sem-severidade.txt"
+grep -q 'situação: a confirmar (severidade ausente, tratada como bloqueante; sem prova:' <<< "$out" || fail "sem severidade: dispensou a prova ($out)"
+for s in 'Bloqueante (alta)' 'alta' 'Nit!'; do
+  { item lente-3e "$s" correctness; echo 'status: achados'; } > "$work/severidade-errada.txt"
+  run "$work/severidade-errada.txt"
+  grep -q 'severidade fora da lista' <<< "$out" && grep -q 'situação: a confirmar' <<< "$out" || fail "severidade '$s': dispensou a prova ($out)"
+done
+# severidade errada com prova completa: não fica a confirmar, mas avisa que o verificador dá a severidade
+{ item lente-3f 'Alta' correctness 'dotnet test → falhou'; echo 'status: achados'; } > "$work/severidade-errada-com-prova.txt"
+run "$work/severidade-errada-com-prova.txt"
+grep -q 'situação: severidade fora da lista: o verificador dá a severidade final' <<< "$out" || fail "severidade errada com prova: sem aviso ($out)"
 # simplicity e nit dispensam a prova
 { item lente-4 importante simplicity; item lente-5 nit correctness; echo 'status: achados'; } > "$work/dispensada.txt"
 run "$work/dispensada.txt"

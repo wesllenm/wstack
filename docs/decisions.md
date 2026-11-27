@@ -824,3 +824,32 @@ Verificação, e uma "O que pode quebrar" que virou Raio de impacto; entrou Trad
 playbooks, e ela entrou na linha da árvore para o teste conferir. O lead não chamava o `why` antes de mudar código
 antigo; o passo foi criado no `pipeline.md`. O `push-guard` não cobre `gh pr create`, então o formato do PR não virou
 trava de comando: a conferência é o `slop-check --pr`, que a skill manda rodar.
+
+## 2026-11-26: prova sem brecha de severidade, verificador sem escrita e limites da prova
+
+Revisão dos itens dos lotes 1, 2 e 5, depois da v0.0.31.
+
+**Decisão:**
+- **Severidade ausente ou fora da lista conta como bloqueante** no `check-findings.mjs` e exige prova. Antes, um
+  candidato sem `severidade:`, ou com `Bloqueante (alta)`, passava sem prova e sem aviso. Com prova completa e
+  severidade errada, ele ganha `situação: severidade fora da lista` para o verificador dar a severidade final.
+- **A saída esperada vai no campo `esperado:`.** O `->` dentro de um comando (`grep 'p->x' src/a.c`) contava como
+  separador e fazia a prova passar como completa. A forma curta só aceita ` → `, com espaços, separado pela última
+  ocorrência. O script nunca muda a severidade, e o comentário dele agora diz isso.
+- **O verificador não grava arquivo.** Ele só confirma um candidato a confirmar com uma prova que cabe num comando
+  (teste existente com filtro, consulta de leitura, `node -e`); sem isso, devolve `plausível` com `como provar: falta
+  prova — <o teste>`, e o lead pede o teste ao `implementer`, com o gate de autoria da `test-audit`.
+- **Limites da prova**, na `review-rubric`: nenhum efeito fora do repositório e da pasta temporária além do banco de
+  teste (nada de migration em banco que não é de teste, deploy, publicação, mensagem ou serviço de terceiro); sem
+  rede além dos serviços locais da `verify-<app>`; tempo limite pelo timeout da ferramenta Bash; e as travas de
+  sempre. Prova que fura um limite não roda.
+- **`RESTRICAO` fora do `--gate`.** Ela é só sinal para a `review-simplicity`; contar no limite de comentários fazia
+  três comentários descritivos ("sempre retorna uma lista") bloquearem o commit. A busca passou a cobrir também a
+  documentação `///` (o `<remarks>` com "deve ser chamado depois de Init()") e a continuação de bloco.
+- **`blast-radius`:** cada nível de probabilidade e de custo tem definição, e o teste que prova o fato de segurança é o
+  primeiro item do sprint contract do `implementer`.
+- **`slop-check --pr`:** título comparado sem acento e sem caixa, e bloco cercado fechado só pelo mesmo marcador.
+
+**Risco aceito:** tirar a `RESTRICAO` do gate afrouxa o limite em relação à v0.0.26, quando esse comentário contava
+como `COMENTARIO`. A troca é de propósito: comentário de regra vira proposta de garantia na revisão, em vez de travar o
+commit.
