@@ -95,6 +95,36 @@ printf 'y\n' >> "$C/a.cs"
 sed -i '/^companion = /d' "$P/.claude/risk.conf"; printf 'checkpoint = nada/* -> false\n' >> "$P/.claude/risk.conf"; gitc "$P" commit -qam sem
 [ "$(ck "$C" 'git commit -m x')" = 0 ] || fail checkpoint-fora-da-lista "$(head -c 200 "$work/ckerr")"
 
+# --- push-guard: o push no companheiro vale com as regras do risk.conf dele (o Platform usa feat/, o ServerControl sc/)
+push() { # push <cwd> <comando>: ok | ask | deny
+  local out rc
+  out=$(jq -cn --arg c "$2" --arg d "$1" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
+    CLAUDE_PROJECT_DIR=$P bash "$plugin/hooks/push-guard.sh" 2> "$work/pgerr"); rc=$?
+  if [ "$rc" = 2 ]; then echo deny; elif grep -q '"permissionDecision":"ask"' <<< "$out"; then echo ask; elif [ "$rc" = 0 ] && [ -z "$out" ]; then echo ok; else echo "rc=$rc"; fi
+}
+par empurra
+for r in "$P" "$C"; do
+  git init -q --bare "$r.git" && git -C "$r" remote add origin "$r.git" && git -C "$r" push -q origin HEAD:refs/heads/main 2> /dev/null
+done
+printf 'activity_branch = feat/\n' >> "$P/.claude/risk.conf"; gitc "$P" commit -qam act
+printf 'activity_branch = sc/\n' >> "$C/.claude/risk.conf"; gitc "$C" commit -qam act
+[ "$(push "$P" 'git push -u origin feat/tarefa')" = ok ] || fail push-projeto "$(cat "$work/pgerr")"
+[ "$(push "$C" 'git push -u origin sc/tarefa')" = ok ] || fail push-companheiro-pasta "$(cat "$work/pgerr")"
+[ "$(push "$P" 'git -C ../ServerControl push -u origin sc/tarefa')" = ok ] || fail push-companheiro-menos-C "$(cat "$work/pgerr")"
+[ "$(push "$C" 'git push -u origin feat/tarefa')" = ask ] || fail push-companheiro-prefixo-do-projeto "$(push "$C" 'git push -u origin feat/tarefa')"
+[ "$(push "$C" 'git push -u origin main')" = deny ] || fail push-companheiro-main "$(push "$C" 'git push -u origin main')"
+grep -qF '(companheiro ServerControl)' "$work/pgerr" || fail push-motivo-com-nome "$(cat "$work/pgerr")"
+# verificação pendente no projeto segura o push do companheiro; a do companheiro também
+mkdir -p "$P/.claude/.session" && printf 'exceção\n' > "$P/.claude/.session/unverified-s1"
+[ "$(push "$C" 'git push -u origin sc/tarefa')" = deny ] || fail push-pendente-no-projeto "$(cat "$work/pgerr")"
+rm -f "$P/.claude/.session/unverified-s1"
+mkdir -p "$C/.claude/.session" && printf 'exceção\n' > "$C/.claude/.session/unverified-s1"
+[ "$(push "$C" 'git push -u origin sc/tarefa')" = deny ] || fail push-pendente-no-companheiro "$(cat "$work/pgerr")"
+rm -f "$C/.claude/.session/unverified-s1"
+# repositório fora da lista: estranho, pede aprovação
+sed -i '/^companion = /d' "$P/.claude/risk.conf"; gitc "$P" commit -qam sem
+[ "$(push "$C" 'git push -u origin sc/tarefa')" = ask ] || fail push-fora-da-lista "$(push "$C" 'git push -u origin sc/tarefa')"
+
 if [ "$fails" -eq 0 ]; then echo "test-companions: todos os casos passaram"; exit 0; fi
 echo "test-companions: $fails falha(s)"
 exit 1

@@ -1098,3 +1098,23 @@ repositório ficava fora do risco, do `Stop` e do checkpoint certo. Nas três es
 e o `SessionStart` avisa. O gate de aprendizado fica só no projeto, onde moram os documentos. O hook de `Stop` emite
 uma mensagem de sistema só, e a de um companheiro que encerrou bem vai para o stderr. O `TaskCompleted` roda só as
 áreas do projeto. O push do companheiro continua pedindo aprovação até a 2ª parte, no `push-guard`.
+
+## 2026-11-27: repositórios companheiros, 2ª parte (push e PRs ligados)
+
+**Decisão:** o `push-guard` reconhece `git [-C <dir>] push` num repositório declarado em `companion`. Com verificação
+pendente no projeto, recusa. Senão, o próprio hook julga o push num processo em que o companheiro é o projeto
+(`CLAUDE_PROJECT_DIR` do companheiro): valem as branches de atividade, a branch padrão, os caminhos protegidos, o origin
+e os marcadores dele. O comando vai sem o `-C`, rodando na raiz do companheiro, porque o `..` do caminho do irmão faria
+o formato fechado pedir aprovação. Repositório fora da lista continua estranho, e o push pede aprovação.
+
+A skill `commit` abre um PR por repositório, primeiro o do repositório que expõe o contrato. Cada PR cita o outro
+(`Par: <owner>/<repo>#<n>`) e traz a mesma `## Ordem de merge`, seção que o `slop-check --pr` passa a aceitar entre
+Raio de impacto e Verificação. O rótulo de risco dos dois é o nível da tarefa.
+
+**Por quê:** na 1ª parte, o push do ServerControl caía em "o repositório do comando não é o do projeto" e pedia
+aprovação a cada vez, com as regras de branch do Platform. Reaproveitar o hook inteiro no outro processo evita uma
+segunda implementação das regras de push, que é onde mora a trava. Ordem de merge decidida por tarefa, e não fixa no
+`risk.conf`: qual repositório expõe o contrato muda de tarefa para tarefa.
+
+**Limite:** a ordem de merge, as citações entre os PRs e a compatibilidade com o formato antigo são do texto da skill,
+não de hook. O merge continua do desenvolvedor.

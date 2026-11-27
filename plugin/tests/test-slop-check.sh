@@ -65,6 +65,9 @@ prcheck 'longo' 3 'linhas de texto (máximo 40)' "$(printf '## Por quê\n'; for 
 prcheck 'padrões continuam valendo' 3 'erro: autorreferência' $'## Por quê\nEste PR corrige o frete.\n\n## Verificação\nok'
 prcheck '### dentro de seção não conta' 0 - $'## Por quê\nx\n### Detalhe\ny\n\n## Verificação\nz'
 prcheck 'título sem acento' 0 - $'## Por que\nx\n\n## Verificacao\nz'
+# PR de repositórios companheiros: Ordem de merge, entre Raio de impacto e Verificação
+prcheck 'ordem de merge' 0 - $'## Por quê\nx\n\n## Raio de impacto\ny\n\n## Ordem de merge\n1. owner/b#2 primeiro.\n\n## Verificação\nz'
+prcheck 'ordem de merge fora de ordem' 3 'seção fora de ordem' $'## Por quê\nx\n\n## Verificação\nz\n\n## Ordem de merge\n1. a'
 # ``` dentro de um bloco ~~~ não fecha o bloco: o "## Testes" de dentro continua sendo exemplo, não seção
 prcheck 'bloco ~~~ com ``` dentro' 0 - $'## Por quê\nx\n~~~\n```\n## Testes\n~~~\n\n## Verificação\nz'
 check 'bloco ~~~ com ``` dentro, padrões' 0 - $'Exemplo:\n~~~\n```\nEste commit adiciona\n~~~\nFim.'

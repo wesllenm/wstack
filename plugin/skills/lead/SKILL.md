@@ -189,6 +189,7 @@ As etapas (preparar, achar, verificar, corrigir), a ancoragem dos candidatos, a 
 - O veredito da revisão vale para uma versão do código: antes do primeiro commit da unidade, conferir que o HEAD ainda é o SHA base e que a impressão da árvore não mudou (forma do cálculo em `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/revisao.md`, Versão revisada); o que mudou passa pela revisão do delta.
 - Um commit por mudança lógica; na `test-audit`, um commit por lote coerente.
 - O `implementer` e os demais subagentes não commitam; o `lead` commita após integrar e revisar.
+- Tarefa com repositórios companheiros: um commit por repositório, e o push de cada um pela pasta dele ou por `git -C <companheiro> push -u origin <branch de atividade dele>`, que o `push-guard` julga com o `risk.conf` do companheiro. Os dois PRs se citam e trazem a mesma `## Ordem de merge` (skill `commit`).
 - Trabalhar numa branch `feat/<id>-<slug>` (ou `fix/`, `chore/`) criada a partir de `main`; não commitar direto em `main`, salvo o commit inicial do bootstrap.
 - Push, PR, rebase de branch publicada e force push ficam fora da aprovação padrão. O push da branch de atividade está liberado quando o plano o prevê (`allow` + hook `push-guard`); `--force-with-lease` depois de rebase pede aprovação ao desenvolvedor, e push para a `main`, `--force` puro e apagar ref remota o hook recusa sempre: são do desenvolvedor.
 
