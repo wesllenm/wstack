@@ -77,17 +77,22 @@ for (const { name, text } of inputs) {
   let cur = null, lastKey = null, found = 0;
   for (const raw of lines) {
     const start = /^\s*-\s+id:\s*(.*)$/.exec(raw);
-    if (start) { cur = { fields: [['id', start[1].trim()]], trecho: [], lens: name }; items.push(cur); found++; lastKey = 'id'; continue; }
+    if (start) { cur = { fields: [['id', start[1].trim()]], trecho: [], lens: name, seen: new Set(['id']), dup: '', cut: false }; items.push(cur); found++; lastKey = 'id'; continue; }
     if (!cur) continue;
     const kv = /^\s{1,3}([\p{L} ]+):\s?(.*)$/iu.exec(raw);
     if (kv && !/^\s{4,}/.test(raw)) {
       const key = kv[1].trim().toLowerCase();
       lastKey = key;
+      // chave repetida: o script leria a primeira e o verificador veria as duas (severidade: nit e severidade: bloqueante)
+      if (cur.seen.has(key) && !cur.dup) cur.dup = key;
+      cur.seen.add(key);
       if (key === 'trecho') { if (kv[2].trim() && kv[2].trim() !== '|') cur.trecho.push(kv[2]); }
       else if (!RESERVED.has(key)) cur.fields.push([key, kv[2]]);
       continue;
     }
     if (lastKey === 'trecho' && /^\s{4,}\S/.test(raw)) cur.trecho.push(raw.replace(/^\s{4}/, ''));
+    // linha do trecho com recuo menor que 4 fica fora dele: um trecho mais curto pode casar em outro ponto do arquivo
+    else if (lastKey === 'trecho' && /^\s{1,3}\S/.test(raw)) cur.cut = true;
   }
   const clean = (s) => s.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 200);
   if (status === null) lacunas.push({ lente: name, motivo: 'sem a linha de status no fim (resposta truncada, fora do formato ou sem resposta)' });
@@ -181,6 +186,7 @@ for (const it of items) {
   if (!m) { r.status = 'descartado'; r.detail = 'local sem o formato arquivo:linha'; continue; }
   const [, path, l1] = m, line = Number(l1);
   const needle = it.trecho.map(norm).filter(Boolean);
+  if (it.dup) { r.status = 'descartado'; r.detail = `chave repetida no candidato (${it.dup}): o script e o verificador leriam valores diferentes`; continue; }
   if (!needle.length) { r.status = 'descartado'; r.detail = 'candidato sem trecho'; continue; }
   if (needle.length > MAX_TRECHO_LINES) { r.status = 'descartado'; r.detail = `trecho acima de ${MAX_TRECHO_LINES} linhas`; continue; }
   const lines = safePath(path) ? fileLines(path) : null;
@@ -208,6 +214,7 @@ for (const it of items) {
   }
   r.local = newLocal;
   if (r.in_diff === false && /^n[ãa]o$/i.test(get('preexistente') ?? '')) r.warning = 'local fora das linhas alteradas com preexistente: não';
+  if (it.cut) r.warning = `${r.warning ? `${r.warning}; ` : ''}trecho pode ter sido cortado (linha com recuo menor que 4 espaços ficou fora dele); conferir o local`;
   // prova por execução: exigida em bloqueante e importante, salvo reuse, simplicity e scope (a evidência ali é o
   // outro trecho de código, não uma execução). Severidade ausente ou fora da lista conta como bloqueante (falha
   // fechada: grafia errada não dispensa a prova). A saída esperada vem no campo `esperado:` (ou, na forma curta, depois

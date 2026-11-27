@@ -912,3 +912,27 @@ lente que só alucina era invisível. E chave com erro de digitação deixava a 
   que vazio é de propósito.
 
 **Por quê:** a base vazia era o mesmo furo da base ausente, entrando por outra porta.
+
+## 2026-11-27: os comandos de prova do review-verifier passam por um hook
+
+**Decisão:** hook novo `verifier-guard` no `PreToolUse` de Bash, que só age quando o `agent_type` da entrada é o
+`review-verifier`. Ele nega rede (`curl`, `wget`, `nc`, `ssh`, `Invoke-WebRequest`, `/dev/tcp`), pipe para
+interpretador (`| sh`, `| bash`, `| node`), `eval`, `base64 -d` e `bash -c`. Deixa passar as formas conhecidas de
+prova: executor de teste, `node` ou `bash` de arquivo do repositório, `git` de leitura, `grep` e `rg`. Pede aprovação
+para o resto, inclusive `node -e`, que sai da lista de prova aceita na rubrica.
+
+No `check-findings.mjs`, candidato com chave repetida é descartado, e linha do trecho com recuo menor que quatro
+espaços gera aviso de trecho cortado. A rubrica passa a dizer que a exigência de prova vale pela severidade e pela
+categoria finais do verificador, não pelas que a lente escreveu.
+
+**Por quê:** a `prova:` vem do texto de uma lente que leu o código do projeto, e esse código pode ser hostil. Uma lente
+induzida a escrever `prova: curl ... | sh` entregava ao verifier um comando que as travas de caminho e de branch não
+pegam; as regras de "sem rede" e "sem efeito fora do repositório" estavam só no texto. Na nuvem, a lista de domínios
+liberados limita o estrago; no terminal local, nada limitava.
+
+**Por que no `hooks.json`:** o Claude Code ignora `hooks:` no frontmatter de agente de plugin, por segurança. O hook
+fica com os outros de Bash e filtra pelo `agent_type` da entrada (`review-verifier` ou `wstack:review-verifier`).
+
+**Limite:** é trava por texto, como as outras: comando montado para esconder passa. Chamada sem `agent_type`, de uma
+versão do Claude Code que não manda o campo, passa sem veredito. As lentes e o lead não passam por este hook. O
+objetivo é tirar a execução arbitrária do caminho padrão, não ser fronteira.
