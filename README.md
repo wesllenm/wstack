@@ -183,50 +183,42 @@ docs/           decisões, inventário da migração, matriz de garantias, sonda
 
 ### Mapa por etapa
 
-O que entra em cada etapa de uma tarefa, na ordem em que dispara. A cor diz quem garante: em vermelho, hook que
+Uma coluna por etapa da tarefa, com o que entra nela de cima para baixo, na ordem em que dispara. A cor diz quem garante: em vermelho, hook que
 roda sem depender do modelo; em azul, script determinístico; em verde, skill (orientação que o modelo segue); em
 roxo, agente; em amarelo, o que é seu.
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph PLAN["1 · Planejar"]
-        direction LR
-        p1["how · why · recall<br/>entender o código"] --> p2["classify-diff.sh<br/>nível de risco"] --> p3["blast-radius<br/>o que quebra fora do diff"] --> p4["arena<br/>propostas + juiz"] --> p5{{"Você aprova<br/>o plano"}}
+        direction TB
+        p1["how · why · recall<br/>entender o código"] --> p2["classify-diff.sh<br/>nível de risco"] --> p3["blast-radius<br/>o que quebra<br/>fora do diff"] --> p4["arena<br/>propostas + juiz"] --> p5{{"Você aprova<br/>o plano"}}
     end
     subgraph DESIGN["2 · Desenhar"]
-        direction LR
-        d1["esboço da fatia<br/>uso e assinaturas"] --> d2["domain-modeling<br/>api-design · vertical-slice<br/>db-evolution"]
+        direction TB
+        d1["esboço da fatia<br/>uso e assinaturas"] --> d2["domain-modeling<br/>api-design"] --> d3["vertical-slice<br/>db-evolution"]
     end
     subgraph BUILD["3 · Construir"]
-        direction LR
-        b1["implementer<br/>sprint contract"] --> b2["tdd · test-audit<br/>teste antes do código"] --> b3["edit-check · iteration-guard<br/>a cada edição"]
+        direction TB
+        b1["implementer<br/>sprint contract"] --> b2["tdd · test-audit<br/>teste antes<br/>do código"] --> b3["edit-check<br/>iteration-guard<br/>a cada edição"]
     end
     subgraph REVIEW["4 · Revisar e provar"]
-        direction LR
-        r1["diff-smells.mjs<br/>escape, marcador, restrição"] --> r2["review-dispatch.mjs<br/>grupos e regras"] --> r3["lentes<br/>agent · simplicity · failures<br/>domain · security"] --> r4["check-findings.mjs<br/>trecho, prova, lacuna"] --> r5["review-verifier<br/>roda a prova"] --> r6["review-critical<br/>fato de segurança"]
+        direction TB
+        r1["diff-smells.mjs<br/>escape, marcador,<br/>restrição"] --> r2["review-dispatch.mjs<br/>grupos e regras"] --> r3["lentes<br/>agent · simplicity<br/>failures · domain<br/>security"] --> r4["check-findings.mjs<br/>trecho, prova,<br/>lacuna"] --> r5["review-verifier<br/>roda a prova"] --> r6["review-critical<br/>fato de segurança"] --> r8["verify-#lt;app#gt;<br/>na aplicação real"]
         r7["interrogate.mjs<br/>outro fornecedor"] --> r4
-        r8["verify-#lt;app#gt;<br/>na aplicação real"]
     end
     subgraph SHIP["5 · Entregar"]
-        direction LR
-        s1["checkpoint-tests<br/>antes do commit"] --> s2["commit<br/>slop-check"] --> s3["verify-on-stop<br/>build e testes verdes"] --> s4["push-guard<br/>branch de atividade"] --> s5["PR<br/>slop-check --pr"] --> s6{{"Você faz<br/>o merge"}}
+        direction TB
+        s1["checkpoint-tests<br/>antes do commit"] --> s2["commit<br/>slop-check"] --> s3["verify-on-stop<br/>build e testes<br/>verdes"] --> s4["push-guard<br/>branch de atividade"] --> s5["PR<br/>slop-check --pr"] --> s6{{"Você faz<br/>o merge"}}
     end
     subgraph LEARN["6 · Aprender e manter"]
-        direction LR
-        l1["Registro<br/>principles.mjs"] --> l2["triagem das lições<br/>aceita · rejeitada · backlog"] --> l3["correct<br/>e /correct historico"] --> l4["Regras e garantias<br/>no CLAUDE.md"]
-        l5["map-staleness.mjs"] --> l6["verify-#lt;app#gt; manutenção<br/>mapa de features"]
+        direction TB
+        l1["Registro<br/>principles.mjs"] --> l2["triagem das lições<br/>aceita · rejeitada<br/>backlog"] --> l3["correct<br/>/correct historico"] --> l4["Regras e garantias<br/>no CLAUDE.md"] --> l5["map-staleness.mjs"] --> l6["verify-#lt;app#gt;<br/>manutenção"]
     end
-    PLAN --> DESIGN --> BUILD --> REVIEW --> SHIP --> LEARN
-
     subgraph ALWAYS["A qualquer momento"]
-        direction LR
-        a1["lead<br/>tipo de tarefa e playbook"]
-        a2["path-guard · write-guard<br/>redirect-guard"]
-        a3["princípios<br/>attack-the-premise<br/>build-the-lever<br/>separate-before-serializing<br/>subtract-before-you-add"]
-        a4["unslop · commit<br/>texto em PT-BR"]
-        a1 ~~~ a2 ~~~ a3 ~~~ a4
+        direction TB
+        a1["lead<br/>tipo de tarefa<br/>e playbook"] ~~~ a2["path-guard<br/>write-guard<br/>redirect-guard"] ~~~ a3["princípios<br/>attack-the-premise<br/>build-the-lever<br/>separate-before-<br/>serializing<br/>subtract-before-<br/>you-add"] ~~~ a4["unslop · commit<br/>texto em PT-BR"]
     end
-    LEARN ~~~ ALWAYS
+    PLAN ~~~ DESIGN ~~~ BUILD ~~~ REVIEW ~~~ SHIP ~~~ LEARN ~~~ ALWAYS
 
     classDef voce fill:#fde68a,stroke:#b45309,color:#000
     classDef trava fill:#fecaca,stroke:#b91c1c,color:#000
@@ -236,7 +228,7 @@ flowchart TB
     class p5,s6 voce
     class b3,s1,s3,s4,a2 trava
     class p2,r1,r2,r4,r7,s5,l1,l5 script
-    class p1,p3,p4,d1,d2,b2,r8,s2,l2,l3,l4,l6,a3,a4 skill
+    class p1,p3,p4,d1,d2,d3,b2,r8,s2,l2,l3,l4,l6,a3,a4 skill
     class b1,r3,r5,r6,a1 agente
 ```
 
