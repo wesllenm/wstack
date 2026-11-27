@@ -936,3 +936,21 @@ fica com os outros de Bash e filtra pelo `agent_type` da entrada (`review-verifi
 **Limite:** é trava por texto, como as outras: comando montado para esconder passa. Chamada sem `agent_type`, de uma
 versão do Claude Code que não manda o campo, passa sem veredito. As lentes e o lead não passam por este hook. O
 objetivo é tirar a execução arbitrária do caminho padrão, não ser fronteira.
+
+## 2026-11-27: o verifier-guard provado com o Claude Code real
+
+**Decisão:** prova nova `prove-verifier-guard.sh`, que roda com o Claude Code real, num repositório de teste com o
+plugin carregado da pasta (`--plugin-dir`). Um servidor HTTP local conta os acessos, e um hook de log grava a entrada de
+cada `PreToolUse`. As duas rodadas usam o modo `bypassPermissions`, em que só um hook que nega barra o comando: a única
+diferença entre o controle e o caso é o agente.
+
+**Resultado com o Claude Code 2.1.332:** o `curl` da sessão principal chega ao servidor; o `agent_type` chega ao hook
+como `wstack:review-verifier`; o mesmo `curl` vindo do `review-verifier` é recusado pelo hook e não chega.
+
+**Por quê:** o hook depende de um campo que só o Claude Code real manda. Os `test-*.sh` montam o JSON e não pegariam o
+campo ausente ou num formato diferente, que deixaria o guard desligado sem aviso. A primeira rodada mostrou também por
+que o controle importa: com só a regra `Bash(curl:*)` no projeto, o `curl` da sessão principal pedia aprovação e era
+recusado, e o "não chegou" do verifier não provaria nada.
+
+**Risco aceito, no README:** o hook deixa passar executor de teste e script do repositório, e esse código vem do
+projeto. A fronteira continua sendo o isolamento do ambiente.
