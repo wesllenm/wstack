@@ -191,6 +191,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   formas conhecidas de prova e pede aprovação para o resto (inclusive `node -e`). `check-findings` descarta candidato
   com chave repetida e avisa trecho cortado. Sem ação no projeto; prova que dependia de `node -e` passa a pedir
   aprovação.
+- 0.0.37: prova `prove-verifier-guard.sh` com o Claude Code real (o `agent_type` chega como
+  `wstack:review-verifier` na 2.1.332) e o risco aceito de rodar teste do projeto registrado no README. Sem ação no
+  projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

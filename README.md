@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.36.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.37.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -309,6 +309,11 @@ veredito), escolhidas depois da classificação de risco: o risco decide os gate
 Os hooks são cinto de segurança, não fronteira: leem o texto do comando, e um caminho montado para esconder não
 aparece. A fronteira é o PR, o isolamento e o `deny` do `settings.json`. O que cada mecanismo garante, o que não
 garante e o teste que prova estão em `docs/harness-capabilities.md`.
+
+Risco aceito: rodar teste do projeto é rodar código do projeto. O `verifier-guard` deixa passar executor de teste e
+script do repositório, e um repositório hostil pode ter código malicioso num teste; o hook de `Stop` e a `verify-<app>`
+rodam esse código de qualquer jeito. Impedir isso impediria a prova por execução. A fronteira é o isolamento do
+ambiente: na nuvem, o contêiner descartável e a lista de domínios liberados; no terminal local, a sua máquina.
 
 ### Scripts
 
