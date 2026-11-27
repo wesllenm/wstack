@@ -975,3 +975,20 @@ repositório é conferido depois de seguir symlink (`realpathSync`).
 **Limite:** o `.gitattributes` do projeto só nomeia o driver de diff, e o comando dele vem da configuração local do git,
 então o risco do textconv num clone comum é baixo; as opções saem baratas para a lente. A prova escrita nas formas
 antigas (`npx vitest`, `git log` sem as opções) passa a pedir aprovação, e a review-rubric mostra a forma que passa.
+
+## 2026-11-27: o verifier-guard troca flag negada por lista fechada
+
+**Decisão:** no `review-verifier`, o hook deixa passar só três formas: executor de teste, `node`/`bash` de arquivo do
+repositório e `git log`, `git show` e `git blame` com as flags listadas uma a uma no hook (`log` e `show` exigem
+`--no-ext-diff --no-textconv`, `blame` exige `--no-textconv`). Todo o resto pede aprovação, inclusive `grep`, `rg`,
+`cat`, `sed`, `sort`, `find`, `git diff`, `git grep` e pipe para filtro. Saem as negações por flag da 0.0.38 (`sort -o`,
+`rg --pre`, `sed -i`), que agora caem no pedido de aprovação como qualquer comando fora da lista.
+
+**Por quê:** a 0.0.38 liberava o comando inteiro e negava as flags perigosas, e a leitura seguinte achou mais da mesma
+família: `git log --output=`, `git grep -O`, `--ext-diff` depois de `--no-ext-diff`, `rg -z`, `sort -T`. Sempre existe
+mais uma flag. O verifier já tem Read, Grep e Glob para ler código e não precisa desses utilitários no Bash. Com a
+lista fechada, a regra cabe numa leitura e o que falta nela pede aprovação em vez de passar.
+
+**Limite:** o executor de teste continua a maior porta: roda código do projeto (MSBuild, `build.rs`, `conftest.py`),
+pode restaurar pacote pela rede e tem opções que rodam programa (`go test -exec`). É o risco aceito do README. Prova que
+dependia de `| tail` ou de `git diff` passa a pedir aprovação; a review-rubric mostra a forma que passa.
