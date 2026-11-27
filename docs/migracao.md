@@ -194,6 +194,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.37: prova `prove-verifier-guard.sh` com o Claude Code real (o `agent_type` chega como
   `wstack:review-verifier` na 2.1.332) e o risco aceito de rodar teste do projeto registrado no README. Sem ação no
   projeto.
+- 0.0.38: `verifier-guard` pede aprovação a subagente sem `agent_type`; nega `sort -o`, `sort --compress-program`,
+  `rg --pre` e `sed -i`; trata `&` como separador; libera `npx` só com `--no-install`, `git diff`/`show`/`log` só com
+  `--no-ext-diff --no-textconv`, `git blame` só com `--no-textconv` e `sed -n` só com número de linha e `p`; segue
+  symlink antes de liberar script do repositório. Sem ação no projeto; prova nas formas antigas (`npx vitest`,
+  `git log` sem as opções) passa a pedir aprovação.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

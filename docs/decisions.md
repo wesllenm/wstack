@@ -954,3 +954,24 @@ recusado, e o "não chegou" do verifier não provaria nada.
 
 **Risco aceito, no README:** o hook deixa passar executor de teste e script do repositório, e esse código vem do
 projeto. A fronteira continua sendo o isolamento do ambiente.
+
+## 2026-11-27: o verifier-guard fecha subagente sem agent_type e as opções de leitura que executam
+
+**Decisão:** subagente sem `agent_type` (a entrada traz `agent_id` e não traz `agent_type`) pede aprovação. Sem
+nenhum dos dois, continua sem veredito, porque é assim que a sessão principal chega, e pedir aprovação ali travaria todo
+comando. O `prove-verifier-guard.sh` confere as duas pontas com o Claude Code real: a sessão principal não manda nenhum
+dos campos, o subagente manda os dois. A prova importa o `VERIFIER` exportado pelo hook, em vez de repetir a regex.
+
+Na lista de leitura, as opções que escrevem ou executam são negadas: `sort -o`, `--output` e `--compress-program`
+(inclusive abreviadas, que o GNU aceita), `rg --pre` e `sed -i`/`--in-place`. `sed -n` só passa com número de linha e
+`p`, o que deixa de fora os comandos `w`, `W` e `e` e um `-e` depois do script. `&` separa comandos como `;`: antes,
+`grep x & rm -rf dir` casava com `^grep` e passava inteiro. `npx` só passa com `--no-install`, que não baixa pacote.
+`git diff`, `show` e `log` só passam com `--no-ext-diff --no-textconv`, e `git blame` com `--no-textconv`. O script do
+repositório é conferido depois de seguir symlink (`realpathSync`).
+
+**Por quê:** eram contornos baratos da lista de liberados, e o resto do guard já pedia aprovação na dúvida. O caso do
+`agent_type` ausente era o único caminho de falha que passava calado.
+
+**Limite:** o `.gitattributes` do projeto só nomeia o driver de diff, e o comando dele vem da configuração local do git,
+então o risco do textconv num clone comum é baixo; as opções saem baratas para a lente. A prova escrita nas formas
+antigas (`npx vitest`, `git log` sem as opções) passa a pedir aprovação, e a review-rubric mostra a forma que passa.

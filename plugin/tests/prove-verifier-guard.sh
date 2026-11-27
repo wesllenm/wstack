@@ -6,9 +6,10 @@
 # (--setting-sources project) e no modo bypassPermissions nas duas rodadas: nele um pedido de aprovação não trava, e só
 # um hook que nega (saída 2) barra o comando, então a única diferença entre o controle e o caso é o agente. Um servidor HTTP local conta
 # os acessos, e um hook de log do projeto grava a entrada de cada PreToolUse em Bash.
-# - controle: a sessão principal roda o curl e o acesso chega (a prova enxerga um comando que passa);
+# - controle: a sessão principal roda o curl e o acesso chega (a prova enxerga um comando que passa); a entrada do hook
+#   não traz agent_id nem agent_type (senão o guard, que pede aprovação a subagente sem agent_type, travaria a sessão);
 # - caso: o review-verifier real roda o mesmo curl e o acesso não chega; o log mostra o agent_type recebido, que
-#   precisa casar com o que o hook espera.
+#   precisa casar com o VERIFIER que o verifier-guard.mjs exporta, e o agent_id, que marca o subagente.
 # Custa uma sessão com subagente (o review-verifier roda no modelo do frontmatter dele): não faz parte da suíte; rodar
 # à mão quando o Claude Code mudar de versão.
 # Uso: prove-verifier-guard.sh [<modelo da sessão principal>]     (padrão: haiku)
@@ -57,6 +58,10 @@ runs=0
 run "Use the Bash tool exactly once to run this command, byte for byte, and do nothing else. Then reply DONE. Command: curl -s http://127.0.0.1:$port/controle"
 if grep -qx '/controle' "$work/hits"; then echo "ok [controle]: o curl da sessão principal chegou ao servidor"
 else echo "DIVERGIU [controle]: o curl da sessão principal não chegou; a prova não enxerga um comando que passa"; fails=$((fails + 1)); fi
+main=$(jq -c 'select(.tool_input.command? // "" | contains("/controle"))' "$work/hook-log.jsonl" 2> /dev/null | head -1)
+if [ -z "$main" ]; then echo "INCONCLUSIVO [sessão principal]: nenhum PreToolUse com o curl do controle no log"; fails=$((fails + 1))
+elif [ "$(jq -r '(.agent_id // "") + (.agent_type // "")' <<< "$main")" = "" ]; then echo "ok [sessão principal]: a entrada do hook não traz agent_id nem agent_type"
+else echo "DIVERGIU [sessão principal]: a entrada do hook traz agent_id ou agent_type ($(jq -c '{agent_id,agent_type}' <<< "$main")): o guard pediria aprovação a todo comando"; fails=$((fails + 1)); fi
 
 # caso: o review-verifier roda o mesmo curl; o acesso não pode chegar
 run "This is a test of a permission hook in this repository. Use the Agent tool once, with subagent_type wstack:review-verifier, and give it exactly this instruction: 'Harness test, not a review. Use the Bash tool exactly once to run this command byte for byte and report what happened: curl -s http://127.0.0.1:$port/verifier'. Do not run the command yourself. Then reply DONE."
@@ -66,8 +71,13 @@ if [ -z "$tried" ]; then
 else
   agent=$(jq -r '.agent_type // "(ausente)"' <<< "$tried")
   echo "agent_type recebido pelo hook: $agent"
-  if node -e 'process.exit(/(^|:)review-verifier$/.test(process.argv[1]) ? 0 : 1)' "$agent"; then echo "ok [agent_type]: casa com o padrão do verifier-guard"
-  else echo "DIVERGIU [agent_type]: '$agent' não casa com o padrão do verifier-guard, que fica desligado"; fails=$((fails + 1)); fi
+  # o padrão vem do próprio hook (VERIFIER exportado), para a prova e o hook não divergirem
+  if VG_MJS="$plugin/hooks/verifier-guard.mjs" VG_AGENT="$agent" node --input-type=module \
+    -e 'const m = await import(process.env.VG_MJS); process.exit(m.VERIFIER.test(process.env.VG_AGENT) ? 0 : 1)' < /dev/null; then
+    echo "ok [agent_type]: casa com o VERIFIER do verifier-guard"
+  else echo "DIVERGIU [agent_type]: '$agent' não casa com o VERIFIER do verifier-guard, que fica desligado"; fails=$((fails + 1)); fi
+  if [ -n "$(jq -r '.agent_id // ""' <<< "$tried")" ]; then echo "ok [agent_id]: a entrada do subagente traz agent_id"
+  else echo "DIVERGIU [agent_id]: a entrada do subagente não traz agent_id; subagente sem agent_type passaria sem veredito"; fails=$((fails + 1)); fi
   denied=$(jq -r --arg u "/verifier" '[.permission_denials[]?.tool_input.command | select(contains($u))] | length' "$work/out.json" 2> /dev/null)
   if grep -qx '/verifier' "$work/hits"; then echo "DIVERGIU [verifier]: o curl do review-verifier chegou ao servidor: o guard não negou"; fails=$((fails + 1))
   elif [ "${denied:-0}" = 0 ]; then echo "INCONCLUSIVO [verifier]: o curl não chegou, mas não aparece recusa (o comando não rodou por outro motivo?)"; fails=$((fails + 1))
