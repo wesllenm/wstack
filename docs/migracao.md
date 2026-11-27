@@ -183,6 +183,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   Diff lido pelas contagens do `@@` (`diff-parse.mjs`), no `check-findings` e no `diff-smells`. O `SessionStart` avisa
   chave desconhecida e linha malformada no `risk.conf`. README com o mapa do plugin em colunas por etapa. Sem ação
   no projeto.
+- 0.0.35: `base =` vazio no `risk.conf` reprova o `diff-smells --gate`, como a base ausente; linha movida só conta
+  dentro do mesmo arquivo; `check-findings` não usa diff parcial e separa lentes de mesmo nome pelo caminho; o
+  `SessionStart` avisa valor vazio no `risk.conf`. Projeto com `base =` vazio passa a ter o gate reprovado até
+  preencher a base.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

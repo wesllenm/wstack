@@ -114,6 +114,13 @@ done
 run --json "$work/falhou.txt"; expect_code 'json com lacuna' 4
 node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); process.exit(j.lacunas.length===1?0:1)' <<< "$out" 2> /dev/null || fail "json com lacuna: campo lacunas ($out)"
 
+# duas lentes com o mesmo nome de arquivo em pastas diferentes não se misturam: a saída usa o caminho inteiro
+mkdir -p "$work/g1" "$work/g2"
+printf 'acho que está tudo certo\n' > "$work/g1/review-agent.txt"
+printf 'status: sem achados\n' > "$work/g2/review-agent.txt"
+run "$work/g1/review-agent.txt" "$work/g2/review-agent.txt"; expect_code 'lentes com o mesmo nome' 4
+grep -qF "lacuna: $work/g1/review-agent.txt — " <<< "$out" || fail "lentes com o mesmo nome: lacuna sem o caminho inteiro ($out)"
+grep -qF "lacuna: $work/g2/review-agent.txt" <<< "$out" && fail "lentes com o mesmo nome: a lente boa herdou a lacuna ($out)"
 # entrada malformada: arquivo ilegível é 3; opção desconhecida é 2; --rev que não é commit é 2
 run "$work/nao-existe.txt"; expect_code 'arquivo ausente' 3
 run --xpto "$work/limpa.txt"; expect_code 'opção desconhecida' 2

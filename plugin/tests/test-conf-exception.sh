@@ -58,6 +58,11 @@ grep -q 'verify_test' <<< "$out" && fail "chave conhecida avisada ($out)"
 sed -E 's/^# ?([a-z_]+ =)/\1/' "$(dirname "$mod")/../templates/.claude/risk.conf" > "$work/p/.claude/risk.conf"
 out=$(CLAUDE_PROJECT_DIR=$work/p node "$mod" --warn)
 grep -q 'chave desconhecida' <<< "$out" && fail "modelo descomentado: chave do modelo avisada como desconhecida ($out)"
+# valor vazio vira 0 ou o padrão sem aviso: avisar; verify_lint vazio é de propósito (não roda o formato)
+printf 'smell_comment_limit =\nverify_lint =\nbase = HEAD\n' > "$work/p/.claude/risk.conf"
+out=$(CLAUDE_PROJECT_DIR=$work/p node "$mod" --warn)
+grep -q 'smell_comment_limit está vazio na linha 1' <<< "$out" || fail "valor vazio: sem aviso ($out)"
+grep -q 'verify_lint' <<< "$out" && fail "verify_lint vazio: avisou ($out)"
 # sem risk.conf: sai 0 calado
 out=$(CLAUDE_PROJECT_DIR=$work/nada node "$mod" --warn); code=$?
 [ "$code" = 0 ] && [ -z "$out" ] || fail "--warn sem risk.conf: código $code, saída ($out)"

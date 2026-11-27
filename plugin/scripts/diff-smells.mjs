@@ -164,7 +164,7 @@ try { mb = git('merge-base', 'HEAD', base).trim(); } catch {
   // base do risk.conf ausente (clone raso, repositório sem main local): compara com HEAD, só o que não foi commitado.
   // Os commits da branch ficam fora, então isso não passa calado: vai na saída e reprova o --gate (falha fechada)
   try { mb = git('rev-parse', '--verify', 'HEAD').trim(); } catch { die(3, `não foi possível resolver a base ${base} nem HEAD`); }
-  baseMissing = base;
+  baseMissing = base || '(vazia)'; // base vazia no risk.conf também é base ausente: string vazia contaria como falso
   console.error(`diff-smells: base ${base} não encontrada; comparando com HEAD`);
 }
 let diff;
@@ -172,10 +172,10 @@ let diff;
 try { diff = git('diff', '-U0', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', mb, '--'); } catch (e) { die(3, `git diff falhou: ${e.message}`); }
 // o parser segue as contagens do @@: linha adicionada "++ x" e removida "-- x" (SQL) são conteúdo, não cabeçalho
 const added = new Map(); // arquivo -> [{line, text}]
-const removed = new Set();
+const removedBy = new Map(); // arquivo -> textos removidos: linha movida é a que saiu e voltou no mesmo arquivo
 for (const [p, d] of parseDiff(diff)) {
   if (d.added.length) added.set(p, d.added);
-  for (const r of d.removed) removed.add(r.text.trim());
+  if (d.removed.length) removedBy.set(p, new Set(d.removed.map((r) => r.text.trim())));
 }
 let untracked = [];
 try { untracked = git('ls-files', '--others', '--exclude-standard', '-z').split('\0').filter(Boolean); } catch { /* sem não rastreados */ }
@@ -206,7 +206,7 @@ for (const [f, lines] of added) {
       if (was) continue; // linha dentro de string de várias linhas aberta numa linha adicionada anterior
       if (inString) t = raw.slice(0, marks[marks.length - 1].index); // a string abre aqui: só o que vem antes
     }
-    const moved = removed.has(raw.trim()) && raw.trim().length > 0;
+    const moved = !!removedBy.get(f)?.has(raw.trim()) && raw.trim().length > 0;
     const startsBlock = !inBlock, continuation = inBlock;
     const s = split(t, lang, inBlock);
     if (startsBlock && s.block && lang.doc && lang.doc.test(t)) docBlock = true;
