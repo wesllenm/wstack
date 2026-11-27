@@ -216,6 +216,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   `doc_state`, a pendência e o "onde paramos" saem do `SESSION.md` para o arquivo versionado. Sem ação no projeto que
   usa os caminhos padrão; o projeto que já tem esses fatos em outro lugar aponta as chaves e confere o aviso do
   `SessionStart`.
+- 0.0.43: chave `override` do `risk.conf` para as skills e agentes do plugin que o projeto substitui (`overrides.mjs`);
+  a lista `Agent(...)` da `lead` traz os agentes do plugin também sem prefixo, e assim chama o agente do projeto de
+  mesmo nome. Projeto com skill ou agente de mesmo nome de um do plugin: o `SessionStart` passa a avisar, e a troca
+  (que o pré-carregamento já fazia) se declara com `override = <nome>`.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

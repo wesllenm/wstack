@@ -29,6 +29,8 @@ fi
 node "$plugin/hooks/conf-exception.mjs" --warn 2> /dev/null
 # Destinos de documento do risk.conf (doc_*): os que diferem do padrão entram no contexto, com aviso de valor inválido
 node "$plugin/hooks/doc-paths.mjs" --session 2> /dev/null
+# Skills e agentes do plugin que o projeto substitui (override): a lista e os avisos entram no contexto
+node "$plugin/hooks/overrides.mjs" --session 2> /dev/null
 
 # Exceção de verificação esquecida: ela só vale para a sessão que a gravou (linha "sessão: <id>"), mas o arquivo parado
 # confunde e esconde o motivo; avisar para ler e apagar ao retomar.

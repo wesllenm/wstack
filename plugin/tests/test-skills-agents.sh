@@ -127,9 +127,13 @@ for (const f of files) {
     if (/\bTodoWrite\b/.test(toolText)) fail(`${r}: TodoWrite não existe nesta versão do Claude Code`);
     const call = toolText.match(/Agent\(([^)]*)\)/);
     if (call) {
-      for (const entry of call[1].split(',').map((x) => x.trim()).filter(Boolean)) {
-        if (!entry.startsWith('wstack:')) fail(`${r}: Agent(${entry}) sem o prefixo wstack:`);
-        else if (!agents.has(entry.slice('wstack:'.length))) fail(`${r}: Agent(${entry}) não existe no plugin`);
+      const entries = call[1].split(',').map((x) => x.trim()).filter(Boolean);
+      for (const entry of entries) {
+        // sem prefixo: o agente do projeto de mesmo nome (override do risk.conf); só o nome de um agente do plugin que
+        // também está na lista com o prefixo, para a lista não abrir agente qualquer do projeto
+        if (!entry.startsWith('wstack:')) {
+          if (!agents.has(entry) || !entries.includes(`wstack:${entry}`)) fail(`${r}: Agent(${entry}) sem o prefixo wstack: e sem o par wstack:${entry} de um agente do plugin`);
+        } else if (!agents.has(entry.slice('wstack:'.length))) fail(`${r}: Agent(${entry}) não existe no plugin`);
       }
     }
     const pre = field(fm, 'skills');

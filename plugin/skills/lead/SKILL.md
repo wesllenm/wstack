@@ -20,6 +20,10 @@ Os scripts citados pelo nome nesta skill (`classify-diff.sh`, `quality-signals.s
 
 As skills e agentes do plugin citam os caminhos padrão: `docs/decisions.md`, `docs/gotchas.md` e `docs/gotchas/`, `docs/review-calibration.md` e `docs/review-rubric.md`. O projeto pode apontar cada um para outro arquivo pelas chaves `doc_*` do `.claude/risk.conf`, e o `SessionStart` lista no início da sessão os que foram trocados. Onde uma skill cita o caminho padrão, ler e gravar no destino configurado. O contrato de cada subagente leva os destinos trocados. Com `doc_state`, a pendência e o "onde paramos" vão para o arquivo dele, versionado e commitado com a tarefa, e não para o `.claude/SESSION.md` (`sessao.md`).
 
+## Substituições do projeto
+
+O projeto pode trocar uma skill ou um agente do plugin pelo dele com a chave `override` do `.claude/risk.conf` (`override = tdd`, `override = review-agent`, `override = test-audit -> auditoria-de-testes`), e o `SessionStart` lista as trocas. O Claude Code não desliga o item do plugin, e os dois continuam listados: quem escolhe é você. Onde este texto ou uma referência manda carregar `wstack:<skill>` ou delegar a `wstack:<agente>` substituído, carregar a skill do projeto e delegar ao agente do projeto, pelo nome sem prefixo; o contrato de delegação leva as trocas de skill ao subagente. Agente do projeto só substitui com o mesmo nome do agente do plugin. Os agentes do plugin pré-carregam pelo nome sem prefixo, e com isso já recebem a skill do projeto de mesmo nome.
+
 ## Leitura sob demanda
 
 Este arquivo é o núcleo: o que vale em toda tarefa. O detalhe de cada assunto que só aparece em parte das tarefas está em `${CLAUDE_PLUGIN_ROOT}/skills/lead/reference/`, e é lido com o Read, inteiro, no momento indicado, não antes. Ler de novo depois de uma compactação. Nesses arquivos os scripts aparecem como `<plugin>/scripts/<nome>`, e `<plugin>` é `${CLAUDE_PLUGIN_ROOT}`: a forma de chamar é a desta seção acima.

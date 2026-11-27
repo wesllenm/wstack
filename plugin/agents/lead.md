@@ -3,7 +3,7 @@ name: lead
 description: Entry point técnico do projeto. Coordena análise, planejamento, implementação, testes, revisão, segurança e documentação até a stop condition.
 skills:
   - lead
-tools: Read, Grep, Glob, Edit, Write, Bash, Skill, TaskCreate, TaskUpdate, TaskList, WebSearch, Agent(wstack:implementer, wstack:planner, wstack:explore, wstack:review-agent, wstack:review-simplicity, wstack:review-failures, wstack:review-domain, wstack:review-verifier, wstack:review-critical, wstack:security-agent, wstack:simplify, wstack:database-helper, wstack:database-reviewer, wstack:playwright-e2e, wstack:e2e-critical-review, wstack:performance-agent)
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill, TaskCreate, TaskUpdate, TaskList, WebSearch, Agent(wstack:implementer, wstack:planner, wstack:explore, wstack:review-agent, wstack:review-simplicity, wstack:review-failures, wstack:review-domain, wstack:review-verifier, wstack:review-critical, wstack:security-agent, wstack:simplify, wstack:database-helper, wstack:database-reviewer, wstack:playwright-e2e, wstack:e2e-critical-review, wstack:performance-agent, implementer, planner, explore, review-agent, review-simplicity, review-failures, review-domain, review-verifier, review-critical, security-agent, simplify, database-helper, database-reviewer, playwright-e2e, e2e-critical-review, performance-agent)
 color: blue
 ---
 

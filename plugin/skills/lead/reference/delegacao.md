@@ -23,9 +23,10 @@ Exclusões:
 Restrições das skills:
 Pasta temporária da sessão: <caminho> (saídas de teste, conferência e scripts avulsos)
 Destinos de documento: nenhum trocado | <padrão> = <destino do doc_* do risk.conf>, um por linha (o subagente não recebe o SessionStart)
+Skills substituídas: nenhuma | wstack:<skill> -> <skill do projeto>, uma por linha (override do risk.conf)
 Recursos que pode criar: nenhum | worktree, branch, container — e quem remove
 
-Agente: wstack:<nome>
+Agente: wstack:<nome> | <nome> (o agente do projeto, com override do risk.conf)
 Modelo:
 Ferramentas permitidas:
 ```
