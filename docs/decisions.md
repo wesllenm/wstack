@@ -1118,3 +1118,25 @@ segunda implementação das regras de push, que é onde mora a trava. Ordem de m
 
 **Limite:** a ordem de merge, as citações entre os PRs e a compatibilidade com o formato antigo são do texto da skill,
 não de hook. O merge continua do desenvolvedor.
+
+## 2026-11-27: medições na máquina do projeto e o plugin sem nome de projeto
+
+**Decisão:** três scripts de medição em `plugin/tests/`, rodados à mão na máquina do projeto, fora do CI:
+- `measure-hook-cost.sh` roda os hooks do `PreToolUse` em Bash como o Claude Code roda, N vezes por comando, e mostra a
+  mediana de cada hook e o acréscimo por comando, entre o hook mais lento (os hooks de um evento rodam em paralelo) e a
+  soma;
+- `measure-permission-asks.sh` acha a transcrição mais recente do projeto e conta os pedidos de hook, por hook
+  (`permission-asks.mjs`), e o total de aprovações manuais, que inclui os pedidos das regras `ask` do `settings.json`;
+- `measure-stop-locked-build.sh` roda os `verify_build` e `verify_test` do `risk.conf` com a aplicação de pé e procura
+  o erro de arquivo em uso. Com `dotnet build` ou `dotnet test`, tenta de novo com `--artifacts-path`. Não roda o hook,
+  porque ele grava carimbo e marcadores.
+
+Os três usam só bash, git e node, sem jq, porque o Git Bash do Windows não traz jq. Medido aqui, no Linux, com 8 hooks
+de Bash: cerca de 40 ms em paralelo e de 260 ms em série por comando.
+
+**Decisão:** o plugin não cita os projetos que o provam. Os exemplos e fixtures que vieram do pedido do HostAzul
+passam a usar nomes neutros (`app`, `servico`, `docs/onde-paramos.md`, `docs/armadilhas.md`). O
+`test-skills-agents.sh` recusa nome de projeto em qualquer arquivo do plugin, não só em skill, agente e modelo.
+
+**Por quê:** o plugin precisa servir a qualquer projeto. Um projeto complexo serve para prová-lo, não para moldá-lo, e
+nome de projeto num exemplo induz a ler o recurso como específico dele.

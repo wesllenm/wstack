@@ -11,13 +11,16 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.45.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.46.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
 - a avaliação comportamental dos agentes;
 - a conferência num projeto real: uma sessão com `"agent": "wstack:lead"` num projeto que passou pelo bootstrap,
-  delegando aos agentes reais, e as provas `plugin/tests/prove-*.sh`, que usam o Claude Code real e rodam à mão.
+  delegando aos agentes reais, e as provas `plugin/tests/prove-*.sh`, que usam o Claude Code real e rodam à mão;
+- a medição na máquina do projeto, com os `plugin/tests/measure-*.sh`: o custo dos hooks por comando
+  (`measure-hook-cost.sh`), os pedidos de aprovação de uma sessão (`measure-permission-asks.sh`) e o hook de fim com a
+  aplicação rodando e travando a saída do build (`measure-stop-locked-build.sh`). Rodam também no Windows com Git Bash.
 
 ## Como funciona
 
