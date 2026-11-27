@@ -1076,3 +1076,25 @@ sem prefixo. O núcleo da `lead` e o contrato de delegação mandam usar a vers�
 vale para skill de plugin). As duas versões continuam listadas, e quem escolhe é a `lead`, pelo texto. A lista
 `Agent(...)` é fixa no frontmatter, então agente do projeto só substitui com o mesmo nome; para skill, o nome pode
 mudar. A lista sem prefixo abre só os nomes dos agentes do plugin, conferidos pelo `test-skills-agents.sh`.
+
+## 2026-11-27: repositórios companheiros, 1ª parte (risco, Stop e checkpoint)
+
+**Decisão:** chave `companion` no `risk.conf` do projeto, um caminho relativo à raiz por repositório que muda junto
+na tarefa (`companion = ../ServerControl`), lida pelo `companions.mjs`. Cada companheiro tem o próprio `risk.conf`, que
+vale para ele:
+- o `classify-diff.sh --companions` (também com `--paths`, com os caminhos do companheiro pelo prefixo dele) classifica
+  cada repositório com a base e os globs dele, e a tarefa fica com o maior nível;
+- o `verify-on-stop` roda os `verify_*` de cada companheiro antes do projeto, e o vermelho bloqueia com o nome dele;
+- o `checkpoint-tests` usa as áreas do repositório do commit.
+
+**Por quê:** pedido do HostAzul, em que o Platform e o ServerControl mudam juntos na mesma tarefa. Antes, o segundo
+repositório ficava fora do risco, do `Stop` e do checkpoint certo. Nas três escolhas em aberto, ficou o proposto:
+- **Nível da tarefa:** no mínimo COMPLEXA quando mais de um repositório muda código (fora de `*.md`, `*.txt` e `docs/`),
+  porque é mudança de contrato entre eles; mudança só de documentação no companheiro não sobe o nível.
+- **Timeout:** o `Stop` passa de 900 s para 1800 s, para caberem dois builds e duas suítes rápidas.
+- **Ordem de merge:** a `lead` decide por tarefa, primeiro o repositório que expõe o contrato (2ª parte).
+
+**Limite:** um companheiro só vale se for a raiz de outro repositório git com `.claude/risk.conf`; o resto é ignorado,
+e o `SessionStart` avisa. O gate de aprendizado fica só no projeto, onde moram os documentos. O hook de `Stop` emite
+uma mensagem de sistema só, e a de um companheiro que encerrou bem vai para o stderr. O `TaskCompleted` roda só as
+áreas do projeto. O push do companheiro continua pedindo aprovação até a 2ª parte, no `push-guard`.

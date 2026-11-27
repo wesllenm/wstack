@@ -6,6 +6,8 @@
 #   checkpoint = <glob> -> <comando>      ex.: checkpoint = src/*/Auth/* -> dotnet test tests/Auth.Tests --no-restore
 #   checkpoint_timeout = 600               segundos por comando
 # No glob, * atravessa pastas. Mesmo conteúdo já aprovado não roda de novo (cache por hash do diff).
+# Commit num repositório companheiro (chave companion do risk.conf do projeto, companions.mjs), pela pasta do comando
+# ou por git -C: valem o risk.conf e as áreas do companheiro, não as do projeto.
 # Código: 0 nada a checar ou testes ok; 2 testes falharam.
 set -uo pipefail
 
@@ -13,13 +15,13 @@ input=$(cat)
 root=${CLAUDE_PROJECT_DIR:-$(pwd)}
 conf="$root/.claude/risk.conf"
 [ -f "$conf" ] || exit 0
-grep -q '^[[:space:]]*checkpoint[[:space:]]*=' "$conf" || exit 0
+grep -qE '^[[:space:]]*(checkpoint|companion)[[:space:]]*=' "$conf" || exit 0
 
-read -r event command < <(printf '%s' "$input" | node -e '
+IFS=$'\t' read -r event cwd command < <(printf '%s' "$input" | node -e '
   let d = ""; process.stdin.on("data", (c) => (d += c)).on("end", () => {
     let j; try { j = JSON.parse(d); } catch { return; }
-    const cmd = (j?.tool_input?.command ?? "").replace(/\s+/g, " ");
-    process.stdout.write(`${j?.hook_event_name ?? ""} ${cmd}`);
+    const one = (s) => String(s ?? "").replace(/\s+/g, " ");
+    process.stdout.write(`${one(j?.hook_event_name)}\t${one(j?.cwd) || "."}\t${one(j?.tool_input?.command)}`);
   });')
 # Falha fechada: sem node ou com payload ilegível não dá para saber o que se está executando. Se o texto bruto
 # menciona git commit, o commit não passa sem checkpoint; qualquer outro comando segue (o hook roda em todo Bash).
@@ -37,6 +39,21 @@ case "$event" in
     [[ " $command" =~ (^|[[:space:];\&\|\(])git([[:space:]]+-[Cc][[:space:]]+[^[:space:]]+)*[[:space:]]+commit([[:space:]]|$) ]] || exit 0 ;;
   *) exit 0 ;;
 esac
+
+# commit num companheiro: o repositório do comando (pasta do payload, ou o -C antes do commit) é um dos declarados
+if [ "$event" = PreToolUse ]; then
+  dir=$cwd
+  if [[ " $command" =~ git[[:space:]]+-C[[:space:]]+([^[:space:]\;\&\|]+)([[:space:]]+-[Cc][[:space:]]+[^[:space:]]+)*[[:space:]]+commit ]]; then
+    case "${BASH_REMATCH[1]}" in /*) dir=${BASH_REMATCH[1]} ;; *) dir="$cwd/${BASH_REMATCH[1]}" ;; esac
+  fi
+  top=$(git -C "$dir" rev-parse --show-toplevel 2> /dev/null) && top=$(cd "$top" && pwd -P)
+  self=$(cd "$root" && pwd -P)
+  if [ -n "$top" ] && [ "$top" != "$self" ]; then
+    while IFS= read -r comp; do [ "$comp" = "$top" ] && root=$comp; done < <(CLAUDE_PROJECT_DIR=$root node "$(dirname "$0")/companions.mjs" 2> /dev/null)
+  fi
+fi
+conf="$root/.claude/risk.conf"
+grep -q '^[[:space:]]*checkpoint[[:space:]]*=' "$conf" 2> /dev/null || exit 0
 
 cd "$root" || exit 0
 git rev-parse --git-dir > /dev/null 2>&1 || exit 0

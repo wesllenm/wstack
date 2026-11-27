@@ -220,6 +220,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   a lista `Agent(...)` da `lead` traz os agentes do plugin também sem prefixo, e assim chama o agente do projeto de
   mesmo nome. Projeto com skill ou agente de mesmo nome de um do plugin: o `SessionStart` passa a avisar, e a troca
   (que o pré-carregamento já fazia) se declara com `override = <nome>`.
+- 0.0.44: chave `companion` do `risk.conf` para os repositórios que mudam junto na mesma tarefa (`companions.mjs`):
+  `classify-diff.sh --companions` dá o nível da tarefa, o `Stop` verifica cada companheiro com o `risk.conf` dele e o
+  `checkpoint-tests` usa as áreas do repositório do commit. O timeout do `Stop` sobe de 900 s para 1800 s. Sem ação no
+  projeto de um repositório só; o push do companheiro ainda pede aprovação (2ª parte).
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

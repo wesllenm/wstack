@@ -15,6 +15,23 @@ input=$(cat)
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 git rev-parse --is-inside-work-tree > /dev/null 2>&1 || exit 0
 
+# Repositórios companheiros (chave companion do risk.conf, companions.mjs): antes do projeto, este mesmo hook roda em
+# cada um, com o risk.conf dele, só com o gate de verificação (WSTACK_COMPANION=1: o aprendizado mora no projeto).
+# Companheiro vermelho bloqueia o encerramento, com o nome dele no motivo. A mensagem de sistema de um companheiro que
+# encerrou bem (exceção consumida, verificação pendente) vai para o stderr, porque o hook só pode emitir uma.
+if [ -z "${WSTACK_COMPANION:-}" ] && command -v node > /dev/null; then
+  while IFS= read -r comp; do
+    [ -n "$comp" ] || continue
+    cout=$(printf '%s' "$input" | CLAUDE_PROJECT_DIR=$comp WSTACK_COMPANION=1 bash "$0" 2> "${TMPDIR:-/tmp}/wstack-comp-err.$$"); crc=$?
+    cerr=$(cat "${TMPDIR:-/tmp}/wstack-comp-err.$$" 2> /dev/null); rm -f "${TMPDIR:-/tmp}/wstack-comp-err.$$"
+    if [ "$crc" = 2 ]; then
+      { echo "Repositório companheiro $(basename "$comp") ($comp):"; printf '%s\n' "$cerr"; } >&2
+      exit 2
+    fi
+    [ -z "$cout" ] || echo "verify-on-stop, companheiro $(basename "$comp"): $cout" >&2
+  done < <(CLAUDE_PROJECT_DIR=$PWD node "$(dirname "$0")/companions.mjs" 2> /dev/null)
+fi
+
 conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .claude/risk.conf 2> /dev/null | tr -d '\r' | tail -1; }
 SOLUTION=$(conf verify_solution)
 BUILD_CMD=$(conf verify_build)
@@ -32,6 +49,8 @@ LEARN_FILE=$DOC_calibration
 # decisões e, com doc_state, a pendência versionada; nada disso conta como código no gate de verificação
 LEARN_PATHS=("$LEARN_FILE" "$DOC_gotchas" "$DOC_gotchas_dir" "$DOC_rubric" "docs/patterns.md" "$DOC_decisions" ".claude/agent-memory" ".claude/SESSION.md")
 [ -z "$DOC_state" ] || LEARN_PATHS+=("$DOC_state")
+# no companheiro, o gate de aprendizado não roda: o Registro da tarefa é o do projeto
+[ -z "${WSTACK_COMPANION:-}" ] || LEARN_FILE=".claude/.sem-aprendizado-no-companheiro"
 
 BLOCKED=".claude/verify-blocked.md"
 # Marcador de verificação pendente (um por sessão, .claude/.session/unverified-<sessão>): o Stop grava ao liberar um
