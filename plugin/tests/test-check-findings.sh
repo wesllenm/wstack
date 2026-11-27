@@ -114,6 +114,15 @@ done
 run --json "$work/falhou.txt"; expect_code 'json com lacuna' 4
 node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); process.exit(j.lacunas.length===1?0:1)' <<< "$out" 2> /dev/null || fail "json com lacuna: campo lacunas ($out)"
 
+# chave repetida (severidade: nit e severidade: bloqueante): o script leria a primeira e o verificador as duas; descarta
+{ item lente-dup nit correctness; printf '  severidade: bloqueante\n'; echo 'status: achados'; } > "$work/dup.txt"
+run --json "$work/dup.txt"
+node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); const r=j.results[0]; process.exit(r.status==="descartado" && /chave repetida no candidato \(severidade\)/.test(r.detail) ? 0 : 1)' <<< "$out" 2> /dev/null \
+  || fail "chave repetida: não foi descartado ($out)"
+# linha do trecho com recuo menor que 4 fica fora dele: o candidato ganha aviso de trecho cortado
+printf -- '- id: lente-cut\n  categoria: correctness\n  severidade: nit\n  confiança: 80\n  local: src/a.cs:1\n  trecho: |\n    linha um\n  var total = itens.Sum(i => i.Preco);\n  evidência: src/a.cs:1 — x\n  cenário: x → y\n  preexistente: sim\nstatus: achados\n' > "$work/cortado.txt"
+run "$work/cortado.txt"
+grep -q 'atenção: trecho pode ter sido cortado' <<< "$out" || fail "trecho cortado: sem aviso ($out)"
 # duas lentes com o mesmo nome de arquivo em pastas diferentes não se misturam: a saída usa o caminho inteiro
 mkdir -p "$work/g1" "$work/g2"
 printf 'acho que está tudo certo\n' > "$work/g1/review-agent.txt"

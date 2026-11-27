@@ -187,6 +187,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   dentro do mesmo arquivo; `check-findings` não usa diff parcial e separa lentes de mesmo nome pelo caminho; o
   `SessionStart` avisa valor vazio no `risk.conf`. Projeto com `base =` vazio passa a ter o gate reprovado até
   preencher a base.
+- 0.0.36: hook `verifier-guard` nos comandos do `review-verifier`: nega rede e execução arbitrária, deixa passar as
+  formas conhecidas de prova e pede aprovação para o resto (inclusive `node -e`). `check-findings` descarta candidato
+  com chave repetida e avisa trecho cortado. Sem ação no projeto; prova que dependia de `node -e` passa a pedir
+  aprovação.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
