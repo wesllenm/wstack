@@ -17,7 +17,7 @@ Texto técnico bom diz o que mudou, por quê e o que isso causa, com o nome das 
 1. Escrever primeiro, limpar depois: o rascunho vai para um arquivo da pasta temporária da sessão.
 2. Rodar `node ${CLAUDE_PLUGIN_ROOT}/scripts/slop-check.mjs <arquivo>`. **Erro** sai sempre. **Aviso** é suspeita: manter só se a palavra disser algo que a troca não diz (um número, um nome, uma consequência), e nesse caso a frase precisa mostrar isso.
 3. Reler com as seções abaixo, que pegam o que o script não pega.
-4. O texto limpo é o que vai para o commit (`git commit -F <arquivo>`), para o `gh pr create --body-file` ou para o arquivo de documentação.
+4. O texto limpo é o que vai para o commit (`git commit -F <arquivo>`), para o corpo do PR (`-F body=@<arquivo>` no `gh api`, skill `commit`) ou para o arquivo de documentação.
 
 O script só olha palavras e padrões. Ele não lê código entre crases, menção entre aspas duplas nem blocos de código, e ignora as linhas de rodapé do commit (`Co-Authored-By:`, `Refs:` e as outras).
 

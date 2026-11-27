@@ -242,18 +242,31 @@ FALSO
 #!/usr/bin/env bash
 pf=${DOCKER_PIDFILE:-/var/run/docker.pid}; [ "$1" = --pidfile ] && pf=$2
 [ -f "$pf" ] && kill -0 "$(cat "$pf")" 2> /dev/null && { echo "process with PID is still running" >&2; exit 1; }
+# o containerd gerenciado recusa do mesmo jeito ("failed to save containerd pid to disk")
+[ -f "$CONTAINERD_PIDFILE" ] && kill -0 "$(cat "$CONTAINERD_PIDFILE")" 2> /dev/null && { echo "failed to start containerd" >&2; exit 1; }
 touch "$MARK"
 FALSO
   chmod +x "$fb/docker" "$fb/dockerd"
   d=$(repo pidvelho 'compose.dev.yml=services: {}')
   echo $$ > "$work/docker.pid"
-  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" timeout 30 bash "$setup" --docker > /dev/null 2>&1)
+  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" CONTAINERD_PIDFILE="$work/containerd.pid" timeout 30 bash "$setup" --docker > /dev/null 2>&1)
   [ -f "$work/subiu" ] || { echo "FALHOU [pid-obsoleto]: o dockerd não subiu com PID de outro processo no arquivo"; fails=$((fails + 1)); }
+  # PID obsoleto no arquivo do containerd que o dockerd gerencia: também não impede o daemon de subir
+  rm -f "$work/docker.pid" "$work/subiu"; echo $$ > "$work/containerd.pid"
+  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" CONTAINERD_PIDFILE="$work/containerd.pid" timeout 30 bash "$setup" --docker > /dev/null 2>&1)
+  [ -f "$work/subiu" ] || { echo "FALHOU [pid-obsoleto-containerd]: o dockerd não subiu com PID de outro processo no arquivo do containerd"; fails=$((fails + 1)); }
+  # o arquivo de um containerd vivo fica
+  mkdir -p "$work/vivoc" && cp "$(command -v sleep)" "$work/vivoc/containerd"
+  "$work/vivoc/containerd" 30 & vivoc=$!
+  echo "$vivoc" > "$work/containerd.pid"
+  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" CONTAINERD_PIDFILE="$work/containerd.pid" timeout 5 bash "$setup" --docker > /dev/null 2>&1)
+  [ -f "$work/containerd.pid" ] || { echo "FALHOU [pid-vivo-containerd]: apagou o arquivo de PID de um containerd vivo"; fails=$((fails + 1)); }
+  kill "$vivoc" 2> /dev/null; rm -f "$work/containerd.pid" "$work/subiu"
   # o arquivo de um dockerd vivo fica (o processo se chama dockerd: cópia do sleep com esse nome)
   mkdir -p "$work/vivo" && cp "$(command -v sleep)" "$work/vivo/dockerd"
   "$work/vivo/dockerd" 30 & vivo=$!
   echo "$vivo" > "$work/docker.pid"; rm -f "$work/subiu"
-  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" timeout 5 bash "$setup" --docker > /dev/null 2>&1)
+  (cd "$d" && PATH="$fb:$PATH" MARK="$work/subiu" DOCKER_PIDFILE="$work/docker.pid" CONTAINERD_PIDFILE="$work/containerd.pid" timeout 5 bash "$setup" --docker > /dev/null 2>&1)
   [ -f "$work/docker.pid" ] || { echo "FALHOU [pid-vivo]: apagou o arquivo de PID de um dockerd vivo"; fails=$((fails + 1)); }
   kill "$vivo" 2> /dev/null
   # o timeout do hook manda SIGTERM ao grupo inteiro: o dockerd lento para responder não pode morrer junto
@@ -263,7 +276,7 @@ echo $$ > "$MARK.pid"
 exec sleep 30
 FALSO
   rm -f "$work/docker.pid" "$work/lento.pid"
-  (cd "$d" && PATH="$fb:$PATH" MARK="$work/lento" DOCKER_PIDFILE="$work/docker.pid" timeout 3 bash "$setup" --docker > /dev/null 2>&1)
+  (cd "$d" && PATH="$fb:$PATH" MARK="$work/lento" DOCKER_PIDFILE="$work/docker.pid" CONTAINERD_PIDFILE="$work/containerd.pid" timeout 3 bash "$setup" --docker > /dev/null 2>&1)
   sleep 1
   lento=$(cat "$work/lento.pid" 2> /dev/null)
   # vivo de verdade: kill -0 também dá certo num zumbi ainda não recolhido

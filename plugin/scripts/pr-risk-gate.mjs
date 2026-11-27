@@ -63,7 +63,7 @@ const labels = (pr.labels ?? []).map(String);
 const levels = labels.map((l) => /^risco:(trivial|simples|complexa|critica)$/i.exec(l)?.[1]?.toLowerCase()).filter(Boolean);
 const order = ['trivial', 'simples', 'complexa', 'critica'];
 const labeled = levels.length ? levels.sort((a, b) => order.indexOf(b) - order.indexOf(a))[0] : 'nao-classificado';
-// O rótulo vem de quem abriu o PR (o próprio agente, por `gh pr edit`), então não é a única fonte: PR sem rótulo
+// O rótulo vem de quem abriu o PR (o próprio agente, pela API de rótulos do `gh api`), então não é a única fonte: PR sem rótulo
 // vale critica (falha fechada, como o classify-diff.sh), e arquivo que muda o comportamento dos agentes ou do
 // workflow (NEVER_DOCS) sobe o nível para critica qualquer que seja o rótulo.
 const touchesNeverDocs = files.some((f) => NEVER_DOCS.some((m) => m(f)));

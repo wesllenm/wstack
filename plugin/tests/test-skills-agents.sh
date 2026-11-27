@@ -78,6 +78,8 @@ for (const f of files) {
     const at = `${r}:${i + 1}`;
     if (/\.claude\/(scripts|hooks)\/|\.claude\/cloud\/setup\.sh/.test(line)) fail(`${at}: caminho do harness no projeto`);
     if (line.includes('§')) fail(`${at}: citação § do documento de origem`);
+    // gh pr create/list/view/edit/checks/comment usam GraphQL, que a sessão na nuvem recusa (403): PR pela REST (gh api)
+    if (/gh pr (create|list|view|edit|checks|comment|status|diff)\b/.test(line)) fail(`${at}: gh pr usa GraphQL (403 na nuvem); use gh api`);
     if (/squad ?os/i.test(line)) fail(`${at}: nome do projeto de origem`);
     if (/\/(reference|playbooks)\//.test(r) && line.includes('${CLAUDE_PLUGIN_ROOT}')) {
       fail(`${at}: \${CLAUDE_PLUGIN_ROOT} em reference/ ou playbooks/ (o Read não troca a variável)`);
