@@ -6,7 +6,8 @@
 // (Co-Authored-By:, Refs: ...).
 // Uso: node slop-check.mjs [--pr] <arquivo>
 // --pr: o arquivo é o corpo de um pull request (skill commit, Pull request). Além dos padrões, confere as seções "## ":
-//   só as conhecidas, nesta ordem e sem repetir: Por quê, O que mudou, Escopo, Trade-offs, Raio de impacto, Verificação;
+//   só as conhecidas, nesta ordem e sem repetir: Por quê, O que mudou, Escopo, Trade-offs, Raio de impacto, Ordem de
+//   merge (PRs de repositórios companheiros), Verificação;
 //   Por quê e Verificação obrigatórias; seção sem conteúdo é erro; mais de 40 linhas com texto é erro. O rodapé de
 //   atribuição (da linha "🤖 Generated with" em diante) fica fora da conferência.
 // Saída: "<linha>: erro|aviso: <padrão> — <troca>", uma por ocorrência; o texto da linha não é impresso (o hook
@@ -62,7 +63,7 @@ if (pr) {
   // rodapé de atribuição do PR: fora dos padrões (tem emoji de propósito) e da contagem
   const foot = lines.findIndex((l) => /^\s*🤖 Generated with/.test(l));
   if (foot >= 0) lines = lines.slice(0, foot);
-  const SECTIONS = ['Por quê', 'O que mudou', 'Escopo', 'Trade-offs', 'Raio de impacto', 'Verificação'];
+  const SECTIONS = ['Por quê', 'O que mudou', 'Escopo', 'Trade-offs', 'Raio de impacto', 'Ordem de merge', 'Verificação'];
   const err = (n, msg) => { console.log(`${n}: erro: ${msg}`); errors++; };
   let last = -1, inFence = '';
   const seen = new Set();
@@ -83,7 +84,7 @@ if (pr) {
     const end = j + 1 < heads.length ? heads[j + 1] : lines.length;
     if (!lines.slice(h + 1, end).some((l) => l.trim())) err(h + 1, 'seção vazia no PR — tirar a seção');
   });
-  for (const [k, name] of [[0, 'Por quê'], [5, 'Verificação']]) if (!seen.has(k)) err(1, `seção obrigatória ausente no PR: ## ${name}`);
+  for (const [k, name] of ['Por quê', 'Verificação'].map((n) => [SECTIONS.indexOf(n), n])) if (!seen.has(k)) err(1, `seção obrigatória ausente no PR: ## ${name}`);
   const filled = lines.filter((l) => l.trim()).length;
   if (filled > 40) err(1, `PR com ${filled} linhas de texto (máximo 40) — logs, tabelas e listas longas vão para o relatório`);
 }

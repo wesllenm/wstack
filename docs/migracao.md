@@ -224,6 +224,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   `classify-diff.sh --companions` dá o nível da tarefa, o `Stop` verifica cada companheiro com o `risk.conf` dele e o
   `checkpoint-tests` usa as áreas do repositório do commit. O timeout do `Stop` sobe de 900 s para 1800 s. Sem ação no
   projeto de um repositório só; o push do companheiro ainda pede aprovação (2ª parte).
+- 0.0.45: o `push-guard` julga o push do repositório companheiro com o `risk.conf` dele (pela pasta ou por `git -C`),
+  e a verificação pendente no projeto segura também esse push. A skill `commit` abre um PR por repositório, que se
+  citam (`Par:`) e trazem a mesma `## Ordem de merge`, seção que o `slop-check --pr` passa a aceitar. Sem ação no
+  projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

@@ -67,7 +67,10 @@ Quando o plano prevê PR, a descrição é um resumo de um minuto para quem tem 
 - `## Escopo`: o que cobre e o que ficou de fora de propósito (follow-up, lacuna conhecida);
 - `## Trade-offs`: o que a escolha custa e a alternativa descartada, quando houver uma;
 - `## Raio de impacto`: quem ou o que a mudança toca, e por que é seguro ou arriscado; vem da skill `blast-radius` quando ela rodou, com o fato de segurança e o degrau de prova;
+- `## Ordem de merge`: só em PR de tarefa com repositórios companheiros (abaixo);
 - `## Verificação`: cada linha um comando real e o resultado (gates, testes novos, condução na aplicação com o caminho da evidência); número de performance com unidade, antes e depois (obrigatória).
+
+Tarefa com repositórios companheiros (chave `companion` do `risk.conf`): um commit por repositório, cada um na branch de atividade do `risk.conf` dele, e um PR por repositório. Abrir primeiro o PR do repositório que expõe o contrato (a API, a mensagem, o esquema que o outro consome) e depois o do que consome. Cada PR cita o outro na primeira linha (`Par: <owner>/<repo>#<n>`; o primeiro recebe a linha com o número do segundo numa atualização da descrição) e traz `## Ordem de merge`, a mesma nos dois: qual entra primeiro e por quê. O que expõe o contrato aceita o formato antigo e o novo enquanto o outro não entrou. Quando isso não é possível, a seção diz isso e pede o merge dos dois na sequência, sem deploy entre eles. O rótulo de risco de cada PR é o nível da tarefa (`classify-diff.sh --companions`), não o do repositório sozinho.
 
 Logs longos, tabelas de achados e listas de arquivos vão para o relatório ou para um comentário do PR com link, não para o corpo.
 

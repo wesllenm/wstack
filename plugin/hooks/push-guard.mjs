@@ -12,9 +12,15 @@
 // (activity_branch = <prefixo>/, um por linha) e as branches padrão recusadas (default_branch); main e master são sempre
 // recusadas, e o ccr-<id>-<id> da nuvem da Anthropic e o wip/ do checkpoint são embutidos. Valor fora do alfabeto fechado é
 // ignorado e nunca entra numa regex; sem nenhum prefixo válido, só o ccr- e o wip/ passam sem pedir.
+// Push num repositório companheiro (chave companion do risk.conf do projeto, companions.mjs), pela pasta do comando ou
+// por git -C: com verificação pendente no projeto, recusa; senão, este mesmo hook julga o push num processo em que o
+// companheiro é o projeto (CLAUDE_PROJECT_DIR), com as branches, os caminhos protegidos, o origin e os marcadores dele,
+// e o comando sem o -C, rodando na raiz do companheiro. Repositório fora da lista segue como repositório estranho (ASK).
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { companions } from './companions.mjs';
 import { foreignRepo, git, left, projectRepo } from './git-repo.mjs';
 import { commitOf, defaultBranches, exactRefCommit, list, protectedChanged } from './protected-paths.mjs';
 import { confAbsent, confValues } from './risk-conf.mjs';
@@ -74,6 +80,8 @@ function verdict(cmd, cwd) {
   // formato fechado e da busca de git ... push, que não atravessam a quebra
   const joined = cmd.replace(/\\\r?\n/g, '');
   if (!/\bpush\b/.test(joined)) return 'OK';
+  const comp = companionVerdict(cmd, cwd);
+  if (comp) return comp;
   const v = scan(cmd, cwd);
   if (v.startsWith('DENY')) return v;
   // Turno encerrado pela exceção de verificação (o Stop grava .claude/.session/unverified-<sessão>; só um Stop da mesma
@@ -101,6 +109,33 @@ function verdict(cmd, cwd) {
   const bare = cmd.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, ' ');
   if (/(^|[^A-Za-z0-9_.\/-])git\b[^\n]*\bpush\b/.test(bare)) return v.startsWith('ASK') ? v : 'ASK git push fora do formato liberado (use: git push -u origin <branch de atividade>, sozinho no comando)';
   return 'OK';
+}
+
+// O veredito do push num companheiro declarado, ou '' quando o comando não é push de um companheiro.
+function companionVerdict(cmd, cwd) {
+  if (process.env.WSTACK_COMPANION) return '';
+  const m = /^[ ]*git(?: +-C +([A-Za-z0-9._/][A-Za-z0-9._/-]*))? +push(?= |$)/.exec(cmd);
+  if (!m) return '';
+  let top;
+  try { top = realpathSync(git(resolve(cwd, m[1] ?? '.'), 'rev-parse', '--show-toplevel')); } catch { return ''; }
+  let comp;
+  try { comp = companions().valid.find((c) => c.path === top); } catch { return 'ASK não deu para ler a lista companion do risk.conf'; }
+  if (!comp) return '';
+  const name = basename(comp.path).replace(/[^A-Za-z0-9._-]/g, '?');
+  const pending = unverified(cwd);
+  if (pending) return `DENY verificação pendente no projeto: o push do companheiro ${name} também espera um encerramento com build e testes verdes (${pending}`;
+  const sub = m[1] === undefined ? cmd : cmd.replace(/^([ ]*git) +-C +[^ ]+/, '$1');
+  try {
+    const v = execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
+      input: JSON.stringify({ tool_input: { command: sub }, cwd: comp.path }), encoding: 'utf8', timeout: 20000,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: comp.path, WSTACK_COMPANION: '1' }, stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    if (v === 'OK') return 'OK';
+    const r = /^(ASK|DENY) ([^]*)$/.exec(v);
+    return r ? `${r[1]} (companheiro ${name}) ${r[2]}` : `ASK veredito ilegível do push no companheiro ${name}`;
+  } catch {
+    return `ASK não deu para julgar o push no companheiro ${name}`;
+  }
 }
 
 // Exceção de verificação usada e ainda não seguida de verificação verde: o motivo (primeira linha do marcador), ou ''.
