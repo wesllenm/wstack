@@ -60,7 +60,7 @@ O verificador roda a `prova:` de cada candidato antes de confirmar e devolve `co
 
 - `confirmado` bloqueante ou importante: corrigir dentro do escopo;
 - `confirmado` nit: corrigir se for barato e dentro do escopo; senão follow-up;
-- `plausível` bloqueante ou importante: provar com um teste que falha (gate de autoria da `test-audit`); se falhar, corrigir; se não falhar, descartar; se não der para provar, acionar o `review-critical`;
+- `plausível` bloqueante ou importante: provar com um teste que falha (gate de autoria da `test-audit`), escrito pelo `implementer` a partir do `como provar` (com `falta prova`, o verificador já diz qual teste); rodado o teste, o candidato volta ao verificador com a prova. Se falhar, corrigir; se não falhar, descartar; se não der para provar, acionar o `review-critical`;
 - `plausível` nit e `refutado`: descartar;
 - `preexistente`: nunca corrigir na tarefa; follow-up no relatório;
 - achado que exige decisão nova de produto, arquitetura ou escopo: interromper.

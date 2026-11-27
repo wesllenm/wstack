@@ -56,7 +56,14 @@ Todo candidato traz:
 - `trecho`: a linha (ou as linhas consecutivas) exata do código em `local`, copiada sem alterar. O `check-findings.mjs` procura esse texto no arquivo antes do verificador: trecho que não existe descarta o candidato (achado alucinado) e trecho achado em outra linha corrige o `local`. Copie do arquivo, nunca de memória;
 - `evidência`: `arquivo:linha` que mostra o comportamento alegado (a definição chamada, o chamador, a configuração, o teste), com trecho curto;
 - `cenário`: entrada ou estado, e o resultado errado;
-- `prova`: o comando exato que reproduz a falha (teste que falha, script de reprodução, comando com a saída errada) e a saída esperada dela, separados por `→`. Obrigatória em bloqueante e importante, salvo `reuse`, `simplicity` e `scope`, cuja evidência é o outro trecho de código; opcional no resto. O `check-findings.mjs` marca `situação: a confirmar` no candidato que precisa de prova e não a traz, ou que a traz sem a saída esperada: ele não é descartado, mas o verificador só o confirma rodando uma prova. O comando roda com as travas de Bash de sempre; prova que só passa com exceção de permissão não é prova.
+- `prova` e `esperado`: o comando exato que reproduz a falha (teste existente que falha, comando com a saída errada) e, no campo `esperado`, a saída que mostra a falha. Obrigatórios em bloqueante e importante, salvo `reuse`, `simplicity` e `scope`, cuja evidência é o outro trecho de código; opcionais em nit. Severidade ausente ou fora da lista conta como bloqueante: precisa de prova. O `check-findings.mjs` marca `situação: a confirmar` no candidato que precisa de prova e não a traz, ou que a traz sem a saída esperada: ele não é descartado nem muda de severidade, mas o verificador só o confirma rodando uma prova. A prova segue os Limites da prova (abaixo).
+
+**Limites da prova.** Uma prova é uma leitura do comportamento, não uma mudança no mundo:
+- nenhum efeito fora do repositório e da pasta temporária da sessão, salvo o banco de teste (o do Testcontainers ou o da `verify-<app>`); nunca aplicar migration em banco que não é de teste, publicar pacote, fazer deploy, mandar mensagem ou e-mail, nem gravar em serviço de terceiro;
+- sem rede, salvo os serviços locais que a `verify-<app>` subiu; nunca a API de um cliente, de produção ou de homologação;
+- tempo limite pelo parâmetro de timeout da ferramenta Bash (cinco minutos por padrão), nunca pelo prefixo `timeout`, que os hooks fazem pedir;
+- as travas de Bash de sempre: prova que só passa com exceção de permissão não é prova.
+Comando de prova que fura um desses limites não roda: o verificador registra `execução: não rodou: fura os limites da prova (<qual>)` e o candidato fica `plausível`.
 
 Por categoria:
 
@@ -199,7 +206,7 @@ O que cada lente procura. O prompt do agente só aponta para cá.
 Para cada candidato:
 
 0. Os candidatos chegam ancorados: o `lead` os passou por `check-findings.mjs`, que descartou os de trecho inexistente e corrigiu o `local` dos deslocados (linha `ancoragem:`). Candidato `realocado` merece confirmar o `local` novo; aviso `preexistente: não` fora das linhas alteradas é contradição a decidir aqui.
-0a. Prova por execução: antes de confirmar, rodar o comando de `prova:` e anexar o comando e o trecho da saída ao veredito (`execução:`). A saída mostra a falha e a falha contraria a intenção da mudança (o contrato): segue para os passos abaixo, já no degrau 4. O comando roda e não reproduz a falha: `refutado`, com motivo `refutado por execução` e a saída. O comando não roda (dependência ausente, ambiente): diga isso em `execução:` e siga sem ela. Candidato com `situação: a confirmar` (sem prova) só sai `confirmado` se você escrever e rodar uma prova que reproduza a falha; senão, no máximo `plausível`, com a prova que faltou em `como provar`. Os comandos rodam com as travas de Bash de sempre: nunca pedir exceção de permissão para uma prova.
+0a. Prova por execução: antes de confirmar, rodar o comando de `prova:` e anexar o comando e o trecho da saída ao veredito (`execução:`). A saída mostra a falha e a falha contraria a intenção da mudança (o contrato): segue para os passos abaixo, já no degrau 4. O comando roda e não reproduz a falha: `refutado`, com motivo `refutado por execução` e a saída. O comando não roda (dependência ausente, ambiente): diga isso em `execução:` e siga sem ela. Candidato com `situação: a confirmar` (sem prova): o verificador não grava arquivo, então só o confirma se uma prova que cabe num comando, sem arquivo novo (teste existente com filtro, consulta de leitura, expressão inline como `node -e`), reproduzir a falha. Senão, sai `plausível` com `como provar: falta prova — <o teste que falharia>`; o `lead` pede esse teste ao `implementer` (com o gate de autoria da `test-audit`), roda e devolve o candidato ao verificador com a prova. Toda prova respeita os Limites da prova (Evidência exigida).
 1. Abrir `local` e `evidência`. Evidência inexistente ou que não diz o que o candidato afirma: `refutado`.
 2. Tentar refutar: procurar o tratamento que o candidato diz faltar (outra camada, middleware, filtro global, teste existente, configuração, garantia do tipo ou do framework), seguindo chamadores e chamados.
 3. Reconstruir o cenário: a entrada ou estado é alcançável de um ponto de entrada real? Se não, `refutado`.
@@ -239,7 +246,8 @@ Cada lente devolve uma lista no formato abaixo e termina **sempre** com uma linh
     <linha exata do código em local, copiada do arquivo>
   evidência: <arquivo:linha> — <o que o código faz, trecho curto>
   cenário: <entrada ou estado> → <resultado errado>
-  prova: <comando exato> → <saída esperada da falha>
+  prova: <comando exato>
+  esperado: <a saída que mostra a falha>
   correção mínima: <mudança>
   preexistente: sim | não
 status: achados
@@ -261,7 +269,7 @@ O `review-verifier` devolve:
 
 ## Checklist de saída
 
-- [ ] todo candidato com local, evidência e cenário, e com prova quando bloqueante ou importante de comportamento;
+- [ ] todo candidato com local, evidência, cenário e severidade da lista, e com prova e esperado quando bloqueante ou importante de comportamento;
 - [ ] a última linha é o status (`achados`, `sem achados` ou `falhou: <motivo>`);
 - [ ] nenhum candidato abaixo de confiança 70;
 - [ ] nenhum item de Não reportar;

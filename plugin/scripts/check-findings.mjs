@@ -7,8 +7,9 @@
 //   descartado  arquivo inexistente, candidato sem trecho, ou trecho que não existe no arquivo (achado alucinado)
 // Também marca local fora das linhas alteradas pelo diff com `preexistente: não`, contradição que o verificador decide.
 // Prova por execução: candidato bloqueante ou importante de categoria de comportamento (todas menos reuse, simplicity
-// e scope) precisa de `prova: <comando> → <saída esperada da falha>`. Sem ela, ou sem a saída esperada, o candidato
-// fica, mas ganha `situação: a confirmar`: o verificador não o confirma sem executar uma prova.
+// e scope), e o candidato sem severidade ou com severidade fora da lista, precisa de `prova: <comando>` e de
+// `esperado: <saída esperada da falha>`. Sem elas, o candidato fica com a severidade que trouxe (o script não a muda) e
+// ganha `situação: a confirmar`: o verificador não o confirma sem executar uma prova.
 // Status da lente: cada arquivo é a resposta de uma lente (ou de um grupo do despacho) e termina com uma linha
 // `status: sem achados`, `status: achados` ou `status: falhou: <motivo>` (o arquivo inteiro `sem achados` ou
 // `falhou: <motivo>`, saída do interrogate.mjs, também vale). Sem status, com status que contradiz o conteúdo, ou com
@@ -188,13 +189,26 @@ for (const it of items) {
   r.in_diff = diffOk ? inDiff(path, best, end) : null;
   if (r.in_diff === false && /^n[ãa]o$/i.test(get('preexistente') ?? '')) r.warning = 'local fora das linhas alteradas com preexistente: não';
   // prova por execução: exigida em bloqueante e importante, salvo reuse, simplicity e scope (a evidência ali é o
-  // outro trecho de código, não uma execução). Ausente, ou sem a saída esperada depois da seta, rebaixa a "a confirmar".
-  const sev = (get('severidade') ?? '').toLowerCase(), cat = (get('categoria') ?? '').toLowerCase();
-  const prova = get('prova') ?? '';
-  const needs = /^(bloqueante|importante)$/.test(sev) && !/^(reuse|simplicity|scope)$/.test(cat);
-  const complete = /\S.*(?:→|->)\s*\S/.test(prova);
+  // outro trecho de código, não uma execução). Severidade ausente ou fora da lista conta como bloqueante (falha
+  // fechada: grafia errada não dispensa a prova). A saída esperada vem no campo `esperado:` (ou, na forma curta, depois
+  // de " → " em `prova:`; "->" não separa, porque aparece dentro de comando). Sem prova ou sem saída esperada, o
+  // candidato fica com a severidade dele e ganha `situação: a confirmar`; o script não muda a severidade.
+  const rawSev = (get('severidade') ?? '').trim().toLowerCase(), cat = (get('categoria') ?? '').trim().toLowerCase();
+  const sevOk = /^(bloqueante|importante|nit)$/.test(rawSev);
+  const prova = (get('prova') ?? '').trim(), esperado = (get('esperado') ?? '').trim();
+  const arrow = prova.lastIndexOf(' → ');
+  const cmd = arrow >= 0 ? prova.slice(0, arrow).trim() : prova;
+  const expected = esperado || (arrow >= 0 ? prova.slice(arrow + 3).trim() : '');
+  const needs = (!sevOk || rawSev !== 'nit') && !/^(reuse|simplicity|scope)$/.test(cat);
+  const complete = !!cmd && !!expected;
   r.proof = !needs ? 'dispensada' : complete ? 'presente' : prova ? 'incompleta' : 'ausente';
-  if (needs && !complete) r.situacao = `a confirmar (${prova ? 'prova: sem a saída esperada depois de "→"' : 'sem prova:'}; o verificador não confirma sem executar uma prova)`;
+  const why = [];
+  if (!sevOk) why.push(`severidade ${rawSev ? `fora da lista ("${rawSev.slice(0, 40)}")` : 'ausente'}, tratada como bloqueante`);
+  if (needs && !prova) why.push('sem prova:');
+  else if (needs && !cmd) why.push('prova: sem o comando');
+  else if (needs && !expected) why.push('prova: sem a saída esperada (campo esperado:)');
+  if (needs && !complete) r.situacao = `a confirmar (${why.join('; ')}; o verificador não confirma sem executar uma prova)`;
+  else if (!sevOk) r.situacao = `severidade ${rawSev ? 'fora da lista' : 'ausente'}: o verificador dá a severidade final (bloqueante | importante | nit)`;
   r.lens = it.lens;
   it.newLocal = newLocal;
   it.result = r;
@@ -203,7 +217,7 @@ for (const it of items) {
 const kept = items.filter((it) => it.result && it.result.status !== 'descartado');
 const counts = { ancorado: 0, realocado: 0, descartado: 0 };
 for (const r of results) counts[r.status]++;
-const pending = results.filter((r) => r.situacao && r.status !== 'descartado').length;
+const pending = results.filter((r) => r.situacao?.startsWith('a confirmar') && r.status !== 'descartado').length;
 const summary = `check-findings: ${items.length} candidato(s): ${counts.ancorado} ancorado(s), ${counts.realocado} realocado(s), ${counts.descartado} descartado(s), ${pending} a confirmar sem prova${lacunas.length ? `; ${lacunas.length} lacuna(s): ${lacunas.map((l) => l.lente).join(', ')}` : ''}${diffOk ? '' : '; diff indisponível, sem checagem de linhas alteradas'}`;
 const code = lacunas.length ? 4 : 0;
 

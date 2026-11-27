@@ -5,7 +5,8 @@
 //   MARCADOR          TODO, FIXME, HACK, XXX, workaround, gambiarra, temporário
 //   RESTRICAO         comentário que descreve uma regra ("não", "nunca", "sempre", "deve", "obrigatório", "never",
 //                     "always", "must", "do not", "required"): regra que só o modelo lê; a review-simplicity propõe
-//                     como garanti-la no código (tipo, checagem, teste, lint). Conta no limite de COMENTARIO
+//                     como garanti-la no código (tipo, checagem, teste, lint). Procurado também em comentário de
+//                     documentação e em continuação de bloco. Só sinal: fica fora do --gate
 //   COMENTARIO        qualquer outro comentário novo: o lead justifica cada um (porquê não óbvio) ou remove
 //   DOC               comentário de documentação (///, /** */, docstring): informativo
 // Linha movida (o mesmo texto removido em outro ponto do diff) não conta: só o que o diff introduziu.
@@ -214,9 +215,11 @@ for (const [f, lines] of added) {
     if (/^(SAFETY|SPDX-License-Identifier|Copyright)\b/i.test(body) || /^#!/.test(t.trim())) continue;
     if (MARKER.test(body)) add('MARCADOR', body.slice(0, 80));
     else if (CODE_BODY.test(body)) add('CODIGO_COMENTADO', '');
+    // restrição é sinal para a review-simplicity, procurada em toda linha de comentário: também na documentação (///,
+    // <remarks> "deve ser chamado depois de Init()") e na continuação de um bloco
+    else if (RESTRICTION.test(body)) add('RESTRICAO', `${isDoc ? 'doc: ' : ''}${RESTRICTION.exec(body)[1].toLowerCase()}`);
     else if (continuation) continue; // bloco de comentário conta uma vez, na linha em que abre
     else if (isDoc) add('DOC', '');
-    else if (RESTRICTION.test(body)) add('RESTRICAO', RESTRICTION.exec(body)[1].toLowerCase());
     else add('COMENTARIO', '');
   }
 }
@@ -228,9 +231,9 @@ const over = [];
 if (totals.ESCAPE > conf.smell_escape_limit) over.push(`ESCAPE ${totals.ESCAPE} > ${conf.smell_escape_limit}`);
 if (totals.CODIGO_COMENTADO > 0) over.push(`CODIGO_COMENTADO ${totals.CODIGO_COMENTADO}`);
 if (totals.MARCADOR > 0) over.push(`MARCADOR ${totals.MARCADOR}`);
-// comentário de restrição continua sendo comentário: o limite vale para os dois juntos, como antes da separação
-const comments = totals.COMENTARIO + totals.RESTRICAO;
-if (comments > conf.smell_comment_limit) over.push(`COMENTARIO ${comments} > ${conf.smell_comment_limit}`);
+// RESTRICAO é só sinal (vai à review-simplicity): fora do --gate, para comentário descritivo ("sempre retorna uma
+// lista") não bloquear o commit
+if (totals.COMENTARIO > conf.smell_comment_limit) over.push(`COMENTARIO ${totals.COMENTARIO} > ${conf.smell_comment_limit}`);
 
 if (text) {
   for (const k of order) for (const i of items.filter((x) => x.kind === k))

@@ -52,7 +52,11 @@ const WARNINGS = [
 ];
 const TRAILER = /^(?:Co-Authored-By|Claude-Session|Signed-off-by|Refs|Closes|Fixes|BREAKING CHANGE|Reviewed-by):/i;
 
-let errors = 0, warnings = 0, fenced = false;
+let errors = 0, warnings = 0, fenced = '';
+// bloco cercado: fecha só com o mesmo marcador que abriu (``` não fecha ~~~)
+const fence = (line, open) => { const m = /^\s*(`{3,}|~{3,})/.exec(line); if (!m) return open; if (!open) return m[1][0]; return m[1][0] === open ? '' : open; };
+// título da seção comparado sem acento e sem caixa ("## Por que" vale como Por quê)
+const plain = (s) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 let lines = text.split(/\r?\n/);
 if (pr) {
   // rodapé de atribuição do PR: fora dos padrões (tem emoji de propósito) e da contagem
@@ -60,16 +64,16 @@ if (pr) {
   if (foot >= 0) lines = lines.slice(0, foot);
   const SECTIONS = ['Por quê', 'O que mudou', 'Escopo', 'Trade-offs', 'Raio de impacto', 'Verificação'];
   const err = (n, msg) => { console.log(`${n}: erro: ${msg}`); errors++; };
-  let last = -1, inFence = false;
+  let last = -1, inFence = '';
   const seen = new Set();
   const heads = [];
   lines.forEach((l, i) => {
-    if (/^\s*(```|~~~)/.test(l)) inFence = !inFence;
-    if (inFence) return;
+    const was = inFence; inFence = fence(l, inFence);
+    if (was || inFence) return;
     const m = /^##\s+(.+?)\s*$/.exec(l);
     if (!m || l.startsWith('###')) return;
     heads.push(i);
-    const k = SECTIONS.indexOf(m[1]);
+    const k = SECTIONS.map(plain).indexOf(plain(m[1]));
     if (k < 0) err(i + 1, `seção desconhecida no PR — use só ${SECTIONS.join(', ')}`);
     else if (seen.has(k)) err(i + 1, 'seção repetida no PR — juntar numa só');
     else if (k < last) err(i + 1, `seção fora de ordem no PR — a ordem é ${SECTIONS.join(', ')}`);
@@ -84,7 +88,8 @@ if (pr) {
   if (filled > 40) err(1, `PR com ${filled} linhas de texto (máximo 40) — logs, tabelas e listas longas vão para o relatório`);
 }
 lines.forEach((raw, i) => {
-  if (/^\s*(```|~~~)/.test(raw)) { fenced = !fenced; return; }
+  const was = fenced; fenced = fence(raw, fenced);
+  if (was !== fenced) return;
   if (fenced || TRAILER.test(raw.trim())) return;
   // código entre crases e menção entre aspas duplas ("este commit" citado como exemplo) não são uso
   const line = raw.replace(/`[^`]*`/g, ' ').replace(/"[^"\n]*"|“[^”\n]*”/g, ' ');

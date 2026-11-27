@@ -76,7 +76,8 @@ Regras:
     <linha exata do código em local>
   evidência: <arquivo:linha> — <o que o código faz, trecho curto>
   cenário: <entrada ou estado> → <resultado errado>
-  prova: <comando que reproduz a falha no projeto, como um teste ou script> → <saída esperada da falha>
+  prova: <comando que reproduz a falha no projeto, como um teste existente com filtro>
+  esperado: <a saída que mostra a falha>
   correção mínima: <mudança>
   preexistente: sim | não
 

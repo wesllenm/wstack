@@ -31,11 +31,21 @@ quebrá-lo depois do código. A evidência de cada afirmação usa a escada da `
    - feature flags que ligam ou desligam o caminho;
    - consumidores de mensagem (Service Bus, RabbitMQ, pub/sub) e outro serviço que lê os mesmos bytes.
    Busca vazia é resultado válido: registrar o comando e "nenhum".
-4. **Classificar cada risco** por probabilidade (alta, média, baixa) e custo se acontecer (dado perdido ou corrompido,
-   contrato quebrado, indisponibilidade, cosmético).
+4. **Classificar cada risco** por probabilidade e custo, nestas escalas:
+   - probabilidade **alta**: um caminho que o uso normal percorre leva ao risco (chamador existente, dado que já
+     existe, configuração padrão); **média**: depende de uma condição plausível que o código não impede (entrada no
+     limite, ordem diferente, falha de dependência); **baixa**: depende de uma combinação rara ou de um uso que o
+     código hoje não faz;
+   - custo **dado**: perde ou corrompe dado, ou o expõe; **contrato**: quebra quem consome a API, o evento ou o
+     schema; **indisponibilidade**: derruba ou trava a funcionalidade; **cosmético**: erro visível sem efeito em dado
+     nem em contrato.
+   Risco de probabilidade alta, ou de custo dado ou contrato, vai para o plano com a prova; os outros ficam como
+   ponto de foco das lentes.
 5. **Provar o fato de segurança** rodando um teste ou script contra o código real (degrau 4), ou conduzindo na
-   aplicação pela `verify-<app>` (degrau 5). Antes do código, a prova é o teste que vai falhar se o fato não valer: ele
-   entra no sprint contract, e o veredito sai depois que a implementação o roda.
+   aplicação pela `verify-<app>` (degrau 5). Antes do código, a prova é o teste que vai falhar se o fato não valer.
+   Quem o escreve é o `implementer`: ele é o **primeiro item** do sprint contract (critério de aceitação e teste
+   nomeados, com o gate de autoria da `test-audit`), escrito e rodado antes do código da fatia. O veredito do fato sai
+   quando a implementação o roda; o `lead` copia o comando e o resultado para esta resposta e para o relatório.
 6. **Responder** no formato abaixo.
 
 ## Resposta
