@@ -155,6 +155,17 @@ for (const s of skills) for (const sub of ['reference', 'playbooks']) {
   }
 }
 
+// o plugin é genérico: nenhum arquivo dele (hooks, scripts, modelos, testes) cita os projetos que o provam ou de onde
+// ele veio; exemplo usa nome neutro (app, servico). Este arquivo fica de fora, porque contém a lista.
+const ORIGIN = /squad ?os|host ?azul|servercontrol/i;
+const all = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? all(path.join(d, e.name)) : [path.join(d, e.name)]));
+for (const f of all(plugin)) {
+  if (f.endsWith(path.join('tests', 'test-skills-agents.sh'))) continue;
+  let text;
+  try { text = fs.readFileSync(f, 'utf8'); } catch { continue; }
+  text.split('\n').forEach((line, i) => { if (ORIGIN.test(line)) fail(`${path.relative(plugin, f)}:${i + 1}: nome de projeto no plugin (use um nome neutro)`); });
+}
+
 if (fails === 0) { console.log(`test-skills-agents: todos os casos passaram (${files.length} arquivos)`); process.exit(0); }
 console.log(`test-skills-agents: ${fails} falha(s)`);
 process.exit(1);

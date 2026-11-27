@@ -28,12 +28,12 @@ p=$(proj vazio 'base = HEAD')
 [ -z "$(list "$p")$(session "$p")" ] || fail vazio-calado "$(session "$p")"
 
 # substituições válidas: skill de mesmo nome, skill com outro nome, agente de mesmo nome
-p=$(proj valido 'override = tdd' 'override = test-audit -> auditoria-de-testes' 'override = review-agent')
-skill "$p" tdd; skill "$p" auditoria-de-testes; agent "$p" review-agent
-want=$'skill\ttdd\ttdd\nskill\ttest-audit\tauditoria-de-testes\nagente\treview-agent\treview-agent'
+p=$(proj valido 'override = tdd' 'override = test-audit -> revisao-de-testes' 'override = review-agent')
+skill "$p" tdd; skill "$p" revisao-de-testes; agent "$p" review-agent
+want=$'skill\ttdd\ttdd\nskill\ttest-audit\trevisao-de-testes\nagente\treview-agent\treview-agent'
 [ "$(list "$p")" = "$want" ] || fail validas "$(list "$p" | tr '\t\n' ' |')"
 s=$(session "$p")
-for t in 'skill tdd do projeto no lugar do wstack:tdd' 'skill auditoria-de-testes do projeto no lugar do wstack:test-audit' \
+for t in 'skill tdd do projeto no lugar do wstack:tdd' 'skill revisao-de-testes do projeto no lugar do wstack:test-audit' \
   'agente review-agent do projeto no lugar do wstack:review-agent'; do
   grep -qF -- "$t" <<< "$s" || fail "session: $t" "$s"
 done

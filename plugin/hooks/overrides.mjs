@@ -1,6 +1,6 @@
 // Skills e agentes do plugin que o projeto substitui pelos dele: chave override do .claude/risk.conf, uma linha por item.
 //   override = tdd                                  a skill (ou o agente) tdd do projeto no lugar do wstack:tdd
-//   override = test-audit -> auditoria-de-testes   com outro nome no projeto (só skill: ver abaixo)
+//   override = test-audit -> revisao-de-testes   com outro nome no projeto (só skill: ver abaixo)
 // O Claude Code não desliga um componente de plugin por vez (o skillOverrides não vale para skill de plugin); as duas
 // versões continuam listadas, e quem escolhe é a lead (núcleo, Substituições do projeto) e o contrato de delegação.
 // Medido com o Claude Code 2.1.332 (prove-overrides.sh): o skills: sem prefixo de um agente do plugin pré-carrega a

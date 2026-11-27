@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Casos dos repositórios companheiros (chave companion do risk.conf, companions.mjs) com dois repositórios git de
-# verdade, Platform e ServerControl, lado a lado: a validação da lista, o classify-diff.sh --companions, o
+# verdade, app e servico, lado a lado: a validação da lista, o classify-diff.sh --companions, o
 # verify-on-stop (o companheiro vermelho bloqueia o Stop; o aprendizado fica no projeto) e o checkpoint-tests (o commit
 # no companheiro usa o risk.conf dele). Sem rede.
 # Uso: test-companions.sh [<pasta do plugin>]
@@ -17,15 +17,15 @@ fails=0
 fail() { echo "FALHOU [$1]: $2"; fails=$((fails + 1)); }
 gitc() { git -C "$1" -c user.email=t@t -c user.name=t "${@:2}"; }
 
-# par novo: Platform (projeto) e ServerControl (companheiro), cada um com risk.conf e um commit base
-par() { # par <nome> <linhas extras do risk.conf do Platform>...
+# par novo: app (projeto) e servico (companheiro), cada um com risk.conf e um commit base
+par() { # par <nome> <linhas extras do risk.conf do app>...
   local d="$work/$1"; shift
-  P=$d/Platform; C=$d/ServerControl
+  P=$d/app; C=$d/servico
   for r in "$P" "$C"; do
     git init -q "$r"; mkdir -p "$r/.claude"; printf 'base = HEAD\n' > "$r/.claude/risk.conf"
     printf 'x\n' > "$r/a.cs"; gitc "$r" add -A; gitc "$r" commit -qm base
   done
-  printf 'companion = ../ServerControl\n' >> "$P/.claude/risk.conf"
+  printf 'companion = ../servico\n' >> "$P/.claude/risk.conf"
   local l; for l in "$@"; do printf '%s\n' "$l" >> "$P/.claude/risk.conf"; done
   gitc "$P" commit -qam conf
 }
@@ -38,7 +38,7 @@ out=$(cd "$P" && CLAUDE_PROJECT_DIR=$P node "$plugin/hooks/companions.mjs")
 [ "$out" = "$C" ] || fail lista-valida "$out"
 s=$(cd "$P" && CLAUDE_PROJECT_DIR=$P node "$plugin/hooks/companions.mjs" --session)
 for t in 'companion = ../nada ignorado: a pasta não existe' 'companion = . ignorado: é o próprio projeto' \
-  'companion = /etc ignorado' 'companion = ../Solto ignorado: o repositório não tem .claude/risk.conf' 'Repositórios companheiros (risk.conf, companion): ../ServerControl'; do
+  'companion = /etc ignorado' 'companion = ../Solto ignorado: o repositório não tem .claude/risk.conf' 'Repositórios companheiros (risk.conf, companion): ../servico'; do
   grep -qF -- "$t" <<< "$s" || fail "session: $t" "$s"
 done
 
@@ -47,21 +47,21 @@ classify() { CLAUDE_PROJECT_DIR=$P bash "$plugin/scripts/classify-diff.sh" --com
 par risco
 printf 'y\n' >> "$P/a.cs"
 [ "$(classify | head -1)" = TRIVIAL ] || fail risco-so-projeto "$(classify | tr '\n' '|')"
-grep -qx 'repositório: ServerControl TRIVIAL' <<< "$(classify)" || fail risco-lista-companheiro "$(classify | tr '\n' '|')"
+grep -qx 'repositório: servico TRIVIAL' <<< "$(classify)" || fail risco-lista-companheiro "$(classify | tr '\n' '|')"
 printf 'y\n' >> "$C/a.cs"
 [ "$(classify | head -1)" = COMPLEXA ] || fail risco-dois-com-codigo "$(classify | tr '\n' '|')"
 grep -qF 'código mudou em 2 repositórios' <<< "$(classify)" || fail risco-motivo "$(classify | tr '\n' '|')"
 gitc "$C" checkout -q a.cs; printf 'doc\n' > "$C/README.md"
 [ "$(classify | head -1)" = TRIVIAL ] || fail risco-doc-no-companheiro "$(classify | tr '\n' '|')"
 planned() { CLAUDE_PROJECT_DIR=$P bash "$plugin/scripts/classify-diff.sh" --companions --paths "$@"; }
-[ "$(planned a.cs ../ServerControl/b.cs | head -1)" = COMPLEXA ] || fail planejado-dois "$(planned a.cs ../ServerControl/b.cs | tr '\n' '|')"
-out=$(planned ../ServerControl/b.cs)
-grep -qx 'repositório: ServerControl SIMPLES' <<< "$out" || fail planejado-so-companheiro "$(tr '\n' '|' <<< "$out")"
-grep -q 'repositório: Platform' <<< "$out" && fail planejado-sem-projeto "$(tr '\n' '|' <<< "$out")"
+[ "$(planned a.cs ../servico/b.cs | head -1)" = COMPLEXA ] || fail planejado-dois "$(planned a.cs ../servico/b.cs | tr '\n' '|')"
+out=$(planned ../servico/b.cs)
+grep -qx 'repositório: servico SIMPLES' <<< "$out" || fail planejado-so-companheiro "$(tr '\n' '|' <<< "$out")"
+grep -q 'repositório: app' <<< "$out" && fail planejado-sem-projeto "$(tr '\n' '|' <<< "$out")"
 [ "$(planned a.cs docs/x.md | head -1)" = SIMPLES ] || fail planejado-so-projeto "$(planned a.cs docs/x.md | tr '\n' '|')"
 printf 'critical = *a.cs\n' >> "$C/.claude/risk.conf"; gitc "$C" commit -qam crit; printf 'z\n' >> "$C/a.cs"
 [ "$(classify | head -1)" = CRITICA ] || fail risco-critica-do-companheiro "$(classify | tr '\n' '|')"
-grep -q '^motivo: CRITICA .*(ServerControl)$' <<< "$(classify)" || fail risco-motivo-com-nome "$(classify | tr '\n' '|')"
+grep -q '^motivo: CRITICA .*(servico)$' <<< "$(classify)" || fail risco-motivo-com-nome "$(classify | tr '\n' '|')"
 
 # --- verify-on-stop: o companheiro vermelho bloqueia; verde segue; o aprendizado fica só no projeto
 stop() { jq -cn '{session_id:"s1"}' | CLAUDE_PROJECT_DIR=$P bash "$plugin/hooks/verify-on-stop.sh" > "$work/out" 2> "$work/err"; echo $?; }
@@ -72,7 +72,7 @@ printf 'mudou\n' >> "$C/a.cs"
 sed -i 's/^verify_build = true$/verify_build = false/' "$C/.claude/risk.conf"; gitc "$C" commit -qam vermelho; printf 'de novo\n' >> "$C/a.cs"
 rc=$(stop)
 [ "$rc" = 2 ] || fail fim-companheiro-vermelho "código $rc: $(head -c 300 "$work/err")"
-grep -qF 'Repositório companheiro ServerControl' "$work/err" || fail fim-motivo-com-nome "$(head -c 300 "$work/err")"
+grep -qF 'Repositório companheiro servico' "$work/err" || fail fim-motivo-com-nome "$(head -c 300 "$work/err")"
 # o gate de aprendizado não roda no companheiro: calibração lá, commit de código, sem registro, não bloqueia
 par aprende
 mkdir -p "$C/docs" && printf '# Calibração\n' > "$C/docs/review-calibration.md" && gitc "$C" add -A && gitc "$C" commit -qm calib
@@ -89,13 +89,13 @@ par commit
 printf 'checkpoint = *.cs -> false\n' >> "$C/.claude/risk.conf"; gitc "$C" commit -qam ck
 printf 'y\n' >> "$C/a.cs"
 [ "$(ck "$C" 'git commit -m x')" = 2 ] || fail checkpoint-pasta-do-companheiro "$(head -c 200 "$work/ckerr")"
-[ "$(ck "$P" 'git -C ../ServerControl commit -m x')" = 2 ] || fail checkpoint-menos-C "$(head -c 200 "$work/ckerr")"
+[ "$(ck "$P" 'git -C ../servico commit -m x')" = 2 ] || fail checkpoint-menos-C "$(head -c 200 "$work/ckerr")"
 [ "$(ck "$P" 'git commit -m x')" = 0 ] || fail checkpoint-projeto-sem-area "$(head -c 200 "$work/ckerr")"
 # repositório fora da lista: vale o risk.conf do projeto (sem área), não o do repositório do comando
 sed -i '/^companion = /d' "$P/.claude/risk.conf"; printf 'checkpoint = nada/* -> false\n' >> "$P/.claude/risk.conf"; gitc "$P" commit -qam sem
 [ "$(ck "$C" 'git commit -m x')" = 0 ] || fail checkpoint-fora-da-lista "$(head -c 200 "$work/ckerr")"
 
-# --- push-guard: o push no companheiro vale com as regras do risk.conf dele (o Platform usa feat/, o ServerControl sc/)
+# --- push-guard: o push no companheiro vale com as regras do risk.conf dele (o app usa feat/, o servico sc/)
 push() { # push <cwd> <comando>: ok | ask | deny
   local out rc
   out=$(jq -cn --arg c "$2" --arg d "$1" '{hook_event_name:"PreToolUse",tool_name:"Bash",cwd:$d,tool_input:{command:$c}}' |
@@ -110,10 +110,10 @@ printf 'activity_branch = feat/\n' >> "$P/.claude/risk.conf"; gitc "$P" commit -
 printf 'activity_branch = sc/\n' >> "$C/.claude/risk.conf"; gitc "$C" commit -qam act
 [ "$(push "$P" 'git push -u origin feat/tarefa')" = ok ] || fail push-projeto "$(cat "$work/pgerr")"
 [ "$(push "$C" 'git push -u origin sc/tarefa')" = ok ] || fail push-companheiro-pasta "$(cat "$work/pgerr")"
-[ "$(push "$P" 'git -C ../ServerControl push -u origin sc/tarefa')" = ok ] || fail push-companheiro-menos-C "$(cat "$work/pgerr")"
+[ "$(push "$P" 'git -C ../servico push -u origin sc/tarefa')" = ok ] || fail push-companheiro-menos-C "$(cat "$work/pgerr")"
 [ "$(push "$C" 'git push -u origin feat/tarefa')" = ask ] || fail push-companheiro-prefixo-do-projeto "$(push "$C" 'git push -u origin feat/tarefa')"
 [ "$(push "$C" 'git push -u origin main')" = deny ] || fail push-companheiro-main "$(push "$C" 'git push -u origin main')"
-grep -qF '(companheiro ServerControl)' "$work/pgerr" || fail push-motivo-com-nome "$(cat "$work/pgerr")"
+grep -qF '(companheiro servico)' "$work/pgerr" || fail push-motivo-com-nome "$(cat "$work/pgerr")"
 # verificação pendente no projeto segura o push do companheiro; a do companheiro também
 mkdir -p "$P/.claude/.session" && printf 'exceção\n' > "$P/.claude/.session/unverified-s1"
 [ "$(push "$C" 'git push -u origin sc/tarefa')" = deny ] || fail push-pendente-no-projeto "$(cat "$work/pgerr")"

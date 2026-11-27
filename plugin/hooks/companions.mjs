@@ -1,5 +1,5 @@
 // Repositórios que mudam junto com o projeto na mesma tarefa: chave companion do .claude/risk.conf, uma linha por
-// repositório, caminho relativo à raiz do projeto (o caso comum é o irmão: companion = ../ServerControl).
+// repositório, caminho relativo à raiz do projeto (o caso comum é o irmão: companion = ../servico).
 // Cada companheiro tem o próprio .claude/risk.conf, que vale para ele: classify-diff.sh --companions classifica cada um
 // com a base dele, o verify-on-stop roda os verify_* de cada um, o checkpoint-tests usa o risk.conf do repositório do
 // commit. Um caminho só vale se for a raiz de um repositório git, diferente da raiz do projeto, com .claude/risk.conf;

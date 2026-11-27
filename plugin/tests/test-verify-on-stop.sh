@@ -291,10 +291,10 @@ expect 2 doc-calibration-bloqueia 'último registro em docs/calibracao.md'
 printf -- '- registro — princípios: nenhum (carregadas: 0)\n' >> "$proj/docs/calibracao.md" && gitc commit -qam registro
 expect 0 doc-calibration-registrado
 # doc_state: mudança só na pendência versionada não é código, e o build (que falharia) não roda; sem a chave, roda
-for c in 'doc_state = docs/ESTADO.md' '# sem doc_state'; do
+for c in 'doc_state = docs/onde-paramos.md' '# sem doc_state'; do
   novo 'verify_solution = sol.txt' 'verify_build = false' 'verify_test = true' "$c"
   printf 's\n' > "$proj/sol.txt" && gitc add -A && gitc commit -qm sol
-  mkdir -p "$proj/docs" && printf 'onde paramos\n' > "$proj/docs/ESTADO.md"
+  mkdir -p "$proj/docs" && printf 'onde paramos\n' > "$proj/docs/onde-paramos.md"
   if [ "$c" = '# sem doc_state' ]; then expect 2 sem-doc-state-conta-como-codigo; else expect 0 doc-state-nao-e-codigo; fi
 done
 

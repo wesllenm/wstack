@@ -228,6 +228,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   e a verificação pendente no projeto segura também esse push. A skill `commit` abre um PR por repositório, que se
   citam (`Par:`) e trazem a mesma `## Ordem de merge`, seção que o `slop-check --pr` passa a aceitar. Sem ação no
   projeto.
+- 0.0.46: medições `measure-hook-cost.sh`, `measure-permission-asks.sh` e `measure-stop-locked-build.sh`, para rodar
+  à mão na máquina do projeto, também no Windows com Git Bash. Os exemplos do plugin passam a usar nomes neutros, e o
+  `test-skills-agents.sh` recusa nome de projeto em qualquer arquivo do plugin. Sem ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

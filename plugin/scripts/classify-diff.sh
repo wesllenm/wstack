@@ -20,7 +20,7 @@ set -uo pipefail
 # --companions: a tarefa que muda o projeto e os repositórios da chave companion do risk.conf (companions.mjs). Cada um
 # é classificado com o próprio risk.conf e a base dele; o nível da tarefa é o maior, e no mínimo COMPLEXA quando mais de
 # um repositório muda código (fora de *.md, *.txt e docs/): é mudança de contrato entre eles. Com --paths, o caminho
-# previsto que começa pelo caminho do companheiro no risk.conf (../ServerControl/src/x.cs) vai para ele, sem o prefixo;
+# previsto que começa pelo caminho do companheiro no risk.conf (../servico/src/x.cs) vai para ele, sem o prefixo;
 # o resto, para o projeto; repositório sem caminho previsto não entra. Saída: 1ª linha = nível da tarefa;
 # "repositório: <nome> <nível>" de cada um; "quente:" e "motivo:" de cada um, com o nome do repositório.
 #   classify-diff.sh --companions                     diff real de cada repositório
