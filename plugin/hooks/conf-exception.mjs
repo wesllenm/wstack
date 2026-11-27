@@ -60,6 +60,9 @@ if (self && self === argv1 && process.argv[2] === '--warn') {
       console.log(`AVISO: chave desconhecida na linha ${i + 1} do .claude/risk.conf: ${m[1]}${near && near[1] <= 3 ? ` (quis dizer ${near[0]}?)` : ''}. Nenhum hook nem script a lê, então a configuração dela está desligada.`);
       return;
     }
+    // valor vazio: o script lê 0 ou o padrão dele, sem aviso (smell_comment_limit = vira 0, base = compara com o HEAD).
+    // Só verify_lint vazio é de propósito: o modelo documenta que vazio não roda o formato
+    if (!m[2].trim() && m[1] !== 'verify_lint') { console.log(`AVISO: ${m[1]} está vazio na linha ${i + 1} do .claude/risk.conf: quem a lê usa 0 ou o padrão dele. Preencher ou comentar a linha.`); return; }
     if (!EXCEPTION_KEYS.includes(m[1])) return;
     const e = parseException(m[2]);
     const shown = `${m[1]} = ${e.value}`.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 160);

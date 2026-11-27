@@ -44,9 +44,17 @@ for (const [name, val] of [['--rev', opt.rev], ['--base', opt.base]])
 
 const sources = opt.files.length ? opt.files : [null];
 const inputs = sources.map((f) => {
-  try { return { name: f === null ? 'entrada padrão' : basename(f), text: readFileSync(f ?? 0, 'utf8') }; }
+  try { return { name: f === null ? 'entrada padrão' : f, text: readFileSync(f ?? 0, 'utf8') }; }
   catch (e) { return die(3, `não foi possível ler ${f ?? 'a entrada padrão'}: ${e.code ?? e.message}`); }
 });
+
+// nome de cada lente na saída: o nome do arquivo, ou o caminho inteiro quando duas lentes têm o mesmo nome em pastas
+// diferentes (senão os descartes e as lacunas delas se misturariam)
+for (const inp of inputs) {
+  if (inp.name === 'entrada padrão') continue;
+  const b = basename(inp.name);
+  inp.name = inputs.filter((x) => x.name !== 'entrada padrão' && basename(x.name) === b).length > 1 ? inp.name : b;
+}
 
 // ---------- leitura dos candidatos e do status de cada lente ----------
 // Itens começam em "- id:"; campos em "  chave: valor"; o trecho pode continuar em linhas com recuo maior.
@@ -141,7 +149,10 @@ if (inGit) {
     }
     if (!opt.rev) for (const p of git('ls-files', '--others', '--exclude-standard', '-z').split('\0')) if (p) changed.set(p, [[1, Infinity]]);
     diffOk = true;
-  } catch { diffOk = false; }
+  } catch {
+    // diff incompleto (git falhou no meio): nada do que foi lido vale, nem as linhas alteradas nem as removidas
+    diffOk = false; changed.clear(); removedBy.clear();
+  }
 }
 const inDiff = (p, a, b) => (changed.get(p) || []).some(([x, y]) => x <= b && a <= y);
 
@@ -193,7 +204,7 @@ for (const it of items) {
     newLocal = `${path}:${best}`;
     r.status = 'removido';
     r.detail = `trecho removido pelo diff; o local é o ponto do corte${newLocal !== local ? ` (era ${local})` : ''}`;
-    r.in_diff = true;
+    r.in_diff = diffOk ? true : null;
   }
   r.local = newLocal;
   if (r.in_diff === false && /^n[ãa]o$/i.test(get('preexistente') ?? '')) r.warning = 'local fora das linhas alteradas com preexistente: não';

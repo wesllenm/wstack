@@ -107,6 +107,21 @@ run --text
 grep -q '^MARCADOR *src/B.cs:2' <<< "$out" || fail "diff.noprefix: caminho errado ($out)"
 grep -qF 'MARCADOR         src/a"c.cs:2' <<< "$out" || fail "caminho entre aspas: não foi lido ($out)"
 git -C "$repo" rm -q --cached src/B.cs 'src/a"c.cs'; rm -f "$repo/src/B.cs" "$repo/src/a\"c.cs"; git -C "$repo" config --unset diff.noprefix
+# base vazia no risk.conf ("base =") também é base ausente: o --gate reprova
+printf 'class A {\n}\n' > "$repo/src/A.cs"
+printf 'base =\n' > "$repo/.claude/risk.conf"
+run --gate --text
+[ "$code" = 1 ] && grep -q 'BASE (vazia) não encontrada' <<< "$out" || fail "base vazia: --gate passou (código $code, $out)"
+printf 'base = main\nsmell_comment_limit = 1\n' > "$repo/.claude/risk.conf"
+# linha movida é a que sai e volta no mesmo arquivo: um TODO apagado num arquivo não esconde um TODO novo em outro
+mkdir -p "$repo/db"
+printf -- '-- TODO legado\nSELECT 1;\n' > "$repo/db/x.sql"
+gitc add -A && gitc commit -qm 'sql x'
+printf 'SELECT 1;\n' > "$repo/db/x.sql"
+printf -- '-- TODO legado\nSELECT 2;\n' > "$repo/db/y.sql"
+run --base HEAD --text
+grep -q '^MARCADOR *db/y.sql:1' <<< "$out" || fail "movida entre arquivos: TODO novo em outro arquivo ficou escondido ($out)"
+git -C "$repo" rm -q -r -f db && rm -rf "$repo/db" && gitc commit -qm 'sem sql x'
 # base ausente (clone raso, sem a branch): a saída diz e o --gate reprova, mesmo sem nenhum sinal
 printf 'class A {\n}\n' > "$repo/src/A.cs"
 printf 'base = nao-existe\n' > "$repo/.claude/risk.conf"

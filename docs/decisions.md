@@ -896,3 +896,19 @@ commit.
 
 **Por quê:** os achados mais importantes de uma revisão costumam ser sobre o que saiu, e eles caíam na ancoragem. Uma
 lente que só alucina era invisível. E chave com erro de digitação deixava a configuração desligada sem sinal.
+
+## 2026-11-27: base vazia também é base ausente, e linha movida só dentro do arquivo
+
+**Decisão:**
+- `base =` vazio no `risk.conf` fazia o `diff-smells.mjs` comparar com o HEAD com o marcador de base ausente vazio,
+  que conta como falso: o `--gate` passava com os commits da branch fora. Agora a base vazia é marcada como
+  `(vazia)`, aparece na saída e reprova o `--gate`, como a base que não existe.
+- Linha movida passa a ser a que sai e volta **no mesmo arquivo**. Substitui o "fica como está" da entrada anterior:
+  um `-- TODO` apagado num arquivo escondia um `-- TODO` novo em outro.
+- O `check-findings.mjs` descarta tudo o que leu do diff quando o git falha no meio (linhas alteradas e removidas):
+  a âncora em linha removida não usa dado parcial nem afirma `in_diff` sem diff. Lentes com o mesmo nome de arquivo
+  em pastas diferentes aparecem pelo caminho inteiro, para descartes e lacunas não se misturarem.
+- O aviso do `SessionStart` cobre valor vazio no `risk.conf` (`smell_comment_limit =` vira 0), salvo `verify_lint`,
+  que vazio é de propósito.
+
+**Por quê:** a base vazia era o mesmo furo da base ausente, entrando por outra porta.
