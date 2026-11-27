@@ -199,6 +199,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   `--no-ext-diff --no-textconv`, `git blame` só com `--no-textconv` e `sed -n` só com número de linha e `p`; segue
   symlink antes de liberar script do repositório. Sem ação no projeto; prova nas formas antigas (`npx vitest`,
   `git log` sem as opções) passa a pedir aprovação.
+- 0.0.39: `verifier-guard` com lista fechada: no `review-verifier` só passam executor de teste, script do repositório e
+  `git log`/`show`/`blame` com as flags listadas no hook. `grep`, `rg`, `cat`, `sed`, `sort`, `find`, `git diff`,
+  `git grep` e pipe para filtro (`| tail`) passam a pedir aprovação; o verifier lê código com Read, Grep e Glob. Sem
+  ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
