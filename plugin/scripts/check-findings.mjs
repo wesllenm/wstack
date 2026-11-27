@@ -196,11 +196,13 @@ for (const it of items) {
   const rawSev = (get('severidade') ?? '').trim().toLowerCase(), cat = (get('categoria') ?? '').trim().toLowerCase();
   const sevOk = /^(bloqueante|importante|nit)$/.test(rawSev);
   const prova = (get('prova') ?? '').trim(), esperado = (get('esperado') ?? '').trim();
-  const arrow = prova.lastIndexOf(' → ');
+  // com esperado: preenchido, a prova inteira é o comando (ele pode conter " → "); a forma curta só vale sem esperado:
+  const arrow = esperado ? -1 : prova.lastIndexOf(' → ');
   const cmd = arrow >= 0 ? prova.slice(0, arrow).trim() : prova;
   const expected = esperado || (arrow >= 0 ? prova.slice(arrow + 3).trim() : '');
   const needs = (!sevOk || rawSev !== 'nit') && !/^(reuse|simplicity|scope)$/.test(cat);
   const complete = !!cmd && !!expected;
+  r.proof_command = cmd || null;
   r.proof = !needs ? 'dispensada' : complete ? 'presente' : prova ? 'incompleta' : 'ausente';
   const why = [];
   if (!sevOk) why.push(`severidade ${rawSev ? `fora da lista ("${rawSev.slice(0, 40)}")` : 'ausente'}, tratada como bloqueante`);

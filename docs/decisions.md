@@ -853,3 +853,24 @@ Revisão dos itens dos lotes 1, 2 e 5, depois da v0.0.31.
 **Risco aceito:** tirar a `RESTRICAO` do gate afrouxa o limite em relação à v0.0.26, quando esse comentário contava
 como `COMENTARIO`. A troca é de propósito: comentário de regra vira proposta de garantia na revisão, em vez de travar o
 commit.
+
+## 2026-11-27: diff-smells falha fechado sem a base, e menos falso código comentado
+
+**Decisão:**
+- Sem a base do `risk.conf` (clone raso, repositório sem a branch), o `diff-smells.mjs` continua comparando com o
+  HEAD, mas a saída diz `BASE <base> não encontrada` (também em `base_missing` no JSON) e o `--gate` reprova. Antes,
+  os commits da branch ficavam fora do gate e o único aviso ia para o stderr.
+- Prosa com cara de código ("Init() precisa vir antes da carga;", "Calcula(x) arredonda para baixo") deixa de ser
+  `CODIGO_COMENTADO`, que não tem limite e reprova o gate: fora das strings, acento ou quatro palavras ou mais, sem `=`,
+  `{` ou `}` e sem começar por palavra-chave, é comentário. O `;` no fim só conta como código com símbolo de código
+  na linha.
+- Comentário `--` de SQL é lido, com `SELECT ... ;` comentado como código. O diff sai com prefixo fixo (`a/`, `b/`),
+  para `diff.noprefix` na config do usuário não trocar os caminhos, e caminho entre aspas é lido.
+- Com `esperado:` preenchido, o `check-findings.mjs` trata a `prova:` inteira como comando, sem cortar num ` → ` que
+  esteja dentro dele.
+
+**Fica como está:** linha removida num arquivo e adicionada em outro continua contando como movida (fora dos sinais).
+É o caso comum de mover código entre arquivos; o custo é um comentário novo igual a um removido passar sem sinal.
+
+**Consequência:** projeto que roda `diff-smells --gate` no CI com clone raso precisa buscar a base antes
+(`git fetch --depth=<n> origin <base>`), ou o gate reprova.

@@ -70,6 +70,11 @@ done
 { item lente-3f 'Alta' correctness 'dotnet test → falhou'; echo 'status: achados'; } > "$work/severidade-errada-com-prova.txt"
 run "$work/severidade-errada-com-prova.txt"
 grep -q 'situação: severidade fora da lista: o verificador dá a severidade final' <<< "$out" || fail "severidade errada com prova: sem aviso ($out)"
+# com esperado: preenchido, o " → " de dentro do comando não corta a prova
+{ item lente-3g bloqueante correctness "node -e 'console.log(\"a → b\")'"; printf '  esperado: a → b\n'; echo 'status: achados'; } > "$work/seta-com-esperado.txt"
+run --json "$work/seta-com-esperado.txt"
+node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); const r=j.results[0]; process.exit(r.proof==="presente" && r.proof_command.endsWith("\")'"'"'") ? 0 : 1)' <<< "$out" 2> /dev/null \
+  || fail "seta no comando com esperado: o comando foi cortado ($out)"
 # simplicity e nit dispensam a prova
 { item lente-4 importante simplicity; item lente-5 nit correctness; echo 'status: achados'; } > "$work/dispensada.txt"
 run "$work/dispensada.txt"

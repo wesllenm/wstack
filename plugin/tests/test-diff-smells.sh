@@ -70,6 +70,41 @@ for l in 'smell_exclude = **/Interop/**' 'smell_exclude = **/Interop/** | vence:
 done
 rm -rf "$repo/src/Interop"; printf 'base = main\nsmell_comment_limit = 1\n' > "$repo/.claude/risk.conf"
 
+# prosa com cara de código não é código comentado; código de verdade continua sendo
+printf 'class A {\n  // Init() precisa vir antes da carga;\n  // Calcula(x) arredonda para baixo\n  // var total = itens.Sum();\n  // conta.Saldo -= valor;\n}\n' > "$repo/src/A.cs"
+run --text
+grep -q '^CODIGO_COMENTADO *src/A.cs:2' <<< "$out" && fail "prosa terminada em ';' virou código comentado ($out)"
+grep -q '^CODIGO_COMENTADO *src/A.cs:3' <<< "$out" && fail "prosa com Calcula(x) virou código comentado ($out)"
+grep -q '^CODIGO_COMENTADO *src/A.cs:4' <<< "$out" || fail "código comentado (var ... ;) não foi pego ($out)"
+grep -q '^CODIGO_COMENTADO *src/A.cs:5' <<< "$out" || fail "código comentado (atribuição) não foi pego ($out)"
+# comentário -- de SQL
+mkdir -p "$repo/db"
+printf 'SELECT 1;\n-- TODO trocar por view\n-- SELECT * FROM pedidos;\n-- nunca apagar esta coluna\n' > "$repo/db/a.sql"
+run --text
+grep -q '^MARCADOR *db/a.sql:2' <<< "$out" || fail "SQL: TODO em -- não foi pego ($out)"
+grep -q '^CODIGO_COMENTADO *db/a.sql:3' <<< "$out" || fail "SQL: SELECT comentado não foi pego ($out)"
+grep -q '^RESTRICAO *db/a.sql:4' <<< "$out" || fail "SQL: restrição em -- não foi pega ($out)"
+rm -rf "$repo/db"
+# prefixo do diff fora do padrão na config do usuário (diff.noprefix) e caminho entre aspas
+git -C "$repo" config diff.noprefix true
+printf 'class B {\n  // TODO x\n}\n' > "$repo/src/B.cs"
+git -C "$repo" add src/B.cs
+printf 'class C {\n  // TODO y\n}\n' > "$repo/src/a\"c.cs"
+git -C "$repo" add 'src/a"c.cs'
+run --text
+grep -q '^MARCADOR *src/B.cs:2' <<< "$out" || fail "diff.noprefix: caminho errado ($out)"
+grep -qF 'MARCADOR         src/a"c.cs:2' <<< "$out" || fail "caminho entre aspas: não foi lido ($out)"
+git -C "$repo" rm -q --cached src/B.cs 'src/a"c.cs'; rm -f "$repo/src/B.cs" "$repo/src/a\"c.cs"; git -C "$repo" config --unset diff.noprefix
+# base ausente (clone raso, sem a branch): a saída diz e o --gate reprova, mesmo sem nenhum sinal
+printf 'class A {\n}\n' > "$repo/src/A.cs"
+printf 'base = nao-existe\n' > "$repo/.claude/risk.conf"
+run --gate --text
+[ "$code" = 1 ] || fail "base ausente: --gate não reprovou (código $code, $out)"
+grep -q 'BASE nao-existe não encontrada: comparado só com HEAD' <<< "$out" || fail "base ausente: saída não diz ($out)"
+run
+node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); process.exit(j.base_missing==="nao-existe"?0:1)' <<< "$out" 2> /dev/null || fail "base ausente: JSON sem base_missing ($out)"
+printf 'base = main\nsmell_comment_limit = 1\n' > "$repo/.claude/risk.conf"
+
 # falha e entrada malformada: fora de repositório é 3, argumento desconhecido é 2, limite inválido no risk.conf é 3
 mkdir -p "$work/fora"
 out=$(cd "$work/fora" && GIT_CEILING_DIRECTORIES=$work node "$script" --text 2>&1); code=$?
