@@ -1055,3 +1055,24 @@ continua citando o padrão, com uma regra de leitura no núcleo da `lead` e os d
 que não recebe o `SessionStart`. O que precisa ser garantido (o gate de aprendizado, o que conta como código, o que
 entra sozinho no merge) está no código. O runbook de teste do HostAzul não virou chave: o plugin não grava "caminho de
 teste", e a skill `verify-<app>` do projeto aponta para ele.
+
+## 2026-11-27: skills e agentes do plugin substituídos pelo projeto
+
+**Decisão:** chave `override` no `risk.conf`, uma linha por item (`override = tdd`, `override = review-agent`,
+`override = test-audit -> auditoria-de-testes`), lida pelo `overrides.mjs`. O `SessionStart` lista as trocas e avisa
+nome inválido, item que o plugin não tem, arquivo do projeto ausente, agente com outro nome e item do projeto com o
+mesmo nome de um do plugin sem declaração. A lista `Agent(...)` da `lead` passa a trazer os 16 agentes do plugin também
+sem prefixo. O núcleo da `lead` e o contrato de delegação mandam usar a versão do projeto.
+
+**Por quê:** pedido do HostAzul, que tem versões próprias de `tdd`, `clean-code`, `security`, `database-reviewer`,
+`simplify`, `review-agent`, `playwright-e2e` e da auditoria de testes. Medido com o Claude Code 2.1.332
+(`prove-overrides.sh`):
+- o `skills:` sem prefixo de um agente do plugin pré-carrega a skill do projeto de mesmo nome. A troca já acontecia
+  sem declaração, e daí o aviso de mesmo nome;
+- a `lead` só chama agente da lista dela: o `review-agent` do projeto dava `Agent type 'review-agent' not found`;
+- com o nome sem prefixo na lista, a `lead` chama o do projeto, e um agente do projeto com outro nome continua fora.
+
+**Limite:** o Claude Code não desliga um componente de plugin por vez (a documentação diz que o `skillOverrides` não
+vale para skill de plugin). As duas versões continuam listadas, e quem escolhe é a `lead`, pelo texto. A lista
+`Agent(...)` é fixa no frontmatter, então agente do projeto só substitui com o mesmo nome; para skill, o nome pode
+mudar. A lista sem prefixo abre só os nomes dos agentes do plugin, conferidos pelo `test-skills-agents.sh`.

@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.42.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.43.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -233,6 +233,10 @@ flowchart LR
 ```
 
 O diagrama não lista tudo: as tabelas abaixo têm cada agente, skill, hook e script.
+
+O projeto que tem a própria versão de uma skill ou de um agente do plugin declara a troca com `override` no
+`risk.conf` (`override = tdd`, `override = test-audit -> auditoria-de-testes`); a `lead` passa a usar a do projeto.
+Agente do projeto só substitui com o mesmo nome do agente do plugin.
 
 ### Agentes
 
