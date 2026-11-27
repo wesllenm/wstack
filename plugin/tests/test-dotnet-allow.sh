@@ -17,7 +17,10 @@ work=$(cd "$work" && pwd -P)
 trap 'rm -rf "$work"' EXIT
 fails=0
 tmp=$(cd "${TMPDIR:-/tmp}" && pwd -P)
-mkdir -p "$work/bin" "$work/cwd" "$work/projeto"
+mkdir -p "$work/bin" "$work/cwd" "$work/projeto/.claude"
+# o hook só fala com allow_module = dotnet válido (vence: futuro e motivo:) no risk.conf do projeto
+conf() { printf '%s\n' "$@" > "$work/projeto/.claude/risk.conf"; }
+conf 'allow_module = dotnet | vence: 2099-12-31 | motivo: formas fechadas do dotnet'
 printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$@" > "$ARGV_OUT"\n' > "$work/bin/dotnet" && chmod +x "$work/bin/dotnet"
 touch "$work/cwd/a.csproj" "$work/cwd/-flp:logfile=x"
 
@@ -112,6 +115,19 @@ expect none 'dotnet test; rm -rf x'
 expect none 'cd x && dotnet build'
 expect none 'DOTNET_CLI_HOME=x dotnet build'
 expect none 'dotnet run --project src/App.AppHost'
+expect none 'dotnet nuget push x.nupkg'
+expect none 'dotnet nuget push x.nupkg --source https://api.nuget.org/v3/index.json'
+
+# sem allow_module = dotnet válido, nada sai liberado (o allow de hook passaria por cima do ask do settings.json)
+for c in '' 'allow_module = dotnet' 'allow_module = dotnet | vence: 2020-01-01 | motivo: x' 'allow_module = dotnet | vence: 2099-12-31' \
+  'allow_module = outro | vence: 2099-12-31 | motivo: x' '# allow_module = dotnet | vence: 2099-12-31 | motivo: x'; do
+  conf "$c"
+  got=$(verdict 'dotnet build App.slnx'); [ -z "$got" ] || { echo "FALHOU: liberado com risk.conf '$c'"; fails=$((fails + 1)); }
+done
+rm -f "$work/projeto/.claude/risk.conf"
+got=$(verdict 'dotnet build App.slnx'); [ -z "$got" ] || { echo "FALHOU: liberado sem risk.conf"; fails=$((fails + 1)); }
+conf 'allow_module = dotnet | vence: 2099-12-31 | motivo: formas fechadas do dotnet'
+got=$(verdict 'dotnet build App.slnx'); [ "$got" = allow ] || { echo "FALHOU: não liberado com a declaração válida ($got)"; fails=$((fails + 1)); }
 expect none "$(printf 'dotnet build\n-o x')"
 expect none 'dotnet format App.slnx --verify-no-changes --binarylog .claude/hooks/push-guard.sh'
 

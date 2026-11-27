@@ -992,3 +992,20 @@ lista fechada, a regra cabe numa leitura e o que falta nela pede aprovação em 
 **Limite:** o executor de teste continua a maior porta: roda código do projeto (MSBuild, `build.rs`, `conftest.py`),
 pode restaurar pacote pela rede e tem opções que rodam programa (`go test -exec`). É o risco aceito do README. Prova que
 dependia de `| tail` ou de `git diff` passa a pedir aprovação; a review-rubric mostra a forma que passa.
+
+## 2026-11-27: o dotnet-allow registrado no hooks.json, condicionado ao allow_module
+
+**Decisão:** o `dotnet-allow.sh` entra no `PreToolUse` de Bash do `hooks.json`, com o padrão `if [ -f ... ]` dos outros
+hooks; ausente, fica calado (é hook de `allow`, e calado vale o pedido normal). Ele só devolve `allow` quando o
+`.claude/risk.conf` do projeto tem `allow_module = dotnet` válido (`vence:` futuro e `motivo:`). A regra de qual módulo
+vale fica num lugar só, `allowModules()` do `risk-conf.mjs`, que o path-guard e o dotnet-allow leem.
+
+**Por quê:** pedido do SquadOS. No harness de origem o SquadOS registrava o hook desde 2026-11-19, e o inventário da
+migração o deu como não registrado; na migração, o `allow_module = dotnet` passou a só calar o path-guard, e todo
+`dotnet build/test/format` na forma fechada voltou a pedir, salvo regra exata no `allow` do projeto. A condição é
+necessária: sem ela, todo projeto com o plugin teria o `dotnet` liberado sem ter pedido.
+
+**Medido com o Claude Code 2.1.332 (`prove-dotnet-allow.sh`):** sem `allow_module`, `dotnet build App.slnx` é recusado
+no `-p` (pediu); com ele, roda; com `deny` ou com `ask` de `dotnet build` no `settings.json`, é recusado. O `allow` de
+hook não passa por cima nem do `deny` nem do `ask` do projeto, então quem quiser pedir aprovação para uma forma, mesmo
+com o módulo declarado, põe a regra no `ask`. A prova fica fora da suíte e roda à mão quando o Claude Code mudar.

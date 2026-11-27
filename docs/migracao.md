@@ -22,8 +22,8 @@ preenche) ou `seed` (o projeto cria e mantém).
 Feita (versão 0.0.4). Hooks em `plugin/hooks/` (ligados em `hooks.json`), scripts em `plugin/scripts/`, setup da
 nuvem em `plugin/cloud/`, testes e provas em `plugin/tests/` (CI em `.github/workflows/ci.yml`), matriz de garantias em
 `docs/harness-capabilities.md`. Diferenças em relação à tabela abaixo:
-- `dotnet-allow.sh` não entrou no `hooks.json`, como na origem: o path-guard importa o `.mjs` quando o `risk.conf`
-  declara `allow_module = dotnet`.
+- `dotnet-allow.sh` não entrou no `hooks.json` na 2.2: o path-guard importa o `.mjs` quando o `risk.conf` declara
+  `allow_module = dotnet`. Entrou na 0.0.40 (ver Depois da 2.4).
 - O `cloud/setup.sh` ainda não instala o plugin: a instalação depende da versão fixada pelo projeto, que é da 2.4.
 - As chaves do `verify-on-stop` ficaram `verify_solution`, `verify_build`, `verify_lint` e `verify_test`.
 - Até a 2.4 criar os modelos, os testes usam fixtures em `plugin/tests/fixtures/` no lugar deles (`risk.conf`,
@@ -203,6 +203,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   `git log`/`show`/`blame` com as flags listadas no hook. `grep`, `rg`, `cat`, `sed`, `sort`, `find`, `git diff`,
   `git grep` e pipe para filtro (`| tail`) passam a pedir aprovação; o verifier lê código com Read, Grep e Glob. Sem
   ação no projeto.
+- 0.0.40: `dotnet-allow.sh` registrado no `hooks.json`: com `allow_module = dotnet` válido no `risk.conf`, as formas
+  fechadas do `dotnet` passam sem pedido, sem regra exata no `allow` do `settings.json`. A `testing-strategy` volta a
+  pedir avaliação a cada mudança de prompt, skill ou modelo. Projeto .NET com o `allow_module`: pode tirar do `allow`
+  as regras exatas de `dotnet` que só existiam por falta do hook.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
@@ -219,7 +223,7 @@ de `$CLAUDE_PROJECT_DIR`.
 | `.claude/hooks/closed-forms.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/cloud-services.sh` | mirror | plugin | SessionStart | lê `cloud_service`/`cloud_ready` do risk.conf do projeto; chama o `cloud/setup.sh` pelo caminho do projeto, que muda com ele |
 | `.claude/hooks/dotnet-allow.mjs` | mirror | plugin | módulo | módulo de stack .NET: o path-guard o importa quando o risk.conf declara `allow_module = dotnet` |
-| `.claude/hooks/dotnet-allow.sh` | mirror | plugin | PreToolUse Bash, se registrado | hook próprio (o teste e a skill lead o tratam assim), mas não registrado no `settings.json` de origem; a 2.2 decide se entra no `hooks.json` |
+| `.claude/hooks/dotnet-allow.sh` | mirror | plugin | PreToolUse Bash, se registrado | hook próprio (o teste e a skill lead o tratam assim); no inventário constava como não registrado na origem, mas o SquadOS o registrava desde 2026-11-19; entra no `hooks.json` na 0.0.40, condicionado ao `allow_module = dotnet` válido |
 | `.claude/hooks/edit-check.sh` | mirror | plugin | PostToolUse edição | lê as regras do risk.conf do projeto |
 | `.claude/hooks/git-read-allow.mjs` | mirror | plugin | módulo | |
 | `.claude/hooks/git-read-allow.sh` | mirror | plugin | PreToolUse Bash | |
