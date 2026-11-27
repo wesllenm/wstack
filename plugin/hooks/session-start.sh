@@ -27,6 +27,8 @@ fi
 # Exceções do risk.conf com validade (conf-exception.mjs): vencida, sem data ou sem motivo, é ignorada pelo hook ou script
 # que a lê; aqui só se avisa.
 node "$plugin/hooks/conf-exception.mjs" --warn 2> /dev/null
+# Destinos de documento do risk.conf (doc_*): os que diferem do padrão entram no contexto, com aviso de valor inválido
+node "$plugin/hooks/doc-paths.mjs" --session 2> /dev/null
 
 # Exceção de verificação esquecida: ela só vale para a sessão que a gravou (linha "sessão: <id>"), mas o arquivo parado
 # confunde e esconde o motivo; avisar para ler e apagar ao retomar.

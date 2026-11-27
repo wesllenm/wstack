@@ -21,9 +21,17 @@ BUILD_CMD=$(conf verify_build)
 LINT_CMD=$(conf verify_lint)
 TEST_CMD=$(conf verify_test)
 
-LEARN_FILE="docs/review-calibration.md"
-# onde a escada de aprendizado da skill lead grava: núcleo e arquivos de área dos gotchas, complemento da rubrica
-LEARN_PATHS=("$LEARN_FILE" "docs/gotchas.md" "docs/gotchas" "docs/review-rubric.md" "docs/patterns.md" "docs/decisions.md" ".claude/agent-memory" ".claude/SESSION.md")
+# destinos dos documentos (doc-paths.mjs, chaves doc_* do risk.conf); sem o node, os padrões
+DOC_decisions=docs/decisions.md DOC_gotchas=docs/gotchas.md DOC_gotchas_dir=docs/gotchas
+DOC_calibration=docs/review-calibration.md DOC_rubric=docs/review-rubric.md DOC_state=
+while IFS='=' read -r k v; do
+  case "$k" in decisions | gotchas | gotchas_dir | calibration | rubric | state) printf -v "DOC_$k" '%s' "$v" ;; esac
+done < <(node "$(dirname "$0")/doc-paths.mjs" 2> /dev/null)
+LEARN_FILE=$DOC_calibration
+# onde a escada de aprendizado da skill lead grava: núcleo e arquivos de área dos gotchas, complemento da rubrica,
+# decisões e, com doc_state, a pendência versionada; nada disso conta como código no gate de verificação
+LEARN_PATHS=("$LEARN_FILE" "$DOC_gotchas" "$DOC_gotchas_dir" "$DOC_rubric" "docs/patterns.md" "$DOC_decisions" ".claude/agent-memory" ".claude/SESSION.md")
+[ -z "$DOC_state" ] || LEARN_PATHS+=("$DOC_state")
 
 BLOCKED=".claude/verify-blocked.md"
 # Marcador de verificação pendente (um por sessão, .claude/.session/unverified-<sessão>): o Stop grava ao liberar um

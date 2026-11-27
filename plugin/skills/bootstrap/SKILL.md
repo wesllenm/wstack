@@ -99,7 +99,10 @@ de produto, arquitetura, segurança ou escopo que não dê para inferir.
 3. Arquivo que já existia: mesclar à mão o que o modelo traz e ele não tem (no `settings.json`: `agent`,
    `worktree.baseRef`, o marketplace fixado, `enabledPlugins`, as regras de `Edit` do `ask` e do `deny`), sem apagar o
    que é do projeto. Depois de criado, `.claude/settings.json` e `.claude/risk.conf` pedem aprovação a cada edição: é
-   a trava funcionando.
+   a trava funcionando. Projeto que já tem lugar para decisões, armadilhas, calibração, rubrica ou pendência aponta as
+   chaves `doc_*` do `risk.conf` para esses arquivos em vez de criar os do modelo; com o `risk.conf` existente antes de
+   rodar o `bootstrap.sh`, ele já cria os modelos no destino e troca as citações do caminho padrão (o import
+   `@docs/gotchas.md` do `CLAUDE.md` incluído). Num `CLAUDE.md` que já existia, o import vai à mão.
 4. Conferir:
    - `jq . .claude/settings.json` (JSON válido);
    - `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh --paths .claude/settings.json CLAUDE.md` devolve CRITICA, e um

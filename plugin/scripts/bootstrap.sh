@@ -47,6 +47,14 @@ branch=$(git symbolic-ref --short -q refs/remotes/origin/HEAD 2> /dev/null); bra
 [[ $ref =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$ && $ref != *..* ]] || { echo "bootstrap: --ref fora do alfabeto" >&2; exit 2; }
 [[ $branch =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$ ]] || branch=main
 
+# destinos dos documentos (doc-paths.mjs, chaves doc_* de um risk.conf que já exista): o modelo de cada documento vai
+# para o destino configurado, e as citações do caminho padrão nos modelos viram o destino; sem o node, os padrões
+DOC_decisions=docs/decisions.md DOC_gotchas=docs/gotchas.md DOC_gotchas_dir=docs/gotchas
+DOC_calibration=docs/review-calibration.md DOC_rubric=docs/review-rubric.md
+while IFS='=' read -r k v; do
+  case "$k" in decisions | gotchas | gotchas_dir | calibration | rubric) printf -v "DOC_$k" '%s' "$v" ;; esac
+done < <(CLAUDE_PROJECT_DIR=$root node "$plugin/hooks/doc-paths.mjs" 2> /dev/null)
+
 render() { # render <modelo>: o conteúdo com os marcadores trocados; falha se o modelo não pôde ser lido
   local c
   c=$(cat "$1" && printf x) || return 1
@@ -55,6 +63,8 @@ render() { # render <modelo>: o conteúdo com os marcadores trocados; falha se o
   c=${c//'{{APP}}'/$app}
   # o risk.conf modelo traz a linha literal (os testes do plugin o copiam como está); aqui vira a branch detectada
   c=${c//$'\ndefault_branch = main\n'/$'\ndefault_branch = '"$branch"$'\n'}
+  c=${c//'docs/decisions.md'/$DOC_decisions}; c=${c//'docs/gotchas.md'/$DOC_gotchas}; c=${c//'docs/gotchas/'/$DOC_gotchas_dir/}
+  c=${c//'docs/review-calibration.md'/$DOC_calibration}; c=${c//'docs/review-rubric.md'/$DOC_rubric}
   printf '%s' "$c"
 }
 linked() { # algum trecho do caminho (o próprio arquivo ou uma pasta acima, dentro do projeto) é link
@@ -69,6 +79,10 @@ while IFS= read -r f; do
   rel=${f#"$templates"/}
   case "$rel" in
     verify-app/*) [ -n "$app" ] && pairs+=("$f|.claude/skills/verify-$app/${rel#verify-app/}") ;;
+    docs/decisions.md) pairs+=("$f|$DOC_decisions") ;;
+    docs/gotchas.md) pairs+=("$f|$DOC_gotchas") ;;
+    docs/review-calibration.md) pairs+=("$f|$DOC_calibration") ;;
+    docs/review-rubric.md) pairs+=("$f|$DOC_rubric") ;;
     *) pairs+=("$f|$rel") ;;
   esac
 done < <(find "$templates" -type f | LC_ALL=C sort)

@@ -211,6 +211,11 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   rotulam PR pela API REST (`gh api`), não pelo `gh pr`, que usa GraphQL e recebe 403 na nuvem. O `setup.sh --docker`
   apaga também o PID velho do `containerd` gerenciado. Sem ação no projeto; regra `allow` para `gh pr ...` no
   `settings.json` do projeto deixa de ser usada pelo plugin.
+- 0.0.42: destinos de documento configuráveis pelas chaves `doc_decisions`, `doc_gotchas`, `doc_gotchas_dir`,
+  `doc_calibration`, `doc_rubric` e `doc_state` do `risk.conf` (`doc-paths.mjs`); sem a chave, o caminho de antes. Com
+  `doc_state`, a pendência e o "onde paramos" saem do `SESSION.md` para o arquivo versionado. Sem ação no projeto que
+  usa os caminhos padrão; o projeto que já tem esses fatos em outro lugar aponta as chaves e confere o aviso do
+  `SessionStart`.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
