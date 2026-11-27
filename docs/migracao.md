@@ -174,6 +174,10 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
   pedir o teste ao `implementer`; Limites da prova na `review-rubric`; `RESTRICAO` fora do `--gate` do `diff-smells` e
   procurada também em `///`; escalas definidas na `blast-radius`; `slop-check --pr` aceita título sem acento. Sem ação
   no projeto.
+- 0.0.33: `diff-smells.mjs` com a base ausente (clone raso) diz isso na saída e reprova o `--gate`, em vez de comparar
+  só com o HEAD calado; prosa com cara de código deixa de ser `CODIGO_COMENTADO`; comentário `--` de SQL é lido;
+  prefixo do diff fixo. `check-findings.mjs` não corta a `prova:` na seta quando há `esperado:`. Projeto com
+  `diff-smells --gate` no CI e clone raso precisa buscar a base (`git fetch --depth=<n> origin <base>`) antes.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

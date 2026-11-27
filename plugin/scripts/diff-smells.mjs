@@ -107,6 +107,7 @@ const LANGS = [
     [/#\s*shellcheck\s+disable/, 'shellcheck desligado', true],
     [/\|\|\s*true\s*$/, 'erro ignorado (|| true)'],
   ] },
+  { re: /\.sql$/i, name: 'sql', line: '--', block: true, doc: null, escapes: [] },
   { re: /\.(go|java|kt|kts|swift|c|cc|cpp|h|hpp)$/i, name: 'c', ...C_LIKE, doc: /^\s*\/\*\*/, escapes: [
     [/@SuppressWarnings|#pragma\s+warning/, 'aviso desligado'],
     [/\/\/\s*nolint/, 'lint desligado (nolint)', true],
@@ -119,7 +120,18 @@ const MULTILINE = { cs: /"{3,}/g, ts: /(?<!\\)`/g };
 const MARKER = /\b(TODO|FIXME|HACK|XXX)\b|\bworkaround\b|\bgambiarra\b|\btempor[áa]ri[oa]\b|\btemporary\b/i;
 // palavra inteira, com letra acentuada contando como letra (\b do JS só vê ASCII)
 const RESTRICTION = /(?<!\p{L})(n[ãa]o|nunca|sempre|devem?|obrigat[óo]ri[oa]s?|never|always|must|do not|don't|required)(?!\p{L})/iu;
-const CODE_BODY = /;\s*$|^[{}]\s*$|^\s*(var|let|const|return|if|for|foreach|while|await|public|private|protected|internal|using|import|from|fn|def|class|new)\b.*[;({=]|^\s*[\w.]+\s*\(.*\)\s*;?\s*$|^\s*[\w.]+\s*=\s*.+;\s*$/;
+// comando SQL comentado, em qualquer caixa (SELECT ... ;)
+const SQL_BODY = /^\s*(?:select|insert|update|delete|alter|create|drop|with)\b.*;\s*$/i;
+const CODE_BODY = /[=(){}[\]].*;\s*$|\w\.\w.*;\s*$|^[{}]\s*$|^\s*(var|let|const|return|if|for|foreach|while|await|public|private|protected|internal|using|import|from|fn|def|class|new)\b.*[;({=]|^\s*[\w.]+\s*\(.*\)\s*;?\s*$|^\s*[\w.]+\s*=\s*.+;\s*$/;
+
+// Prosa com cara de código ("Init() precisa vir antes;", "Calcula(x) arredonda para baixo") não é código comentado:
+// fora das strings, acento sem =, { ou }, ou quatro palavras ou mais sem esses símbolos e sem começar por palavra-chave.
+const KEYWORD = /^\s*(var|let|const|return|if|for|foreach|while|await|public|private|protected|internal|using|import|from|fn|def|class|new|select|insert|update|delete)\b/i;
+function prose(body) {
+  const s = body.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""');
+  if (/[={}]/.test(s) || KEYWORD.test(s)) return false;
+  return /[\u00C0-\u017F]/.test(s) || s.trim().split(/\s+/).length >= 4;
+}
 
 // Separa código e comentário de uma linha. Strings viram espaços antes, para "//" numa URL não virar comentário
 // e "!" num texto não virar null-forgiving.
@@ -132,7 +144,7 @@ function split(line, lang, inBlock) {
   const blank = line.replace(/@?"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, (s) => ' '.repeat(s.length));
   let lc = -1;
   if (lang.line === '#') { const m = /(^|\s)#(?!!)/.exec(blank); if (m) lc = m.index + m[1].length; }
-  else lc = blank.indexOf('//');
+  else lc = blank.indexOf(lang.line);
   const bc = lang.block ? blank.indexOf('/*') : -1;
   if (bc >= 0 && (lc < 0 || bc < lc)) {
     const end = blank.indexOf('*/', bc + 2);
@@ -144,21 +156,30 @@ function split(line, lang, inBlock) {
 }
 
 // ---------- diff ----------
-let mb;
+let mb, baseMissing = '';
 const base = baseArg || conf.base;
 try { mb = git('merge-base', 'HEAD', base).trim(); } catch {
   if (baseArg) die(3, `base inválida: ${base}`);
-  // base do risk.conf ausente (repositório sem main local): compara com HEAD, só o que não foi commitado
+  // base do risk.conf ausente (clone raso, repositório sem main local): compara com HEAD, só o que não foi commitado.
+  // Os commits da branch ficam fora, então isso não passa calado: vai na saída e reprova o --gate (falha fechada)
   try { mb = git('rev-parse', '--verify', 'HEAD').trim(); } catch { die(3, `não foi possível resolver a base ${base} nem HEAD`); }
+  baseMissing = base;
   console.error(`diff-smells: base ${base} não encontrada; comparando com HEAD`);
 }
 let diff;
-try { diff = git('diff', '-U0', '--no-color', '--no-ext-diff', mb, '--'); } catch (e) { die(3, `git diff falhou: ${e.message}`); }
+// prefixos fixos (a/, b/): diff.noprefix ou diff.mnemonicPrefix na config do usuário não mudam o parser
+try { diff = git('diff', '-U0', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', mb, '--'); } catch (e) { die(3, `git diff falhou: ${e.message}`); }
 const added = new Map(); // arquivo -> [{line, text}]
 const removed = new Set();
 let file = null, lineNo = 0;
 for (const l of diff.split('\n')) {
-  if (l.startsWith('+++ ')) { file = l === '+++ /dev/null' ? null : l.slice(6); continue; }
+  if (l.startsWith('+++ ')) {
+    let p = l.slice(4).replace(/\t$/, '');
+    // caminho com caractere especial vem entre aspas, com escapes de C ("b/a\\tb.cs")
+    if (p.startsWith('"')) { try { p = JSON.parse(p); } catch { p = p.slice(1, -1); } }
+    file = p === '/dev/null' ? null : p.replace(/^b\//, '');
+    continue;
+  }
   if (l.startsWith('--- ')) continue;
   const h = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(l);
   if (h) { lineNo = Number(h[1]); continue; }
@@ -214,7 +235,7 @@ for (const [f, lines] of added) {
     if (directive) continue;
     if (/^(SAFETY|SPDX-License-Identifier|Copyright)\b/i.test(body) || /^#!/.test(t.trim())) continue;
     if (MARKER.test(body)) add('MARCADOR', body.slice(0, 80));
-    else if (CODE_BODY.test(body)) add('CODIGO_COMENTADO', '');
+    else if (!prose(body) && (CODE_BODY.test(body) || SQL_BODY.test(body))) add('CODIGO_COMENTADO', '');
     // restrição é sinal para a review-simplicity, procurada em toda linha de comentário: também na documentação (///,
     // <remarks> "deve ser chamado depois de Init()") e na continuação de um bloco
     else if (RESTRICTION.test(body)) add('RESTRICAO', `${isDoc ? 'doc: ' : ''}${RESTRICTION.exec(body)[1].toLowerCase()}`);
@@ -228,6 +249,7 @@ const count = (k) => items.filter((i) => i.kind === k).length;
 const order = ['ESCAPE', 'CODIGO_COMENTADO', 'MARCADOR', 'RESTRICAO', 'COMENTARIO', 'DOC'];
 const totals = Object.fromEntries(order.map((k) => [k, count(k)]));
 const over = [];
+if (baseMissing) over.push(`BASE ${baseMissing} não encontrada: comparado só com HEAD, os commits da branch ficaram fora`);
 if (totals.ESCAPE > conf.smell_escape_limit) over.push(`ESCAPE ${totals.ESCAPE} > ${conf.smell_escape_limit}`);
 if (totals.CODIGO_COMENTADO > 0) over.push(`CODIGO_COMENTADO ${totals.CODIGO_COMENTADO}`);
 if (totals.MARCADOR > 0) over.push(`MARCADOR ${totals.MARCADOR}`);
@@ -241,6 +263,6 @@ if (text) {
   console.log(`total: ${order.map((k) => `${k}=${totals[k]}`).join(' ')}  base=${mb.slice(0, 12)}`);
   console.log(over.length ? `acima do limite: ${over.join('; ')}` : 'dentro dos limites');
 } else {
-  console.log(JSON.stringify({ base: mb, limits: { escape: conf.smell_escape_limit, comment: conf.smell_comment_limit }, totals, over, items }, null, 2));
+  console.log(JSON.stringify({ base: mb, base_missing: baseMissing || null, limits: { escape: conf.smell_escape_limit, comment: conf.smell_comment_limit }, totals, over, items }, null, 2));
 }
 process.exit(gate && over.length ? 1 : 0);
