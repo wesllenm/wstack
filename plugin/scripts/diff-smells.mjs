@@ -17,6 +17,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, posix } from 'node:path';
 import { validValues } from '../hooks/conf-exception.mjs';
+import { parseDiff } from './diff-parse.mjs';
 
 function die(code, msg) { console.error(`diff-smells: ${msg}`); process.exit(code); }
 const argv = process.argv.slice(2);
@@ -169,22 +170,12 @@ try { mb = git('merge-base', 'HEAD', base).trim(); } catch {
 let diff;
 // prefixos fixos (a/, b/): diff.noprefix ou diff.mnemonicPrefix na config do usuário não mudam o parser
 try { diff = git('diff', '-U0', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', mb, '--'); } catch (e) { die(3, `git diff falhou: ${e.message}`); }
+// o parser segue as contagens do @@: linha adicionada "++ x" e removida "-- x" (SQL) são conteúdo, não cabeçalho
 const added = new Map(); // arquivo -> [{line, text}]
 const removed = new Set();
-let file = null, lineNo = 0;
-for (const l of diff.split('\n')) {
-  if (l.startsWith('+++ ')) {
-    let p = l.slice(4).replace(/\t$/, '');
-    // caminho com caractere especial vem entre aspas, com escapes de C ("b/a\\tb.cs")
-    if (p.startsWith('"')) { try { p = JSON.parse(p); } catch { p = p.slice(1, -1); } }
-    file = p === '/dev/null' ? null : p.replace(/^b\//, '');
-    continue;
-  }
-  if (l.startsWith('--- ')) continue;
-  const h = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(l);
-  if (h) { lineNo = Number(h[1]); continue; }
-  if (l.startsWith('-')) { removed.add(l.slice(1).trim()); continue; }
-  if (l.startsWith('+') && file) { (added.get(file) || added.set(file, []).get(file)).push({ line: lineNo, text: l.slice(1) }); lineNo++; }
+for (const [p, d] of parseDiff(diff)) {
+  if (d.added.length) added.set(p, d.added);
+  for (const r of d.removed) removed.add(r.text.trim());
 }
 let untracked = [];
 try { untracked = git('ls-files', '--others', '--exclude-standard', '-z').split('\0').filter(Boolean); } catch { /* sem não rastreados */ }

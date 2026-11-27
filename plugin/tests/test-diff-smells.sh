@@ -85,6 +85,18 @@ grep -q '^MARCADOR *db/a.sql:2' <<< "$out" || fail "SQL: TODO em -- não foi peg
 grep -q '^CODIGO_COMENTADO *db/a.sql:3' <<< "$out" || fail "SQL: SELECT comentado não foi pego ($out)"
 grep -q '^RESTRICAO *db/a.sql:4' <<< "$out" || fail "SQL: restrição em -- não foi pega ($out)"
 rm -rf "$repo/db"
+# comentário de SQL removido e readicionado (movido) não é novo: a linha removida "-- x" é conteúdo, não cabeçalho
+mkdir -p "$repo/db"
+printf -- '-- TODO legado\nSELECT 1;\n' > "$repo/db/b.sql"
+gitc add -A && gitc commit -qm 'sql base'
+printf 'SELECT 1;\n-- TODO legado\n' > "$repo/db/b.sql"
+run --base HEAD --text
+grep -q '^MARCADOR *db/b.sql' <<< "$out" && fail "SQL movido: comentário removido e readicionado contou como novo ($out)"
+# linha adicionada que começa com "++ " não confunde o parser: o comentário da linha seguinte continua sendo lido
+printf '++ cabecalho falso\n-- TODO novo\nSELECT 1;\n' > "$repo/db/b.sql"
+run --base HEAD --text
+grep -q '^MARCADOR *db/b.sql:2' <<< "$out" || fail "linha '++ ': o parser perdeu a linha seguinte ($out)"
+git -C "$repo" rm -q -r -f db && gitc commit -qm 'sem sql'
 # prefixo do diff fora do padrão na config do usuário (diff.noprefix) e caminho entre aspas
 git -C "$repo" config diff.noprefix true
 printf 'class B {\n  // TODO x\n}\n' > "$repo/src/B.cs"

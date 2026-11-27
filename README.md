@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.33.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.34.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -180,6 +180,59 @@ plugin/
   tests/        testes (CI) e provas com o Claude Code real (à mão)
 docs/           decisões, inventário da migração, matriz de garantias, sondas
 ```
+
+### Mapa por etapa
+
+Uma coluna por etapa da tarefa, com o que entra nela de cima para baixo, na ordem em que dispara. A cor diz quem garante: em vermelho, hook que
+roda sem depender do modelo; em azul, script determinístico; em verde, skill (orientação que o modelo segue); em
+roxo, agente; em amarelo, o que é seu.
+
+```mermaid
+flowchart LR
+    subgraph PLAN["1 · Planejar"]
+        direction TB
+        p1["how · why · recall<br/>entender o código"] --> p2["classify-diff.sh<br/>nível de risco"] --> p3["blast-radius<br/>o que quebra<br/>fora do diff"] --> p4["arena<br/>propostas + juiz"] --> p5{{"Você aprova<br/>o plano"}}
+    end
+    subgraph DESIGN["2 · Desenhar"]
+        direction TB
+        d1["esboço da fatia<br/>uso e assinaturas"] --> d2["domain-modeling<br/>api-design"] --> d3["vertical-slice<br/>db-evolution"]
+    end
+    subgraph BUILD["3 · Construir"]
+        direction TB
+        b1["implementer<br/>sprint contract"] --> b2["tdd · test-audit<br/>teste antes<br/>do código"] --> b3["edit-check<br/>iteration-guard<br/>a cada edição"]
+    end
+    subgraph REVIEW["4 · Revisar e provar"]
+        direction TB
+        r1["diff-smells.mjs<br/>escape, marcador,<br/>restrição"] --> r2["review-dispatch.mjs<br/>grupos e regras"] --> r3["lentes<br/>agent · simplicity<br/>failures · domain<br/>security"] --> r4["check-findings.mjs<br/>trecho, prova,<br/>lacuna"] --> r5["review-verifier<br/>roda a prova"] --> r6["review-critical<br/>fato de segurança"] --> r8["verify-#lt;app#gt;<br/>na aplicação real"]
+        r7["interrogate.mjs<br/>outro fornecedor"] --> r4
+    end
+    subgraph SHIP["5 · Entregar"]
+        direction TB
+        s1["checkpoint-tests<br/>antes do commit"] --> s2["commit<br/>slop-check"] --> s3["verify-on-stop<br/>build e testes<br/>verdes"] --> s4["push-guard<br/>branch de atividade"] --> s5["PR<br/>slop-check --pr"] --> s6{{"Você faz<br/>o merge"}}
+    end
+    subgraph LEARN["6 · Aprender e manter"]
+        direction TB
+        l1["Registro<br/>principles.mjs"] --> l2["triagem das lições<br/>aceita · rejeitada<br/>backlog"] --> l3["correct<br/>/correct historico"] --> l4["Regras e garantias<br/>no CLAUDE.md"] --> l5["map-staleness.mjs"] --> l6["verify-#lt;app#gt;<br/>manutenção"]
+    end
+    subgraph ALWAYS["A qualquer momento"]
+        direction TB
+        a1["lead<br/>tipo de tarefa<br/>e playbook"] ~~~ a2["path-guard<br/>write-guard<br/>redirect-guard"] ~~~ a3["princípios<br/>attack-the-premise<br/>build-the-lever<br/>separate-before-<br/>serializing<br/>subtract-before-<br/>you-add"] ~~~ a4["unslop · commit<br/>texto em PT-BR"]
+    end
+    PLAN ~~~ DESIGN ~~~ BUILD ~~~ REVIEW ~~~ SHIP ~~~ LEARN ~~~ ALWAYS
+
+    classDef voce fill:#fde68a,stroke:#b45309,color:#000
+    classDef trava fill:#fecaca,stroke:#b91c1c,color:#000
+    classDef script fill:#bfdbfe,stroke:#1d4ed8,color:#000
+    classDef skill fill:#bbf7d0,stroke:#15803d,color:#000
+    classDef agente fill:#e9d5ff,stroke:#7e22ce,color:#000
+    class p5,s6 voce
+    class b3,s1,s3,s4,a2 trava
+    class p2,r1,r2,r4,r7,s5,l1,l5 script
+    class p1,p3,p4,d1,d2,d3,b2,r8,s2,l2,l3,l4,l6,a3,a4 skill
+    class b1,r3,r5,r6,a1 agente
+```
+
+O diagrama não lista tudo: as tabelas abaixo têm cada agente, skill, hook e script.
 
 ### Agentes
 

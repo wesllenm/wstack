@@ -122,7 +122,37 @@ run --rev --output=x "$work/limpa.txt"; expect_code '--rev com hífen' 2
 # trecho que não existe descarta (achado alucinado)
 sed 's/var total = itens.Sum(i => i.Preco);/var inventado = 1;/' "$work/prova.txt" > "$work/alucinado.txt"
 run "$work/alucinado.txt"; expect_code 'alucinado' 0
-[ "$out" = 'sem achados' ] || fail "alucinado: candidato não foi descartado ($out)"
+grep -q '^- id:' <<< "$out" && fail "alucinado: candidato não foi descartado ($out)"
+# a lente que só trouxe lixo não some num "sem achados": a saída diz, para a calibração
+grep -q '^descartes: alucinado.txt — 1 de 1 candidato(s) descartado(s) (1 trecho não encontrado)' <<< "$out" || fail "alucinado: sem a linha descartes: ($out)"
+grep -qx 'sem achados' <<< "$out" && fail "alucinado: lente só com descartes virou 'sem achados' ($out)"
+# lente com um candidato bom e um alucinado não ganha a linha descartes:
+cat "$work/prova.txt" | sed '$d' > "$work/misto.txt"; sed '$d' "$work/alucinado.txt" | sed 's/lente-1/lente-9/' >> "$work/misto.txt"; echo 'status: achados' >> "$work/misto.txt"
+run "$work/misto.txt"
+grep -q '^descartes:' <<< "$out" && fail "lente mista: ganhou descartes: ($out)"
+
+# achado sobre código que o diff removeu ("removeu a checagem"): o trecho está nas linhas removidas, não no arquivo
+rm2=$work/rm
+git init -q "$rm2"; mkdir -p "$rm2/src"
+printf 'void M(Pedido p) {\n  if (p == null) throw new ArgumentNullException(nameof(p));\n  Salvar(p);\n}\n' > "$rm2/src/b.cs"
+git -C "$rm2" -c user.email=t@t -c user.name=t add -A; git -C "$rm2" -c user.email=t@t -c user.name=t commit -qm base; git -C "$rm2" branch -q -M main
+printf 'void M(Pedido p) {\n  Salvar(p);\n}\n' > "$rm2/src/b.cs"
+printf -- '- id: lente-r\n  categoria: correctness\n  severidade: bloqueante\n  confiança: 90\n  local: src/b.cs:2\n  trecho: |\n    if (p == null) throw new ArgumentNullException(nameof(p));\n  evidência: src/b.cs:2 — a guarda saiu\n  cenário: p nulo → NullReferenceException em Salvar\n  prova: dotnet test --filter Nulo\n  esperado: NullReferenceException\n  preexistente: não\nstatus: achados\n' > "$work/removido.txt"
+out=$(cd "$rm2" && node "$script" "$work/removido.txt" 2> "$work/err"); code=$?
+[ "$code" = 0 ] || fail "removido: código $code ($(cat "$work/err"))"
+grep -q '^- id: lente-r$' <<< "$out" || fail "removido: achado sobre linha removida foi descartado ($out)"
+grep -q '^  ancoragem: removido (trecho removido pelo diff' <<< "$out" || fail "removido: ancoragem ($out)"
+grep -q 'fora das linhas alteradas' <<< "$out" && fail "removido: marcado fora do diff ($out)"
+# local na linha seguinte a um trecho que só remove também está no diff (sem o aviso de preexistente)
+printf -- '- id: lente-s\n  categoria: correctness\n  severidade: nit\n  confiança: 80\n  local: src/b.cs:2\n  trecho: |\n    Salvar(p);\n  evidência: src/b.cs:2 — x\n  cenário: x → y\n  preexistente: não\nstatus: achados\n' > "$work/corte.txt"
+out=$(cd "$rm2" && node "$script" "$work/corte.txt" 2> /dev/null)
+grep -q 'fora das linhas alteradas' <<< "$out" && fail "corte: linha junto de trecho que só remove ficou fora do diff ($out)"
+# linha adicionada que começa com "++ " e linha removida "-- " (SQL) são conteúdo, não cabeçalho
+printf -- '-- comentário antigo\nSELECT 1;\n' > "$rm2/src/q.sql"; git -C "$rm2" -c user.email=t@t -c user.name=t add -A; git -C "$rm2" -c user.email=t@t -c user.name=t commit -qm sql
+printf '++ nova\nSELECT 1;\n' > "$rm2/src/q.sql"
+printf -- '- id: lente-q\n  categoria: correctness\n  severidade: nit\n  confiança: 80\n  local: src/q.sql:1\n  trecho: |\n    -- comentário antigo\n  evidência: src/q.sql:1 — x\n  cenário: x → y\n  preexistente: não\nstatus: achados\n' > "$work/sql.txt"
+out=$(cd "$rm2" && node "$script" --base HEAD "$work/sql.txt" 2> /dev/null)
+grep -q '^  ancoragem: removido' <<< "$out" || fail "SQL: linha removida '-- ' não foi lida como conteúdo ($out)"
 
 if [ "$fails" -eq 0 ]; then echo 'test-check-findings: todos os casos passaram'; exit 0; fi
 echo "test-check-findings: $fails falha(s)"
