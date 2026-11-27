@@ -116,6 +116,8 @@ Classificar duas vezes:
 1. **No plano**, com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh --paths <arquivos previstos>`, para decidir plano, agentes e gates.
 2. **No diff real**, com `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh` (mudanças ainda não commitadas; para uma tarefa já commitada, passar a base: `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh <commit>`), antes da revisão. Se o nível subiu, aplicar o pipeline do nível maior a partir dali, sem nova aprovação, e registrar no relatório. Se o diff tocou caminho crítico que o plano não previa, interromper (seção Interrupções): é escopo novo.
 
+Com repositórios companheiros (chave `companion` do `risk.conf`, listados no `SessionStart`), a tarefa que toca mais de um repositório se classifica com `--companions`: no plano, `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh --companions --paths <arquivos previstos>`, com os do companheiro pelo caminho a partir da raiz do projeto (`../ServerControl/src/x.cs`); no diff real, `${CLAUDE_PLUGIN_ROOT}/scripts/classify-diff.sh --companions`. O nível da tarefa é o maior dos repositórios e, quando mais de um muda código, no mínimo COMPLEXA. O hook de `Stop` verifica cada companheiro com o `risk.conf` dele, e o `checkpoint-tests` usa as áreas do repositório do commit.
+
 Os globs de `risk.conf` ficam em `ask`/`deny` para os agentes (afrouxar o classificador desliga o pipeline); ajustá-los é decisão do desenvolvedor, registrada em `docs/decisions.md`.
 
 ### TRIVIAL

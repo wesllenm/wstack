@@ -55,7 +55,7 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify-on-stop.sh", "timeout": 900 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify-on-stop.sh", "timeout": 1800 },
           { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/sessions.sh touch", "timeout": 10 }
         ]
       }

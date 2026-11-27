@@ -4,6 +4,7 @@
 # Uso: classify-diff.sh [<base>]            working tree + commits desde <base> (padrão: `base` do risk.conf)
 #      classify-diff.sh --paths <caminhos>  caminhos planejados, antes de implementar
 #      classify-diff.sh --commit <sha>      um commit do histórico (usado por calibrate-risk.sh)
+#      classify-diff.sh --companions [--paths <caminhos>]   a tarefa com os repositórios companion (ver abaixo)
 # Saída: 1ª linha = nível (TRIVIAL | SIMPLES | COMPLEXA | CRITICA); depois "quente: <categoria>" para cada categoria
 #        de benchmark tocada (bench-compare.sh) e "motivo: <NÍVEL> — <causa>" para cada motivo.
 # Chaves lidas do risk.conf: critical, complex, domain, hot, critical_signal, base, max_files_*, max_lines_*.
@@ -15,6 +16,63 @@
 # Também: chave `complex`, base padrão HEAD, base inexistente => CRITICA (nunca cai em HEAD), arquivo novo soma
 # linhas, teste por convenção de caminho e nome.
 set -uo pipefail
+
+# --companions: a tarefa que muda o projeto e os repositórios da chave companion do risk.conf (companions.mjs). Cada um
+# é classificado com o próprio risk.conf e a base dele; o nível da tarefa é o maior, e no mínimo COMPLEXA quando mais de
+# um repositório muda código (fora de *.md, *.txt e docs/): é mudança de contrato entre eles. Com --paths, o caminho
+# previsto que começa pelo caminho do companheiro no risk.conf (../ServerControl/src/x.cs) vai para ele, sem o prefixo;
+# o resto, para o projeto; repositório sem caminho previsto não entra. Saída: 1ª linha = nível da tarefa;
+# "repositório: <nome> <nível>" de cada um; "quente:" e "motivo:" de cada um, com o nome do repositório.
+#   classify-diff.sh --companions                     diff real de cada repositório
+#   classify-diff.sh --companions --paths <caminhos>  caminhos planejados, antes de implementar
+if [ "${1:-}" = --companions ]; then
+  shift
+  self=$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")
+  root=$(cd "${CLAUDE_PROJECT_DIR:-.}" 2> /dev/null && pwd -P) || { echo CRITICA; echo "motivo: CRITICA — raiz do projeto ilegível"; exit 0; }
+  planned=0; [ "${1:-}" = --paths ] && { planned=1; shift; }
+  craw=(); cpath=()
+  if command -v node > /dev/null; then
+    while IFS=$'\t' read -r a b; do [ -n "$b" ] && { craw+=("$a"); cpath+=("$b"); }; done \
+      < <(CLAUDE_PROJECT_DIR=$root node "$(dirname "$self")/../hooks/companions.mjs" --raw 2> /dev/null)
+  elif grep -qE '^[[:space:]]*companion[[:space:]]*=' "$root/.claude/risk.conf" 2> /dev/null; then
+    echo CRITICA; echo "motivo: CRITICA — o risk.conf declara companion e não há node para ler a lista"; exit 0
+  fi
+  rank() { case "$1" in TRIVIAL) echo 0 ;; SIMPLES) echo 1 ;; COMPLEXA) echo 2 ;; *) echo 3 ;; esac; }
+  names=(TRIVIAL SIMPLES COMPLEXA CRITICA)
+  top=0; withcode=0; lines_out=()
+  classify_one() { # classify_one <raiz> [<caminhos>...]
+    local r=$1 res lvl n; shift
+    if [ "$planned" = 1 ]; then res=$(CLAUDE_PROJECT_DIR=$r CLASSIFY_CODE_COUNT=1 bash "$self" --paths "$@")
+    else res=$(CLAUDE_PROJECT_DIR=$r CLASSIFY_CODE_COUNT=1 bash "$self"); fi
+    lvl=$(head -1 <<< "$res"); n=$(basename "$r")
+    [ "$(rank "$lvl")" -gt "$top" ] && top=$(rank "$lvl")
+    [ "$(sed -n 's/^codigo: //p' <<< "$res" | head -1)" -gt 0 ] 2> /dev/null && withcode=$((withcode + 1))
+    lines_out+=("repositório: $n $lvl")
+    while IFS= read -r l; do lines_out+=("$l ($n)"); done < <(grep -E '^(quente|motivo):' <<< "$res")
+  }
+  if [ "$planned" = 0 ]; then
+    classify_one "$root"
+    for c in "${cpath[@]}"; do classify_one "$c"; done
+  else
+    mine=(); declare -a per=()
+    for f in "$@"; do
+      hit=-1
+      for i in "${!craw[@]}"; do case "$f" in "${craw[$i]}"/*) hit=$i ;; esac; done
+      if [ "$hit" -lt 0 ]; then mine+=("$f"); else per+=("$hit:${f#"${craw[$hit]}"/}"); fi
+    done
+    [ "${#mine[@]}" -gt 0 ] && classify_one "$root" "${mine[@]}"
+    for i in "${!craw[@]}"; do
+      list=(); for e in "${per[@]}"; do [ "${e%%:*}" = "$i" ] && list+=("${e#*:}"); done
+      [ "${#list[@]}" -gt 0 ] && classify_one "${cpath[$i]}" "${list[@]}"
+    done
+    [ "${#lines_out[@]}" -gt 0 ] || { echo CRITICA; echo "motivo: CRITICA — --paths sem caminhos"; exit 0; }
+  fi
+  if [ "$withcode" -gt 1 ] && [ "$top" -lt 2 ]; then
+    top=2; lines_out+=("motivo: COMPLEXA — código mudou em $withcode repositórios da tarefa (companion): contrato entre eles")
+  fi
+  echo "${names[$top]}"; printf '%s\n' "${lines_out[@]}"
+  exit 0
+fi
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 1
 CONF=".claude/risk.conf"
@@ -205,4 +263,10 @@ done
 echo "$level"
 [ "${#hot_cats[@]}" -gt 0 ] && printf 'quente: %s\n' "${hot_cats[@]}"
 [ "${#reasons[@]}" -gt 0 ] && printf 'motivo: %s\n' "${reasons[@]}"
+# para o --companions: quantos arquivos tocados são código (fora de *.md, *.txt e docs/)
+if [ "${CLASSIFY_CODE_COUNT:-}" = 1 ]; then
+  code=0
+  for f in "${files[@]}"; do case "$f" in *.md | *.txt | docs/*) ;; *) code=$((code + 1)) ;; esac; done
+  echo "codigo: $code"
+fi
 exit 0
