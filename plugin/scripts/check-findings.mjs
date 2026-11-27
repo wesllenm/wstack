@@ -23,6 +23,7 @@
 import { readFileSync, existsSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, basename } from 'node:path';
+import { parseDiff } from './diff-parse.mjs';
 
 function die(code, msg) { console.error(`check-findings: ${msg}`); process.exit(code); }
 const opt = { files: [], rev: null, base: null, tol: 3, json: false };
@@ -120,6 +121,7 @@ function fileLines(path) {
   return lines;
 }
 const changed = new Map();
+const removedBy = new Map(); // arquivo -> linhas removidas pelo diff, com a posição na versão nova
 let diffOk = false;
 if (inGit) {
   try {
@@ -131,17 +133,11 @@ if (inGit) {
     }
     if (base.startsWith('-')) throw new Error('base inválida');
     const range = opt.rev ? [`${opt.rev}^`, opt.rev] : [(() => { try { return git('merge-base', 'HEAD', base).trim(); } catch { return git('rev-parse', '--verify', '--end-of-options', base).trim(); } })()];
-    let curFile = null;
-    for (const line of git('diff', '-U0', '--no-color', '--no-ext-diff', ...range).split('\n')) {
-      if (line.startsWith('+++ ')) { const p = line.slice(4).replace(/\t$/, ''); curFile = p === '/dev/null' ? null : p.replace(/^"?b\//, '').replace(/"$/, ''); }
-      else if (curFile && line.startsWith('@@')) {
-        const m = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-        if (m && (m[2] === undefined || Number(m[2]) > 0)) {
-          if (!changed.has(curFile)) changed.set(curFile, []);
-          const s = Number(m[1]), n = m[2] === undefined ? 1 : Number(m[2]);
-          changed.get(curFile).push([s, s + n - 1]);
-        }
-      }
+    // trecho que só remove linhas também é diff: a linha antes e a depois do corte entram em `changed`, e as linhas
+    // removidas ficam em `removedBy` para ancorar o achado sobre o que saiu ("removeu a checagem de nulo")
+    for (const [p, d] of parseDiff(git('diff', '-U0', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', ...range))) {
+      if (d.ranges.length) changed.set(p, [...(changed.get(p) ?? []), ...d.ranges]);
+      if (d.removed.length) removedBy.set(p, d.removed);
     }
     if (!opt.rev) for (const p of git('ls-files', '--others', '--exclude-standard', '-z').split('\0')) if (p) changed.set(p, [[1, Infinity]]);
     diffOk = true;
@@ -169,24 +165,37 @@ for (const it of items) {
   const get = (k) => it.fields.find(([key]) => key === k)?.[1]?.trim();
   const id = get('id'), local = get('local') ?? '';
   const m = /^(.+?):(\d+)(?:-(\d+))?$/.exec(local);
-  const r = { id, local, status: null, detail: '' };
+  const r = { id, local, status: null, detail: '', lens: it.lens };
   results.push(r);
   if (!m) { r.status = 'descartado'; r.detail = 'local sem o formato arquivo:linha'; continue; }
   const [, path, l1] = m, line = Number(l1);
   const needle = it.trecho.map(norm).filter(Boolean);
   if (!needle.length) { r.status = 'descartado'; r.detail = 'candidato sem trecho'; continue; }
   if (needle.length > MAX_TRECHO_LINES) { r.status = 'descartado'; r.detail = `trecho acima de ${MAX_TRECHO_LINES} linhas`; continue; }
-  const lines = fileLines(path);
-  if (!lines) { r.status = 'descartado'; r.detail = `arquivo não existe${opt.rev ? ` em ${opt.rev}` : ''}: ${path}`; continue; }
-  const hits = findAll(lines, needle);
-  if (!hits.length) { r.status = 'descartado'; r.detail = `trecho não encontrado em ${path}`; continue; }
-  const best = hits.reduce((a, b) => (Math.abs(b - line) < Math.abs(a - line) ? b : a));
-  const end = best + needle.length - 1;
-  const newLocal = needle.length > 1 ? `${path}:${best}-${end}` : `${path}:${best}`;
-  if (Math.abs(best - line) <= opt.tol) { r.status = 'ancorado'; r.detail = hits.length > 1 ? `${hits.length} ocorrências; usada a mais próxima` : ''; }
-  else { r.status = 'realocado'; r.detail = `de ${local} para ${newLocal}`; }
+  const lines = safePath(path) ? fileLines(path) : null;
+  const hits = lines ? findAll(lines, needle) : [];
+  // o trecho pode ser código que o diff removeu (o achado é sobre o que saiu): ancora na posição do corte
+  const removed = safePath(path) ? (removedBy.get(path) ?? []) : [];
+  const removedHits = hits.length ? [] : findAll(removed.map((x) => x.text), needle).map((k) => removed[k - 1].at);
+  if (!lines && !removedHits.length) { r.status = 'descartado'; r.detail = `arquivo não existe${opt.rev ? ` em ${opt.rev}` : ''}: ${path}`; continue; }
+  if (!hits.length && !removedHits.length) { r.status = 'descartado'; r.detail = `trecho não encontrado em ${path}`; continue; }
+  let best, end, newLocal;
+  if (hits.length) {
+    best = hits.reduce((a, b) => (Math.abs(b - line) < Math.abs(a - line) ? b : a));
+    end = best + needle.length - 1;
+    newLocal = needle.length > 1 ? `${path}:${best}-${end}` : `${path}:${best}`;
+    if (Math.abs(best - line) <= opt.tol) { r.status = 'ancorado'; r.detail = hits.length > 1 ? `${hits.length} ocorrências; usada a mais próxima` : ''; }
+    else { r.status = 'realocado'; r.detail = `de ${local} para ${newLocal}`; }
+    r.in_diff = diffOk ? inDiff(path, best, end) : null;
+  } else {
+    best = removedHits.reduce((a, b) => (Math.abs(b - line) < Math.abs(a - line) ? b : a));
+    end = best;
+    newLocal = `${path}:${best}`;
+    r.status = 'removido';
+    r.detail = `trecho removido pelo diff; o local é o ponto do corte${newLocal !== local ? ` (era ${local})` : ''}`;
+    r.in_diff = true;
+  }
   r.local = newLocal;
-  r.in_diff = diffOk ? inDiff(path, best, end) : null;
   if (r.in_diff === false && /^n[ãa]o$/i.test(get('preexistente') ?? '')) r.warning = 'local fora das linhas alteradas com preexistente: não';
   // prova por execução: exigida em bloqueante e importante, salvo reuse, simplicity e scope (a evidência ali é o
   // outro trecho de código, não uma execução). Severidade ausente ou fora da lista conta como bloqueante (falha
@@ -217,13 +226,19 @@ for (const it of items) {
 }
 
 const kept = items.filter((it) => it.result && it.result.status !== 'descartado');
-const counts = { ancorado: 0, realocado: 0, descartado: 0 };
+const counts = { ancorado: 0, realocado: 0, removido: 0, descartado: 0 };
 for (const r of results) counts[r.status]++;
 const pending = results.filter((r) => r.situacao?.startsWith('a confirmar') && r.status !== 'descartado').length;
-const summary = `check-findings: ${items.length} candidato(s): ${counts.ancorado} ancorado(s), ${counts.realocado} realocado(s), ${counts.descartado} descartado(s), ${pending} a confirmar sem prova${lacunas.length ? `; ${lacunas.length} lacuna(s): ${lacunas.map((l) => l.lente).join(', ')}` : ''}${diffOk ? '' : '; diff indisponível, sem checagem de linhas alteradas'}`;
+const summary = `check-findings: ${items.length} candidato(s): ${counts.ancorado} ancorado(s), ${counts.realocado} realocado(s), ${counts.removido} em linha removida, ${counts.descartado} descartado(s), ${pending} a confirmar sem prova${lacunas.length ? `; ${lacunas.length} lacuna(s): ${lacunas.map((l) => l.lente).join(', ')}` : ''}${diffOk ? '' : '; diff indisponível, sem checagem de linhas alteradas'}`;
+// lente que trouxe candidatos e teve todos descartados: o resultado (nenhum achado) está certo, mas a lente só produziu
+// lixo, e isso é sinal para a calibração; nunca some num "sem achados" calado
+const byLens = new Map();
+for (const r of results) { const e = byLens.get(r.lens) ?? { total: 0, dropped: 0, why: new Map() }; e.total++; if (r.status === 'descartado') { e.dropped++; const k = r.detail.replace(/ em .*$|: .*$/, ''); e.why.set(k, (e.why.get(k) ?? 0) + 1); } byLens.set(r.lens, e); }
+const allDropped = [...byLens].filter(([, e]) => e.total && e.dropped === e.total)
+  .map(([lente, e]) => ({ lente, descartados: e.dropped, motivos: [...e.why].map(([k, n]) => `${n} ${k}`).join(', ') }));
 const code = lacunas.length ? 4 : 0;
 
-if (opt.json) { console.log(JSON.stringify({ total: items.length, counts, a_confirmar: pending, lacunas, diff_checked: diffOk, results }, null, 2)); console.error(summary); process.exit(code); }
+if (opt.json) { console.log(JSON.stringify({ total: items.length, counts, a_confirmar: pending, lacunas, lentes_so_descartes: allDropped, diff_checked: diffOk, results }, null, 2)); console.error(summary); process.exit(code); }
 
 const out = [];
 for (const it of kept) {
@@ -235,7 +250,8 @@ for (const it of kept) {
   if (r.situacao) out.push(`  situação: ${r.situacao}`);
 }
 for (const l of lacunas) out.push(`lacuna: ${l.lente} — ${l.motivo}`);
-// "sem achados" só quando nenhuma lente falhou: lacuna nunca conta como aprovação
+for (const d of allDropped) out.push(`descartes: ${d.lente} — ${d.descartados} de ${d.descartados} candidato(s) descartado(s) (${d.motivos}); a lente não trouxe nenhum achado ancorado: registrar na calibração`);
+// "sem achados" só quando nenhuma lente falhou nem trouxe só descartes: lacuna nunca conta como aprovação
 console.log(out.length ? out.join('\n') : 'sem achados');
 for (const r of results.filter((x) => x.status === 'descartado')) console.error(`  descartado ${r.id}: ${r.detail}`);
 console.error(summary);

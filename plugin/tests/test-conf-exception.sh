@@ -46,6 +46,18 @@ grep -q 'linha 3, review_exclude = docs/generated/\*\*): sem data de vencimento'
 grep -q 'linha 4, smell_exclude = \*\*/Interop/\*\*): venceu em 2001-05-01' <<< "$out" || fail "--warn: sem o aviso do smell_exclude ($out)"
 grep -q 'allow_module' <<< "$out" && fail "--warn: avisou da exceção válida ($out)"
 [ "$(wc -l <<< "$out")" = 2 ] || fail "--warn: esperado 2 avisos ($out)"
+# chave com erro de digitação e linha que não é "chave = valor": aviso com a linha e a chave mais parecida, sem o conteúdo
+printf 'smell_coment_limit = 1\nverify_test = dotnet test\nisto não é chave SEGREDO-XYZ\n' > "$work/p/.claude/risk.conf"
+out=$(CLAUDE_PROJECT_DIR=$work/p node "$mod" --warn); code=$?
+[ "$code" = 0 ] || fail "chave desconhecida: código $code"
+grep -q 'chave desconhecida na linha 1 do .claude/risk.conf: smell_coment_limit (quis dizer smell_comment_limit?)' <<< "$out" || fail "chave desconhecida: sem aviso ($out)"
+grep -q 'linha 3 do .claude/risk.conf não é "chave = valor"' <<< "$out" || fail "linha malformada: sem aviso ($out)"
+grep -q 'SEGREDO' <<< "$out" && fail "linha malformada: o conteúdo foi para o aviso ($out)"
+grep -q 'verify_test' <<< "$out" && fail "chave conhecida avisada ($out)"
+# toda chave que o modelo do risk.conf cita, comentada ou não, é conhecida: o próprio modelo não gera aviso
+sed -E 's/^# ?([a-z_]+ =)/\1/' "$(dirname "$mod")/../templates/.claude/risk.conf" > "$work/p/.claude/risk.conf"
+out=$(CLAUDE_PROJECT_DIR=$work/p node "$mod" --warn)
+grep -q 'chave desconhecida' <<< "$out" && fail "modelo descomentado: chave do modelo avisada como desconhecida ($out)"
 # sem risk.conf: sai 0 calado
 out=$(CLAUDE_PROJECT_DIR=$work/nada node "$mod" --warn); code=$?
 [ "$code" = 0 ] && [ -z "$out" ] || fail "--warn sem risk.conf: código $code, saída ($out)"

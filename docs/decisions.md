@@ -874,3 +874,25 @@ commit.
 
 **Consequência:** projeto que roda `diff-smells --gate` no CI com clone raso precisa buscar a base antes
 (`git fetch --depth=<n> origin <base>`), ou o gate reprova.
+
+## 2026-11-27: achado sobre código removido, lente só com descartes e diff lido pelas contagens
+
+**Decisão:**
+- **Achado sobre código removido.** O `check-findings.mjs` descartava como alucinado o achado cujo trecho é a linha que
+  o diff tirou ("removeu a checagem de nulo", "tirou o filtro de tenant"), porque a linha não existe mais no arquivo.
+  Agora ele procura o trecho também nas linhas removidas e o ancora no ponto do corte, com `ancoragem: removido`. E o
+  trecho do diff que só remove linhas passa a contar como linha alterada (a linha antes e a depois do corte).
+- **Lente só com descartes.** Lente que trouxe candidatos e teve todos descartados sai numa linha `descartes: <lente> —
+  N de N (motivos)`, e não num `sem achados` calado. O resultado continua sem achado, mas a lente que só produz lixo vai
+  para a calibração.
+- **Diff lido pelas contagens do `@@`.** O `diff-parse.mjs` é o leitor único do `check-findings.mjs` e do
+  `diff-smells.mjs`. Dentro de um trecho, toda linha é conteúdo: uma linha adicionada `++ x` não vira cabeçalho
+  `+++`, e uma removida `-- x` (comentário de SQL) não vira `---`. Com isso, comentário de SQL removido e readicionado
+  conta como movido, como nas outras linguagens.
+- **Chave desconhecida no `risk.conf`.** O aviso do `SessionStart` (`conf-exception.mjs --warn`) cobre chave que
+  nenhum hook nem script lê, com a mais parecida, e linha que não é `chave = valor`, sem copiar o conteúdo. A lista de
+  chaves conhecidas é o próprio modelo do `risk.conf` do plugin, comentado ou não, e um teste garante que o modelo não
+  gera aviso.
+
+**Por quê:** os achados mais importantes de uma revisão costumam ser sobre o que saiu, e eles caíam na ancoragem. Uma
+lente que só alucina era invisível. E chave com erro de digitação deixava a configuração desligada sem sinal.
