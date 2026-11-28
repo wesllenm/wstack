@@ -1176,3 +1176,22 @@ com mais de uma pessoa na mesma branch o lease sem o SHA confia no ref local, e 
 
 **Limite:** o `push_delete` compara com o `origin/<branch>` do último fetch, e um commit empurrado por outra pessoa
 depois dele não aparece. Na nuvem, o proxy do GitHub recusa apagar branch de qualquer jeito.
+
+## 2026-11-28: URL não é a pasta .git, e o push compara com o que o remoto já tem
+
+**Decisão:** três ajustes vindos das propostas de um projeto que usa o wstack na nuvem:
+- **`path-guard`:** a conferência das travas ignora URL de repositório remoto (`https://…/x.git`, `ssh://…`,
+  `git@host:x.git`). Antes, `git clone https://github.com/a/b.git /tmp/b` pedia aprovação porque o `.git` do fim da URL
+  casava como a pasta `.git`. Segredo e config que executa programa são conferidos antes e não mudam. Escrita na pasta
+  `.git` continua pedindo; leitura simples dela já era livre.
+- **`push-guard`:** o caminho protegido que o remoto já tem na branch de destino não pede de novo. Antes, a comparação
+  era sempre com a branch padrão, e um workflow publicado no primeiro push fazia pedir em todo push seguinte da branch,
+  mesmo nos que só mudavam `docs/`. O "já tem" é lido do próprio remoto (`git ls-remote origin`, depois da conferência
+  do destino) e só vale se o commit existe no repositório local e é ancestral do que vai subir.
+- **`push-guard`:** `git -c push.negotiate=true push` passa, porque é a forma que a nuvem recomenda para push a partir
+  de clone raso, e a opção só muda a negociação de objetos. Qualquer outro `-c` continua recusado.
+
+**Por quê do `ls-remote`:** o `refs/remotes/origin/<branch>` local é uma ref que o agente move com `git update-ref`.
+Com ela, um caminho protegido "já publicado" seria forjado sem nunca ter saído da máquina. O teste cobre esse caso.
+
+**Limite:** sem resposta do remoto (rede, timeout), a comparação volta a ser com a branch padrão, e pede como antes.

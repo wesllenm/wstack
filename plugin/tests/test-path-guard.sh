@@ -209,6 +209,17 @@ for c in 'cp /tmp/x .git/config' 'cp /tmp/x .git/hooks/pre-push' 'sed -i s/^/x/ 
   'cp /tmp/x ~/.claude.json' 'cat ~/.claude/.credentials.json' 'cp /tmp/x ~/.gitconfig' 'git show :certs/client.p12'; do
   nuvem ask "$c"
 done
+# URL de repositório remoto: o .git do fim não é a pasta .git (nuvem e local); a pasta continua pedindo
+for c in 'git clone --depth 1 https://github.com/actions/setup-dotnet.git /tmp/setup-dotnet' \
+  'git clone git@github.com:actions/runner.git /tmp/runner' 'git ls-remote ssh://git@example.com/x/y.git' \
+  'git remote add up https://github.com/a/b.git'; do
+  nuvem livre "$c"
+  expect livre "$c"
+done
+for c in 'cp x .git/config' 'git clone https://github.com/a/b.git .git' 'cp hook .git/hooks/pre-push' 'git clone https://x/y.git && cp x .git/config'; do
+  nuvem ask "$c"
+  expect ask "$c"
+done
 VCWD=$proj/.git/hooks nuvem ask 'cp a pre-push'
 VCWD=$proj/.git nuvem ask 'ls'
 nuvem livre 'git config --get user.name'

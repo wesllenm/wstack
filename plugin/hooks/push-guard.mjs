@@ -63,7 +63,7 @@ function R() {
   rules = {
     ACT: new RegExp(`^(?:${ACTIVITY})$`),
     NEVER: new Set(['main', 'master', ...defaultBranches()]), // recusadas para push, nem com aprovação
-    STRICT: new RegExp(`^git(?: +-C +(${DIR}))? +push(?: +${FLAG})* +origin((?: +${SPEC})+)(?: +${REDIR})*(?: *\\| *tail +-n? *[0-9]+)?$`),
+    STRICT: new RegExp(`^git(?: +-C +(${DIR}))?(?: +-c +push\\.negotiate=true)? +push(?: +${FLAG})* +origin((?: +${SPEC})+)(?: +${REDIR})*(?: *\\| *tail +-n? *[0-9]+)?$`),
   };
   return rules;
 }
@@ -127,9 +127,9 @@ function verdict(cmd, cwd) {
 const optIn = (key, value) => validValues(confValues(key)).includes(value);
 function optInVerdict(cmd, cwd) {
   if (!/^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd)) return '';
-  const lease = /^git(?: +-C +(DIR))? +push(?: +(?:-u|--set-upstream))? +--force-with-lease(?:=(P)(?::([0-9a-f]{7,40}))?)? +origin +(P)$/
+  const lease = /^git(?: +-C +(DIR))?(?: +-c +push\.negotiate=true)? +push(?: +(?:-u|--set-upstream))? +--force-with-lease(?:=(P)(?::([0-9a-f]{7,40}))?)? +origin +(P)$/
     .source.replace(/DIR/g, DIR).replace(/P/g, P);
-  const del = /^git(?: +-C +(DIR))? +push +origin +(?:--delete|-d) +(P)$/.source.replace(/DIR/g, DIR).replace(/P/g, P);
+  const del = /^git(?: +-C +(DIR))?(?: +-c +push\.negotiate=true)? +push +origin +(?:--delete|-d) +(P)$/.source.replace(/DIR/g, DIR).replace(/P/g, P);
   const t = cmd.trim();
   const ml = new RegExp(lease).exec(t), md = new RegExp(del).exec(t);
   if (!ml && !md) return '';
@@ -177,7 +177,7 @@ function mergedContent(dir, branch) {
 // O veredito do push num companheiro declarado, ou '' quando o comando não é push de um companheiro.
 function companionVerdict(cmd, cwd) {
   if (process.env.WSTACK_COMPANION) return '';
-  const m = /^[ ]*git(?: +-C +([A-Za-z0-9._/][A-Za-z0-9._/-]*))? +push(?= |$)/.exec(cmd);
+  const m = /^[ ]*git(?: +-C +([A-Za-z0-9._/][A-Za-z0-9._/-]*))?(?: +-c +push\.negotiate=true)? +push(?= |$)/.exec(cmd);
   if (!m) return '';
   let top;
   try { top = realpathSync(git(resolve(cwd, m[1] ?? '.'), 'rev-parse', '--show-toplevel')); } catch { return ''; }
@@ -261,9 +261,11 @@ function published(dir, specs) {
         kind = `a origem ${src} é ${tag ? 'a tag' : 'a ref'} ${full}: com destino curto o git criaria ${tag ? 'uma tag' : 'uma ref fora de refs/heads/'} no remoto (use refs/heads/${dst} como destino)`;
       }
     }
+    const since = remoteTip(dir, dst);
     for (const commit of o.commits) { // commits vazio: o git recusa o push de uma ref que não existe, nada é publicado
-      if (!seen.has(commit)) seen.set(commit, protectedChanged(dir, commit));
-      const r = seen.get(commit);
+      const key = `${commit} ${since}`;
+      if (!seen.has(key)) seen.set(key, protectedChanged(dir, commit, since));
+      const r = seen.get(key);
       if (r.failed) return `ASK não foi possível conferir o que o push publica: ${r.failed}`;
       for (const f of r.files) files.add(f);
     }
@@ -271,6 +273,23 @@ function published(dir, specs) {
   if (files.size) return `ASK o push publica mudança em caminho protegido: ${list([...files])}`;
   if (ambiguous) return `ASK ${ambiguous}`;
   return kind ? `ASK ${kind}` : 'OK';
+}
+
+// O commit que o remoto tem hoje na branch de destino, lido do próprio remoto (git ls-remote origin), e só se ele existe
+// no repositório local; '' quando a branch não existe lá, o remoto não responde ou o commit não está aqui. O
+// refs/remotes/origin/<branch> local não serve: o agente o move com git update-ref e forjaria um caminho protegido "já
+// publicado". O destino do push já foi conferido (redirected, destination) antes de chegar aqui.
+function remoteTip(dir, dst) {
+  const name = dst.replace(/^refs\/heads\//, '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9._\/-]*$/.test(name) || name.includes('..')) return '';
+  try {
+    const out = execFileSync('git', ['-C', dir, 'ls-remote', '--heads', 'origin', `refs/heads/${name}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: Math.min(left(), 15000) });
+    const line = out.split('\n').find((l) => l.endsWith(`\trefs/heads/${name}`));
+    const sha = line ? line.split('\t')[0] : '';
+    if (!/^[0-9a-f]{40}$/.test(sha)) return '';
+    git(dir, 'cat-file', '-e', `${sha}^{commit}`);
+    return sha;
+  } catch { return ''; }
 }
 
 // Os commits que a origem do refspec pode publicar, e o motivo se o nome é ambíguo. Candidatas do git push: refs/<nome>,
@@ -346,7 +365,10 @@ function scan(cmd, cwd) {
     let k = 1, cfg = false, dir = cwd;
     while (k < toks.length && toks[k].startsWith('-')) {
       if (toks[k] === '-C') { dir = resolve(cwd, toks[k + 1] ?? '.'); k += 2; continue; }
-      cfg = true; k += toks[k] === '-c' ? 2 : 1; // -c, --git-dir, --exec-path, --work-tree... mudam o que o git executa
+      // -c push.negotiate=true só muda a negociação de objetos com o remoto (a nuvem a recomenda para clone raso);
+      // qualquer outro -c, --git-dir, --exec-path, --work-tree... muda o que o git executa ou para onde o push vai
+      if (toks[k] === '-c' && toks[k + 1] === 'push.negotiate=true') { k += 2; continue; }
+      cfg = true; k += toks[k] === '-c' ? 2 : 1;
     }
     if (toks[k] !== 'push') continue;
     if (envs.some((e) => /^GIT_/.test(e))) { take('DENY variável GIT_* antes do git push'); continue; }

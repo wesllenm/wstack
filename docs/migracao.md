@@ -237,6 +237,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.48: chaves opcionais do `push-guard`, no formato com validade: `push_force_with_lease = activity` libera o push
   com lease para branch de atividade, e `push_delete = merged` libera apagar a branch de atividade cujo conteúdo já
   está na branch padrão. Sem a declaração, nada muda.
+- 0.0.49: o `path-guard` não trata o `.git` do fim de uma URL de repositório como a pasta `.git`; o `push-guard`
+  não pede de novo pelo caminho protegido que o remoto já tem na branch, conferido no próprio remoto, e aceita
+  `git -c push.negotiate=true push`. Sem ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
