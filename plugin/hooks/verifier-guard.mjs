@@ -5,7 +5,9 @@
 //         base64 -d, bash -c / sh -c, /dev/tcp
 //   livre só três formas: executor de teste (dotnet test, npm test, npx --no-install vitest, cargo test, go test,
 //         pytest...), node/bash de arquivo dentro do repositório e git log/show/blame com as flags da lista GIT
-//   ASK   o resto, inclusive grep, rg, cat, sed, node -e, pipe, substituição de comando e redirecionamento
+//         cada forma pode terminar num redirecionamento para a pasta temporária da sessão ou para /dev/null
+//   ASK   o resto, inclusive grep, rg, cat, sed, node -e, pipe, substituição de comando e redirecionamento para
+//         qualquer outro lugar (o repositório, caminho com .., symlink na pasta temporária)
 // Lista fechada em vez de comando liberado com flag negada: utilitário de leitura sempre tem mais uma flag que escreve
 // ou executa (sort -o, rg --pre, git --output...), e o verifier lê código com Read, Grep e Glob. O executor de teste roda
 // código do projeto: risco aceito, no README.
@@ -17,6 +19,7 @@
 import { realpathSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { inTempDir } from './closed-forms.mjs';
 
 export const VERIFIER = /(^|:)review-verifier$/;
 
@@ -79,8 +82,12 @@ export function verdict(input) {
   if (hit) return `DENY comando de prova com rede ou execução arbitrária (${hit.trim()}): a prova não roda (review-rubric, Limites da prova)`;
   if (/\$\(|`|<\(/.test(cmd)) return 'ASK comando de prova com substituição de comando: fora das formas conhecidas';
   const segs = cmd.split(/&&|\|\||;|\||\n|(?<![<>])&(?!>)/).map((s) => s.trim().replace(/\s+2>&1$/, '')).filter(Boolean);
-  for (const s of segs) {
-    if (/>/.test(s)) return 'ASK comando de prova com redirecionamento: fora das formas conhecidas';
+  for (const raw of segs) {
+    // no fim, um redirecionamento só para a pasta temporária da sessão (inTempDir: caminho real, fora do projeto, sem
+    // symlink) ou para /dev/null, com 2>&1 opcional; qualquer outro > pede aprovação
+    const red = /\s+(?:\d?>>?|&>)\s*(\/[A-Za-z0-9._/+=:@-]+)(?:\s+2>&1)?$/.exec(raw);
+    const s = red && (red[1] === '/dev/null' || inTempDir(red[1])) ? raw.slice(0, red.index).trim() : raw;
+    if (/>/.test(s)) return 'ASK comando de prova com redirecionamento fora da pasta temporária: fora das formas conhecidas';
     const ok = TEST_RUNNER.some((re) => re.test(s)) || gitRead(s) || repoScript(s, cwd);
     if (!ok) return `ASK comando de prova fora das formas conhecidas (${s.split(/\s+/).slice(0, 2).join(' ')}): executor de teste, node/bash de arquivo do repositório, git log/show/blame com as flags liberadas; leia código com Read, Grep e Glob`;
   }

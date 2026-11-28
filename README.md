@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.46.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.47.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -305,7 +305,7 @@ veredito), escolhidas depois da classificação de risco: o risco decide os gate
 | `PreToolUse` Bash | `push-guard` | push só na forma exata, para branch de atividade, nunca na padrão; pede aprovação se publica caminho protegido; recusa o push enquanto um turno encerrado pela exceção de verificação não for seguido, na mesma sessão, de um encerramento em que o build e os testes rodaram e passaram sobre a árvore limpa (marcador preso, de sessão encerrada ou de commit reescrito, só você apaga, e a recusa mostra o comando) |
 | | `path-guard` | pede aprovação para comando que cita trava (`settings.json`, `risk.conf`, `.git`, workflows, a pasta do plugin) ou segredo; recusa, também na nuvem, comando que mexe no estado dos hooks (`.claude/.session/`, com o marcador de verificação pendente e o `checkpoint-ok`, e o carimbo `.claude/.verify-ok`) e, na nuvem, comando que cita a exceção `.claude/verify-blocked.md` |
 | | `redirect-guard` | pede aprovação para `>` fora das formas fechadas |
-| | `verifier-guard` | nos comandos do `review-verifier`, que roda a prova escrita por uma lente: nega rede, pipe para interpretador, `eval` e `base64 -d`, deixa passar só executor de teste, script do repositório e `git log`/`show`/`blame` com flags listadas, e pede aprovação para o resto (o verifier lê código com Read, Grep e Glob) |
+| | `verifier-guard` | nos comandos do `review-verifier`, que roda a prova escrita por uma lente: nega rede, pipe para interpretador, `eval` e `base64 -d`, deixa passar só executor de teste, script do repositório e `git log`/`show`/`blame` com flags listadas, com saída para a pasta temporária, e pede aprovação para o resto (o verifier lê código com Read, Grep e Glob) |
 | | `git-read-allow` | aprova `git log/diff/show` na forma fechada |
 | | `script-allow` | aprova os scripts do plugin na forma fechada |
 | | `dotnet-allow` | aprova `dotnet build/test/restore/format/ef/list package` na forma fechada, só com `allow_module = dotnet` válido no `risk.conf`; o `deny` e o `ask` do `settings.json` continuam valendo |
