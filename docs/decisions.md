@@ -1236,3 +1236,19 @@ própria, com um contador mantido por hook, depois de provar os eventos de subag
 para a nuvem. A lista fechada da 0.0.39 existe porque essas ferramentas têm flags que executam programa (`rg --pre`, o
 `e` do `sed`, o textconv do `git`), e um programa chamado assim usa a rede da VM sem passar pelo DENY de rede, que é
 por texto. O verificador lê código com Read, Grep e Glob, que não pedem aprovação.
+
+## 2026-11-28: gate de aprendizado espera o subagente em segundo plano
+
+**Decisão:** o gate de aprendizado do `Stop` não cobra o Registro enquanto a entrada do hook lista um subagente em
+segundo plano rodando (`background_tasks` com `type` `subagent` e `status` `running`); cobra no fim de turno depois que
+ele termina. Build, formato e testes seguem valendo nesse fim de turno. Numa tarefa na nuvem, cada espera por uma lente de
+revisão (uma levou 8 minutos) virou bloqueio, e o laço com o hook de commit do ambiente durou dezenas de turnos.
+
+**Por que o campo, e não um contador:** o plano era um contador mantido por hook nos eventos `SubagentStart` e
+`SubagentStop`. O `prove-subagent-events.sh`, com o Claude Code 2.1.332, mostrou que os dois eventos chegam com o mesmo
+`agent_id`, e também que a própria entrada do `Stop` já traz `background_tasks`, com o subagente como `running` no Stop
+do meio e a lista vazia no Stop depois do `SubagentStop`. Ler o campo dispensa dois hooks e um arquivo de estado, que
+poderia ficar errado quando um evento se perde. O agente não grava a entrada do hook.
+
+**Risco aceito:** um subagente em segundo plano que nunca termina adia o gate até o fim da sessão. Campo ausente,
+ilegível ou node indisponível conta como nenhum subagente, e o gate roda.

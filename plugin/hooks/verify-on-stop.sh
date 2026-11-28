@@ -145,13 +145,19 @@ if [ -z "$sid" ] && [ -f "$LEARN_FILE" ]; then
   exit 2
 fi
 base_file=".claude/.session/$sid.base"
+# Com subagente em segundo plano rodando (background_tasks da entrada do Stop: o Claude Code lista cada tarefa com type e
+# status, e o prove-subagent-events.sh confere isso), o fim de turno é espera por ele, não entrega: o gate de aprendizado
+# fica para o Stop depois que ele termina. Campo ausente, ilegível ou node indisponível conta como nenhum, e o gate roda.
+bg_running=$(printf '%s' "$input" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{let n=0;try{const t=JSON.parse(d)?.background_tasks;if(Array.isArray(t))n=t.filter(x=>x?.type==="subagent"&&x?.status==="running").length}catch{}process.stdout.write(String(n))})' 2> /dev/null)
+[[ $bg_running =~ ^[0-9]+$ ]] || bg_running=0
+[ "$bg_running" -eq 0 ] || emit learning_deferred_subagent
 # Sem o HEAD do início da sessão (o SessionStart não gravou), não dá para saber se houve commit de código nesta sessão:
 # aviso e telemetria, não bloqueio, porque o caso vem de sessão aberta antes do plugin ou de hook que falhou.
 if [ -n "$sid" ] && [ ! -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
   emit learning_unverified
   echo "Aviso: sem $base_file (HEAD do início da sessão), o gate de aprendizado não foi conferido nesta sessão." >&2
 fi
-if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
+if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ] && [ "$bg_running" -eq 0 ]; then
   base=$(cat "$base_file")
   if git cat-file -e "$base^{commit}" 2> /dev/null && [ "$(git rev-list --count "$base"..HEAD "${LCODE[@]}")" -gt 0 ]; then
     learned=0
