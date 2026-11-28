@@ -1,6 +1,11 @@
 // Conta os pedidos de permissão (decisão `ask` de hook PreToolUse) de uma sessão do Claude Code a partir da transcrição
 // JSONL, agrupados por hook e motivo, com o comando de cada um. Sem dependências.
-//   node <pasta do plugin>/scripts/permission-asks.mjs <transcrição.jsonl> [<pasta de subagentes>]
+//   node <pasta do plugin>/scripts/permission-asks.mjs <transcrição.jsonl> [<pasta de subagentes>] [--until <data ISO>]
+// Com --until, só conta o pedido cujo evento é daquele instante ou anterior (o gate do Stop passa a hora do commit que
+// gravou a linha de Registro: o push que grava a linha não pode reabrir a contagem). Evento sem data conta sempre.
+// Com --until-edit <caminho>, o instante é o da última edição desse arquivo pela ferramenta Edit, Write ou MultiEdit na
+// transcrição principal: vem da transcrição, e não de data de commit, que o agente controla (GIT_COMMITTER_DATE). Sem
+// edição achada, conta tudo.
 // A transcrição fica em ~/.claude/projects/<projeto>/<sessão>.jsonl e os subagentes em <sessão>/subagents/*.jsonl.
 // Formato medido (2.1.330): o ask é um anexo `hook_success` de `hookEvent: PreToolUse` cujo `stdout` é o JSON do hook
 // (`hookSpecificOutput.permissionDecision: "ask"`), e `toolUseID` aponta para o `tool_use` com o comando. A aprovação
@@ -10,7 +15,21 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
-const [file, subDir] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const ui = argv.indexOf("--until");
+const until = ui >= 0 ? Date.parse(argv[ui + 1] ?? "") : NaN;
+if (ui >= 0 && Number.isNaN(until)) {
+  console.error("permission-asks: --until precisa de uma data ISO");
+  process.exit(2);
+}
+const ue = argv.indexOf("--until-edit");
+const editPath = ue >= 0 ? String(argv[ue + 1] ?? "").replace(/\\/g, "/") : "";
+if (ue >= 0 && !editPath) {
+  console.error("permission-asks: --until-edit precisa de um caminho");
+  process.exit(2);
+}
+const flagged = new Set([ui, ue].filter((i) => i >= 0).flatMap((i) => [i, i + 1]));
+const [file, subDir] = argv.filter((_, i) => !flagged.has(i));
 if (!file) {
   console.error("uso: permission-asks.mjs <transcrição.jsonl> [<pasta de subagentes>]");
   process.exit(2);
@@ -67,6 +86,7 @@ function summarize(use) {
 }
 
 const asks = [];
+let cut = NaN; // instante de corte: --until, --until-edit ou os dois (o menor)
 const seen = new Set();
 let manual = 0;
 
@@ -81,6 +101,7 @@ function collect(entries, label) {
     if (String(e.permissionDecision?.source ?? "").startsWith("user_")) manual++;
     const a = e.attachment;
     if (e.type !== "attachment" || a?.type !== "hook_success" || a.hookEvent !== "PreToolUse" || typeof a.stdout !== "string") continue;
+    if (!Number.isNaN(cut) && Date.parse(e.timestamp ?? "") > cut) continue;
     for (const reason of askReasons(a.stdout)) {
       const key = `${e.uuid ?? a.toolUseID}|${reason}`;
       if (seen.has(key)) continue;
@@ -91,7 +112,24 @@ function collect(entries, label) {
   }
 }
 
-collect(readJsonl(file), "principal");
+const mainEntries = readJsonl(file);
+cut = until;
+if (editPath) {
+  let last = NaN;
+  for (const e of mainEntries) {
+    const content = e.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content) {
+      const p = String(b?.input?.file_path ?? "").replace(/\\/g, "/");
+      if (b?.type === "tool_use" && ["Edit", "Write", "MultiEdit"].includes(b.name) && (p === editPath || p.endsWith(`/${editPath}`))) {
+        const t = Date.parse(e.timestamp ?? "");
+        if (!Number.isNaN(t) && !(t <= last)) last = t;
+      }
+    }
+  }
+  if (!Number.isNaN(last)) cut = Number.isNaN(cut) ? last : Math.min(cut, last);
+}
+collect(mainEntries, "principal");
 if (subDir) {
   let names;
   try {

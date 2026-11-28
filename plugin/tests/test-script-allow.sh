@@ -57,7 +57,8 @@ done
 
 # fora da lista: o que pede aprovação de propósito e o que a origem nunca liberou
 for c in "bash $plug/scripts/enviar-nuvem.sh plano" "bash $plug/scripts/nova-atividade.sh x" "node $plug/scripts/recall.mjs termo" \
-  "node $plug/scripts/otlp-sink.mjs" "bash $plug/scripts/inexistente.sh" "bash $plug/scripts/interrogate.mjs a b"; do
+  "node $plug/scripts/otlp-sink.mjs" "bash $plug/scripts/inexistente.sh" "bash $plug/scripts/interrogate.mjs a b" \
+  "bash $plug/scripts/checkpoint.sh --aprovado permissoes 1 motivo" "bash $plug/scripts/checkpoint.sh permissoes 1 x --aprovado"; do
   expect nada "$c"
 done
 # interpretador trocado, ou execução direta onde a origem não liberava

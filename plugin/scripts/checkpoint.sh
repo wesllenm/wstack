@@ -7,11 +7,17 @@
 # conteúdo que parece segredo recusa o checkpoint. É uma rede grossa, não o gitleaks.
 # Recusa também, sem publicar, se a árvore do checkpoint altera caminho protegido (hooks, scripts, settings, workflows, ci...)
 # em relação ao merge-base com origin/<branch padrão>, ou se não der para conferir (sem essa base): protected-paths.mjs.
-# Uso: checkpoint.sh <atividade> <n> <motivo>     ex.: checkpoint.sh permissoes 1 "esperando aprovação"
+# Com --aprovado, a mudança em caminho protegido não recusa (o segredo continua recusando). A aprovação é do
+# desenvolvedor no pedido de permissão do Claude Code: o script-allow do plugin não aprova a chamada com --aprovado,
+# e ela cai no pedido normal. Num projeto cujo CI roda em push de qualquer branch, uma ref wip/ com workflow dispara o
+# Actions: o workflow do projeto deve ter branches-ignore: ['wip/**'].
+# Uso: checkpoint.sh [--aprovado] <atividade> <n> <motivo>     ex.: checkpoint.sh permissoes 1 "esperando aprovação"
 # Código: 0 enviado (imprime a ref e o sha); 2 uso errado; 3 falha (git, ref já existe, caminho protegido, push recusado).
 set -uo pipefail
 
-[ $# -eq 3 ] || { echo "uso: checkpoint.sh <atividade> <n> <motivo>" >&2; exit 2; }
+aprovado=0
+[ "${1:-}" = --aprovado ] && { aprovado=1; shift; }
+[ $# -eq 3 ] || { echo "uso: checkpoint.sh [--aprovado] <atividade> <n> <motivo>" >&2; exit 2; }
 atividade=$1 n=$2 motivo=$3
 [[ $atividade =~ ^[a-z0-9][a-z0-9-]{0,48}$ ]] || { echo "atividade fora do alfabeto (a-z, 0-9, hífen)" >&2; exit 2; }
 [[ $n =~ ^[0-9]{1,4}$ ]] || { echo "n precisa ser um número" >&2; exit 2; }
@@ -43,7 +49,8 @@ fi
 protegidos=$(node "$(dirname "${BASH_SOURCE[0]}")/../hooks/protected-paths.mjs" "$sha"); rc=$?
 case $rc in
   0) [ "$protegidos" = OK ] || { echo "checkpoint recusado: a conferência de caminho protegido não respondeu OK (registrar 'checkpoint não gravado', skill lead)" >&2; exit 3; } ;;
-  1) echo "checkpoint com mudança protegida: $(printf '%s' "$protegidos" | tr '\n' ' '); publicar só com aprovação do desenvolvedor (registrar 'checkpoint não gravado', skill lead)" >&2; exit 3 ;;
+  1) if [ "$aprovado" = 1 ]; then echo "checkpoint com mudança protegida, publicado com aprovação: $(printf '%s' "$protegidos" | tr '\n' ' ')" >&2
+     else echo "checkpoint com mudança protegida: $(printf '%s' "$protegidos" | tr '\n' ' '); publicar só com aprovação do desenvolvedor, rodando de novo com --aprovado (o Claude Code pede a aprovação) ou registrando 'checkpoint não gravado' (skill lead)" >&2; exit 3; fi ;;
   *) echo "checkpoint recusado: não foi possível conferir caminho protegido ($protegidos); registrar 'checkpoint não gravado', skill lead" >&2; exit 3 ;;
 esac
 

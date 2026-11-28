@@ -232,6 +232,14 @@ for p in .claude/hooks/x.sh .github/workflows/x.yml .claude/settings.json .claud
   rm -f "$p"; cp "$fixture" .claude/risk.conf # o risk.conf versionado volta como estava (o caso dele o alterou)
 done
 rm -rf .claude .github ci .devcontainer && mkdir -p .claude && cp "$fixture" .claude/risk.conf
+# com --aprovado (a aprovação é do desenvolvedor, no pedido do Claude Code), publica a mudança protegida; o segredo continua recusado
+mkdir -p .github/workflows && printf 'x\n' > .github/workflows/x.yml
+msg=$(bash "$ckpt" --aprovado teste 40 "com aprovação" 2>&1) || { echo "FALHOU: checkpoint --aprovado não publicou: $msg"; fails=$((fails + 1)); }
+grep -qF 'publicado com aprovação' <<< "$msg" || { echo "FALHOU: checkpoint --aprovado não avisou o caminho protegido: $msg"; fails=$((fails + 1)); }
+[ -n "$(git ls-remote "$remote" refs/heads/wip/teste-40)" ] || { echo "FALHOU: checkpoint --aprovado não chegou ao remoto"; fails=$((fails + 1)); }
+printf 'k\n' > id_rsa
+bash "$ckpt" --aprovado teste 41 "com chave" > /dev/null 2>&1 && { echo "FALHOU: checkpoint --aprovado enviou arquivo de chave"; fails=$((fails + 1)); }
+rm -rf .github id_rsa
 # o que não é protegido segue livre: src, docs, e nomes parecidos fora da raiz protegida
 mkdir -p src/ci docs .claude && printf 'x\n' > src/ci/a.cs && printf 'x\n' > docs/a.md && printf 'x\n' > cix.txt && printf 'x\n' > .claude/project.md
 bash "$ckpt" teste 30 "sem protegido" > /dev/null 2>&1 || { echo "FALHOU: checkpoint recusou mudança só em src, docs e .claude/project.md"; fails=$((fails + 1)); }

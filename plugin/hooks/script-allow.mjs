@@ -57,7 +57,9 @@ function form(cmd) {
   if (typeof cmd !== 'string' || /[\n\r]/.test(cmd)) return false;
   let m = FREE.exec(cmd);
   if (m) {
-    const [, interp = '', root, name] = m;
+    const [, interp = '', root, name, args] = m;
+    // checkpoint.sh --aprovado publica mudança em caminho protegido: a aprovação é do desenvolvedor, no pedido normal
+    if (name === 'checkpoint.sh' && /(^| )--aprovado( |$)/.test(args ?? '')) return false;
     return (SCRIPTS[name] ?? []).includes(interp) && existsSync(`${root}/scripts/${name}`);
   }
   if ((m = TEST.exec(cmd))) return existsSync(`${m[1]}/tests/${m[2]}`);
