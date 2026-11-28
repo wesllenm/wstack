@@ -1214,3 +1214,25 @@ Com ela, um caminho protegido "já publicado" seria forjado sem nunca ter saído
 **Por quê:** a proposta original do projeto sugeria também uma marca de "tarefa em andamento" no `SESSION.md`, que
 o próprio agente escreveria para pular o gate, e foi descartada. A espera por subagente fica para uma mudança
 própria, com um contador mantido por hook, depois de provar os eventos de subagente no Claude Code.
+
+## 2026-11-28: CLI do Aspire no setup, prazo das lentes e clone raso no verifier
+
+**Decisão:** três ajustes vindos de uma tarefa na nuvem de um projeto que usa o wstack:
+- **`setup.sh`:** com um AppHost do Aspire no repositório (SDK `Aspire.AppHost.Sdk` ou pacote `Aspire.Hosting.AppHost`,
+  no `.csproj` ou no `Directory.Packages.props`), instala a CLI do Aspire na mesma versão
+  (`dotnet tool install -g Aspire.Cli`) e a liga em `/usr/local/bin`; o `--check` acusa a falta. Sem a CLI no PATH,
+  o AppHost não compila (ASPIRE009), e toda sessão nova precisava de um passo manual. A versão passa pelo mesmo alfabeto
+  fechado da versão do `global.json`.
+- **`revisao.md` da `lead`:** prazo por lente (10 minutos; 15 para o `review-critical` e o `security-agent` em
+  CRITICA). Antes do prazo, lente lenta não é lacuna, e não se dispara uma segunda chamada. Depois, conta como lacuna e
+  segue a regra de repetir uma vez. Para diff pequeno, o pedido ao `review-critical` e ao `security-agent` diz o
+  escopo. Numa tarefa, uma lente levou 8 minutos e 66 ferramentas, e a segunda chamada disparada por julgamento dobrou
+  a triagem.
+- **`verifier-guard`:** `git clone --depth 1 https://<host>/<caminho> <pasta temporária>` passa, para o verificador ler
+  com Read e Grep a fonte de uma dependência e confirmar um achado. O clone não executa código do repositório clonado;
+  submódulo, `-c`, `..`, `http://`, SSH e destino fora da pasta temporária continuam pedindo aprovação.
+
+**O que ficou de fora:** liberar `cat`, `grep`, `sed` e o `git` de leitura completo no verifier, como a proposta pedia
+para a nuvem. A lista fechada da 0.0.39 existe porque essas ferramentas têm flags que executam programa (`rg --pre`, o
+`e` do `sed`, o textconv do `git`), e um programa chamado assim usa a rede da VM sem passar pelo DENY de rede, que é
+por texto. O verificador lê código com Read, Grep e Glob, que não pedem aprovação.

@@ -4,7 +4,8 @@
 //   DENY  rede (curl, wget, nc, ssh, Invoke-WebRequest...), pipe para interpretador (| sh, | bash, | node...), eval,
 //         base64 -d, bash -c / sh -c, /dev/tcp
 //   livre só três formas: executor de teste (dotnet test, npm test, npx --no-install vitest, cargo test, go test,
-//         pytest...), node/bash de arquivo dentro do repositório e git log/show/blame com as flags da lista GIT
+//         pytest...), node/bash de arquivo dentro do repositório, git log/show/blame com as flags da lista GIT e
+//         git clone --depth 1 de URL https literal para a pasta temporária (CLONE)
 //         cada forma pode terminar num redirecionamento para a pasta temporária da sessão ou para /dev/null
 //   ASK   o resto, inclusive grep, rg, cat, sed, node -e, pipe, substituição de comando e redirecionamento para
 //         qualquer outro lugar (o repositório, caminho com .., symlink na pasta temporária)
@@ -53,6 +54,15 @@ function gitRead(seg) {
   return flags.every((f) => rule.ok.test(f)) && rule.need.every((f) => flags.includes(f));
 }
 
+// git clone raso de uma URL https literal para a pasta temporária (inTempDir), para ler a fonte de uma dependência com
+// Read e Grep: git clone --depth 1 [--single-branch] [--branch <nome>] https://<host>/<caminho> <pasta temporária>.
+// O clone não executa código do repositório clonado (hooks não vêm no clone); a URL é texto fixo, sem expansão.
+const CLONE = /^git +clone +--depth +1(?: +--single-branch)?(?: +(?:--branch|-b) +[A-Za-z0-9._\/-]+)? +(https:\/\/[A-Za-z0-9.-]+(?::443)?\/[A-Za-z0-9._~\/-]+) +(\/[A-Za-z0-9._\/+=:@-]+)$/;
+function shallowClone(seg) {
+  const m = CLONE.exec(seg);
+  return !!m && !m[1].includes('..') && inTempDir(m[2]);
+}
+
 // node/bash de um arquivo do repositório: caminho relativo, sem "..", existente dentro do cwd depois de seguir symlink
 function repoScript(seg, cwd) {
   const m = /^(node|bash)\s+(\S+)(\s|$)/.exec(seg);
@@ -88,7 +98,7 @@ export function verdict(input) {
     const red = /\s+(?:\d?>>?|&>)\s*(\/[A-Za-z0-9._/+=:@-]+)(?:\s+2>&1)?$/.exec(raw);
     const s = red && (red[1] === '/dev/null' || inTempDir(red[1])) ? raw.slice(0, red.index).trim() : raw;
     if (/>/.test(s)) return 'ASK comando de prova com redirecionamento fora da pasta temporária: fora das formas conhecidas';
-    const ok = TEST_RUNNER.some((re) => re.test(s)) || gitRead(s) || repoScript(s, cwd);
+    const ok = TEST_RUNNER.some((re) => re.test(s)) || gitRead(s) || repoScript(s, cwd) || shallowClone(s);
     if (!ok) return `ASK comando de prova fora das formas conhecidas (${s.split(/\s+/).slice(0, 2).join(' ')}): executor de teste, node/bash de arquivo do repositório, git log/show/blame com as flags liberadas; leia código com Read, Grep e Glob`;
   }
   return '';

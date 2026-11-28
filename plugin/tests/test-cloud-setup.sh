@@ -39,6 +39,21 @@ hasnt() { if grep -qF -- "$2" <<< "$1"; then echo "FALHOU [$3]: não podia ter \
 d=$(repo dotnet 'global.json={"sdk":{"version":"10.0.100"}}' 'src/A/A.csproj=<Project />')
 out=$(run "$d" --plan)
 has "$out" "plano: dotnet:" dotnet
+hasnt "$out" "Aspire" dotnet-sem-aspire
+
+# AppHost do Aspire: a CLI na versão do SDK ou do pacote (sem ela o AppHost não compila, ASPIRE009)
+for spec in 'src/H/H.csproj=<Project Sdk="Aspire.AppHost.Sdk/13.1.0"><PropertyGroup /></Project>' \
+  'src/H/H.csproj=<Project Sdk="Microsoft.NET.Sdk"><Sdk Name="Aspire.AppHost.Sdk" Version="13.1.0" /></Project>' \
+  'Directory.Packages.props=<Project><ItemGroup><PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.0" /></ItemGroup></Project>'; do
+  d=$(repo "aspire-$RANDOM" 'global.json={"sdk":{"version":"10.0.100"}}' "$spec")
+  out=$(run "$d" --plan)
+  has "$out" "CLI do Aspire 13.1.0" "aspire-plano: ${spec%%=*}"
+  out=$(PATH="/usr/bin:/bin" run "$d" --check)
+  has "$out" "CLI do Aspire 13.1.0 (o AppHost não compila sem ela)" "aspire-check: ${spec%%=*}"
+done
+d=$(repo aspire-versao-ruim 'global.json={"sdk":{"version":"10.0.100"}}' 'src/H/H.csproj=<Project Sdk="Aspire.AppHost.Sdk/1;id"></Project>')
+out=$(run "$d" --plan)
+hasnt "$out" "1;id" aspire-versao-fora-do-alfabeto
 has "$out" "10.0.100" dotnet-versao
 hasnt "$out" "plano: node" dotnet-sem-node
 
