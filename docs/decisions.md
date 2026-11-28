@@ -1195,3 +1195,22 @@ depois dele não aparece. Na nuvem, o proxy do GitHub recusa apagar branch de qu
 Com ela, um caminho protegido "já publicado" seria forjado sem nunca ter saído da máquina. O teste cobre esse caso.
 
 **Limite:** sem resposta do remoto (rede, timeout), a comparação volta a ser com a branch padrão, e pede como antes.
+
+## 2026-11-28: gate de aprendizado sem laço na tarefa longa e checkpoint com aprovação
+
+**Decisão:** três ajustes vindos de uma tarefa CRITICA na nuvem de um projeto que usa o wstack:
+- **Commit só de documentação** (`*.md`, `docs/`) não conta como commit de código no gate de aprendizado do `Stop`. O
+  primeiro commit da tarefa na nuvem é o plano, como manda o `nuvem.md`, e o gate cobrava o Registro já ali: cada fim de
+  turno bloqueava, inclusive enquanto a sessão esperava uma revisão. O gate de verificação (build e testes) não muda.
+  `*.txt` ficou de fora da exceção: `requirements.txt` é dependência.
+- **O `pedidos:`** é conferido com os pedidos de hook da transcrição até a última edição do arquivo de calibração pela
+  ferramenta Edit ou Write (`permission-asks.mjs --until-edit`). O commit e o push que publicam a linha pediam aprovação,
+  a contagem subia e o gate reabria. O corte vem da transcrição, e não da data do commit, que o agente controla com
+  `GIT_COMMITTER_DATE`. Sem a edição na transcrição, conta tudo, como antes.
+- **`checkpoint.sh --aprovado`** publica a ref `wip/` com mudança em caminho protegido (o segredo continua recusado).
+  Quem aprova é o desenvolvedor, no pedido de permissão do Claude Code, porque o `script-allow` nunca aprova essa forma.
+  Uma flag que o agente passa sozinho não seria aprovação, e a aprovação escrita no chat também não é.
+
+**Por quê:** a proposta original do projeto sugeria também uma marca de "tarefa em andamento" no `SESSION.md`, que
+o próprio agente escreveria para pular o gate, e foi descartada. A espera por subagente fica para uma mudança
+própria, com um contador mantido por hook, depois de provar os eventos de subagente no Claude Code.

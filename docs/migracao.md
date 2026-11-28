@@ -240,6 +240,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.49: o `path-guard` não trata o `.git` do fim de uma URL de repositório como a pasta `.git`; o `push-guard`
   não pede de novo pelo caminho protegido que o remoto já tem na branch, conferido no próprio remoto, e aceita
   `git -c push.negotiate=true push`. Sem ação no projeto.
+- 0.0.50: no gate de aprendizado do `Stop`, commit só de documentação não cobra o Registro, e o `pedidos:` conta até a
+  gravação da linha; o `checkpoint.sh --aprovado` publica caminho protegido com a aprovação do desenvolvedor no pedido de
+  permissão. Projeto cujo CI roda em push de qualquer branch: pôr `branches-ignore: ['wip/**']` no workflow.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

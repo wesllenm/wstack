@@ -298,6 +298,32 @@ for c in 'doc_state = docs/onde-paramos.md' '# sem doc_state'; do
   if [ "$c" = '# sem doc_state' ]; then expect 2 sem-doc-state-conta-como-codigo; else expect 0 doc-state-nao-e-codigo; fi
 done
 
+# gate de aprendizado: commit só de documentação (o plano da tarefa) não cobra o Registro; o primeiro commit de código cobra
+novo '# sem verificação'
+mkdir -p "$proj/docs" && printf '# Calibração\n' > "$proj/docs/review-calibration.md" && gitc add -A && gitc commit -qm calib
+gitc rev-parse HEAD > "$proj/.claude/.session/s1.base"
+mkdir -p "$proj/docs/planos" && printf '# plano\n' > "$proj/docs/planos/ci.md" && printf 'x\n' > "$proj/NOTAS.md" && gitc add -A && gitc commit -qm plano
+expect 0 plano-commitado-nao-cobra
+printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
+expect 2 codigo-cobra 'Aprendizado não registrado'
+
+# pedidos: conta até a gravação da linha de Registro (a última edição do arquivo de calibração na transcrição); o pedido do
+# push que publica a linha, depois dela, não reabre o gate
+cal="$proj/docs/review-calibration.md"
+ask() { jq -cn --arg o "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"$2\"}}" --arg t "$1" --arg id "$3" \
+  '{type:"attachment",uuid:$id,timestamp:$t,attachment:{type:"hook_success",hookName:"PreToolUse:Bash",hookEvent:"PreToolUse",toolUseID:$id,stdout:$o,exitCode:0}}'; }
+use() { jq -cn --arg t "$1" --arg id "$2" --arg n "$3" --arg f "$4" '{type:"assistant",timestamp:$t,message:{role:"assistant",content:[{type:"tool_use",id:$id,name:$n,input:{command:"x",file_path:$f}}]}}'; }
+tr2=$work/sessao-corte.jsonl
+{
+  use 2026-11-28T10:00:00Z b1 Bash ''; ask 2026-11-28T10:00:01Z 'path-guard: trava' b1
+  use 2026-11-28T10:05:00Z e1 Edit "$cal"
+  use 2026-11-28T10:06:00Z b2 Bash ''; ask 2026-11-28T10:06:01Z 'push-guard: caminho protegido' b2
+} > "$tr2"
+printf -- '- t — pedidos: 1 (path-guard 1) — princípios: nenhum (carregadas: 0)\n' >> "$cal"
+TRANSCRIPT=$tr2 expect 0 pedidos-ate-a-linha
+# sem a edição na transcrição (linha gravada por outro caminho), conta tudo
+grep -v '"e1"' "$tr2" > "$tr2.sem" && TRANSCRIPT=$tr2.sem expect 2 pedidos-sem-edicao-conta-tudo 'a transcrição tem 2 pedido'
+
 if [ "$fails" -eq 0 ]; then echo "test-verify-on-stop: todos os casos passaram"; exit 0; fi
 echo "test-verify-on-stop: $fails falha(s)"
 exit 1

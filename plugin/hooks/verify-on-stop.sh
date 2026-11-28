@@ -77,6 +77,9 @@ for p in "${LEARN_PATHS[@]}"; do CODE+=(":(exclude)$p"); done
 # estado dos hooks (HEAD do início da sessão, marcador de verificação pendente, carimbo) nunca é código, mesmo sem o
 # .gitignore: o carimbo não rastreado deixaria a árvore sempre suja e o marcador nunca sairia
 CODE+=(":(exclude).claude/.session" ":(exclude)$STAMP")
+# no gate de aprendizado, commit só de documentação (o plano da tarefa, por exemplo) não é commit de código: o Registro
+# é cobrado depois do primeiro commit que muda outra coisa
+LCODE=("${CODE[@]}" ":(exclude)*.md" ":(exclude)docs")
 
 sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 # o id vira caminho de arquivo (.claude/.session/<id>.base): fora do alfabeto fechado, conta como ausente
@@ -150,12 +153,12 @@ if [ -n "$sid" ] && [ ! -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
 fi
 if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
   base=$(cat "$base_file")
-  if git cat-file -e "$base^{commit}" 2> /dev/null && [ "$(git rev-list --count "$base"..HEAD "${CODE[@]}")" -gt 0 ]; then
+  if git cat-file -e "$base^{commit}" 2> /dev/null && [ "$(git rev-list --count "$base"..HEAD "${LCODE[@]}")" -gt 0 ]; then
     learned=0
     git diff --quiet HEAD -- "$LEARN_FILE" 2> /dev/null || learned=1
     [ -n "$(git ls-files --others --exclude-standard -- "$LEARN_FILE")" ] && learned=1
     last=$(git log -1 --format=%H "$base"..HEAD -- "$LEARN_FILE")
-    if [ -n "$last" ] && [ "$(git rev-list --count "$last"..HEAD "${CODE[@]}")" -eq 0 ]; then
+    if [ -n "$last" ] && [ "$(git rev-list --count "$last"..HEAD "${LCODE[@]}")" -eq 0 ]; then
       learned=1
     fi
     if [ "$learned" -eq 0 ]; then
@@ -232,7 +235,9 @@ if [ -n "$sid" ] && [ -f "$base_file" ] && [ -f "$LEARN_FILE" ]; then
         *) unverified 'princípios:' "principles.mjs saiu com código $rc: $(tail -1 <<< "$out")" ;;
       esac
       registered=$(grep -o 'pedidos:[[:space:]]*[0-9]\+' <<< "$line" | grep -o '[0-9]\+' | tail -1)
-      out=$(node "$scripts/permission-asks.mjs" "$transcript" ${sub[@]+"${sub[@]}"} 2>&1); rc=$?
+      # conta até a última edição do arquivo de calibração (a gravação da linha): o commit e o push que a publicam, e que
+      # podem pedir aprovação, não reabrem o gate
+      out=$(node "$scripts/permission-asks.mjs" "$transcript" ${sub[@]+"${sub[@]}"} --until-edit "$LEARN_FILE" 2>&1); rc=$?
       asks=$(sed -n '1s/^pedidos: \([0-9]\+\).*/\1/p' <<< "$out")
       [ "$rc" -eq 0 ] && [ -n "$asks" ] || unverified 'pedidos:' "permission-asks.mjs saiu com código $rc: $(tail -1 <<< "$out")"
       if [ -z "$registered" ] || [ "$registered" -lt "$asks" ]; then
