@@ -11,7 +11,7 @@ instalação do plugin, as sessões, os subagentes e os testes. Você acompanha 
 que sai de lá são branches e PRs no GitHub. Não é preciso instalar nada na sua máquina, nem para começar um projeto do
 zero. O Claude Code local também funciona ([No Claude Code local](#no-claude-code-local)).
 
-**Estado: versão 0.0.47.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
+**Estado: versão 0.0.48.** A migração do harness para o plugin está concluída (unidades 2.2 a 2.4, ver
 `docs/migracao.md`). Ficaram para depois, de propósito:
 - os workflows do GitHub (gates, merge por risco, revisão de PR) e a configuração de MCP do banco, que ficam para
   depois da 0.1.0 (`docs/decisions.md`);
@@ -302,7 +302,7 @@ veredito), escolhidas depois da classificação de risco: o risco decide os gate
 | Evento | Hook | O que faz |
 |---|---|---|
 | `PreToolUse` Edit/Write | `write-guard` | a ferramenta de escrita não grava em `.git`, na config do git nem na pasta do plugin, e pede a sua aprovação para gravar a exceção do `Stop` (`.claude/verify-blocked.md`); em `.claude/.session/` e no `.claude/.verify-ok`, estado dos hooks, não grava |
-| `PreToolUse` Bash | `push-guard` | push só na forma exata, para branch de atividade, nunca na padrão; pede aprovação se publica caminho protegido; recusa o push enquanto um turno encerrado pela exceção de verificação não for seguido, na mesma sessão, de um encerramento em que o build e os testes rodaram e passaram sobre a árvore limpa (marcador preso, de sessão encerrada ou de commit reescrito, só você apaga, e a recusa mostra o comando) |
+| `PreToolUse` Bash | `push-guard` | push só na forma exata, para branch de atividade, nunca na padrão; pede aprovação se publica caminho protegido; recusa o push enquanto um turno encerrado pela exceção de verificação não for seguido, na mesma sessão, de um encerramento em que o build e os testes rodaram e passaram sobre a árvore limpa (marcador preso, de sessão encerrada ou de commit reescrito, só você apaga, e a recusa mostra o comando); por projeto, `push_force_with_lease` e `push_delete` no `risk.conf` liberam o push com lease e apagar a branch de atividade já incorporada |
 | | `path-guard` | pede aprovação para comando que cita trava (`settings.json`, `risk.conf`, `.git`, workflows, a pasta do plugin) ou segredo; recusa, também na nuvem, comando que mexe no estado dos hooks (`.claude/.session/`, com o marcador de verificação pendente e o `checkpoint-ok`, e o carimbo `.claude/.verify-ok`) e, na nuvem, comando que cita a exceção `.claude/verify-blocked.md` |
 | | `redirect-guard` | pede aprovação para `>` fora das formas fechadas |
 | | `verifier-guard` | nos comandos do `review-verifier`, que roda a prova escrita por uma lente: nega rede, pipe para interpretador, `eval` e `base64 -d`, deixa passar só executor de teste, script do repositório e `git log`/`show`/`blame` com flags listadas, com saída para a pasta temporária, e pede aprovação para o resto (o verifier lê código com Read, Grep e Glob) |

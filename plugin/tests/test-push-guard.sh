@@ -660,6 +660,44 @@ printf '[safe]\n\tbareRepository = explicit\n' > "$work/gitconfig-explicit"
 (cd "$bare" && GIT_CONFIG_GLOBAL=/dev/null git rev-parse --git-dir > /dev/null 2>&1) \
   || { echo "FALHOU: sem a configuração o git deveria usar o repositório bare (o caso acima não provaria nada)"; fails=$((fails + 1)); }
 
+# formas declaradas no risk.conf: push_force_with_lease = activity e push_delete = merged (com validade)
+opt="$work/optin"; git init -q --bare "$opt.git" && git init -q "$opt" && git -C "$opt" remote add origin "$opt.git"
+gco() { git -C "$opt" -c user.name=t -c user.email=t@t "$@"; }
+mkdir -p "$opt/.claude" && printf 'base = HEAD\nactivity_branch = feat/\ndefault_branch = main\n' > "$opt/.claude/risk.conf"
+printf 'a\n' > "$opt/a.txt"; gco add -A; gco commit -qm base; gco branch -M main; gco push -q origin main 2> /dev/null
+# feat/feita: o conteúdo entrou na main por squash (commit diferente, mesmo conteúdo); feat/aberta: tem mudança fora da main
+gco checkout -q -b feat/feita; printf 'b\n' > "$opt/b.txt"; gco add -A; gco commit -qm b; gco push -q origin feat/feita 2> /dev/null
+gco checkout -q main; printf 'b\n' > "$opt/b.txt"; gco add -A; gco commit -qm squash; gco push -q origin main 2> /dev/null
+gco checkout -q -b feat/aberta; printf 'c\n' > "$opt/c.txt"; gco add -A; gco commit -qm c; gco push -q origin feat/aberta 2> /dev/null
+gco fetch -q origin
+export PAYLOAD_CWD="$opt" CLAUDE_PROJECT_DIR="$opt"
+# sem a declaração: lease pede aprovação, apagar é recusado
+expect ask 'git push --force-with-lease origin feat/aberta'
+expect deny 'git push origin --delete feat/feita'
+valid=' | vence: 2099-12-31 | motivo: autonomia na própria branch'
+printf 'push_force_with_lease = activity%s\npush_delete = merged%s\n' "$valid" "$valid" >> "$opt/.claude/risk.conf"
+expect ok 'git push --force-with-lease origin feat/aberta'
+expect ok 'git push -u --force-with-lease=feat/aberta origin feat/aberta'
+expect ok "git push --force-with-lease=feat/aberta:$(gco rev-parse origin/feat/aberta) origin feat/aberta"
+expect ok "git -C $opt push --force-with-lease origin feat/aberta"
+expect deny 'git push --force-with-lease origin main'
+expect ask 'git push --force-with-lease origin outra/x' 'fora dos branches de atividade'
+expect ask 'git push --force-with-lease=feat/outra origin feat/aberta'
+expect deny 'git push --force origin feat/aberta'
+expect ok 'git push origin --delete feat/feita'
+expect ok 'git push origin -d feat/feita'
+expect ask 'git push origin --delete feat/aberta' 'apagar a branch perderia trabalho'
+expect ask 'git push origin --delete feat/nao-existe' 'rode git fetch origin'
+expect deny 'git push origin --delete main'
+expect deny 'git push origin --delete feat/feita feat/aberta'
+# o lease que publica caminho protegido continua pedindo
+gco checkout -q feat/aberta; printf 'x = y\n' >> "$opt/.claude/risk.conf"; gco commit -qam conf
+expect ask 'git push --force-with-lease origin feat/aberta' 'caminho protegido'
+# declaração vencida: volta ao comportamento de antes
+sed -i 's/vence: 2099-12-31/vence: 2020-01-01/' "$opt/.claude/risk.conf"
+expect ask 'git push --force-with-lease origin feat/aberta'
+expect deny 'git push origin --delete feat/feita'
+
 if [ "$fails" -eq 0 ]; then echo "test-push-guard: todos os casos passaram"; exit 0; fi
 echo "test-push-guard: $fails falha(s)"
 exit 1

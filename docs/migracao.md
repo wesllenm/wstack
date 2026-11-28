@@ -234,6 +234,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.47: o `verifier-guard` deixa a prova terminar em redirecionamento para a pasta temporária da sessão ou para
   `/dev/null` (`> <arquivo> 2>&1`, `>>`, `&>`); para o repositório, com `..` ou por symlink, continua pedindo
   aprovação. Sem ação no projeto.
+- 0.0.48: chaves opcionais do `push-guard`, no formato com validade: `push_force_with_lease = activity` libera o push
+  com lease para branch de atividade, e `push_delete = merged` libera apagar a branch de atividade cujo conteúdo já
+  está na branch padrão. Sem a declaração, nada muda.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.

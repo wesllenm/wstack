@@ -1154,3 +1154,25 @@ Read). Gravar ali não toca o projeto nem executa nada, e a regra já valia para
 
 **Fica para a proposta das chaves do push-guard:** `--force-with-lease` sem pedido nas branches de atividade e apagar
 branch de atividade já incorporada à branch padrão, ambos opcionais por projeto, com validade, porque afrouxam a trava.
+
+## 2026-11-28: push com lease e apagar branch incorporada, por projeto
+
+**Decisão:** duas chaves opcionais do `push-guard`, no formato com validade (`| vence: | motivo:`), porque afrouxam
+a trava:
+- `push_force_with_lease = activity`: `git [-C dir] push [-u] --force-with-lease[=<branch>[:<sha>]] origin <branch de
+  atividade>` passa sem pedido. A conferência do que o push publica em caminho protegido continua. O lease de uma
+  branch com destino em outra pede aprovação, e o `--force` puro e o `+` no refspec continuam recusados.
+- `push_delete = merged`: `git [-C dir] push origin --delete <branch de atividade>` passa sem pedido quando cada
+  arquivo que `origin/<branch>` mudou desde a base comum tem o mesmo conteúdo em `origin/<padrão>`. A comparação é por
+  conteúdo, e não por ancestralidade, para valer também com squash merge. Com mudança fora da padrão, ou sem os refs
+  locais para comparar, pede aprovação.
+
+A branch padrão continua recusada nas duas formas. Sem a declaração, vencida ou sem motivo, fica como antes: o lease
+pede aprovação e apagar é recusado.
+
+**Por quê:** proposta de um projeto que quer o máximo de autonomia na VM descartável. Rebase da própria branch e
+limpeza da branch depois do merge eram os pedidos que sobravam no fluxo de PR. Por projeto, e não como padrão, porque
+com mais de uma pessoa na mesma branch o lease sem o SHA confia no ref local, e um ref velho deixa sobrescrever.
+
+**Limite:** o `push_delete` compara com o `origin/<branch>` do último fetch, e um commit empurrado por outra pessoa
+depois dele não aparece. Na nuvem, o proxy do GitHub recusa apagar branch de qualquer jeito.
