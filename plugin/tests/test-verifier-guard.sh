@@ -46,7 +46,10 @@ for c in 'dotnet test --filter "FullyQualifiedName~Total"' 'dotnet test tests/A.
   'git blame --no-textconv src/a.cs' 'git blame --no-textconv -L 10,20 -- src/a.cs' 'git blame -L10,+5 --no-textconv src/a.cs' \
   'dotnet test --filter A && dotnet test --filter B' \
   "dotnet test > $tmpd/saida.txt" "dotnet test --filter A > $tmpd/a.txt 2>&1" "npm test >> $tmpd/log" "pytest -k x &> $tmpd/p" \
-  'dotnet test > /dev/null 2>&1' "dotnet test > $tmpd/a.txt && dotnet test --filter B > $tmpd/b.txt"; do
+  'dotnet test > /dev/null 2>&1' "dotnet test > $tmpd/a.txt && dotnet test --filter B > $tmpd/b.txt" \
+  "git clone --depth 1 https://github.com/actions/setup-dotnet.git $tmpd/setup-dotnet" \
+  "git clone --depth 1 --single-branch --branch v4 https://github.com/actions/runner $tmpd/runner" \
+  "git clone --depth 1 https://github.com/a/b.git $tmpd/b > $tmpd/clone.log 2>&1"; do
   expect livre "$V" "$c"
 done
 # o resto pede aprovação: utilitários de leitura (o verifier lê com Read, Grep e Glob), git fora da lista, node -e,
@@ -57,6 +60,10 @@ for c in "node -e 'console.log(1)'" 'node /tmp/x.mjs' 'node ../fora.mjs' 'bash t
   'rg --pre ./x.sh Total' 'sed -i s/a/b/ src/a.cs' 'find . -name x' 'head -5 a' 'dotnet test --filter Total | tail -20' \
   'grep x & rm -rf dir' 'cat src/a.cs & dotnet ef database drop' 'grep x &> /tmp/saida' "dotnet test > $work/repo/saida.txt" 'dotnet test > saida.txt' \
   "dotnet test > $tmpd/../saida" "dotnet test > $tmpd/link" "dotnet test > $tmpd/a > $tmpd/b" "dotnet test > /etc/x" \
+  'git clone https://github.com/a/b.git /tmp/b' "git clone --depth 1 https://github.com/a/b.git src/b" \
+  "git clone --depth 1 http://github.com/a/b.git $tmpd/c" "git clone --depth 1 git@github.com:a/b.git $tmpd/d" \
+  "git clone --depth 1 https://github.com/a/../b.git $tmpd/e" "git clone --depth 1 https://github.com/a/b.git $tmpd/link" \
+  "git clone --depth 1 --recurse-submodules https://github.com/a/b.git $tmpd/f" "git clone --depth 1 -c core.hooksPath=x https://github.com/a/b $tmpd/g" \
   'npx vitest run' 'git push origin x' 'git diff --no-ext-diff --no-textconv HEAD~1' 'git grep -O Total' 'git status' \
   'git log -p' 'git show --no-textconv HEAD' 'git blame src/a.cs' 'git log --no-ext-diff --no-textconv --output=/tmp/x' \
   'git log --no-ext-diff --no-textconv --ext-diff -p' 'git show --no-ext-diff --no-textconv --textconv HEAD' \

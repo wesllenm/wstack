@@ -122,6 +122,17 @@ dotnet_has() { # SDK exato do global.json, ou qualquer SDK quando não há vers�
   sdks=$(dotnet --list-sdks 2> /dev/null)
   if [ -n "$1" ]; then grep -q "^$1 " <<< "$sdks"; else [ -n "$sdks" ]; fi
 }
+# versão do Aspire do AppHost: o SDK do projeto (Sdk="Aspire.AppHost.Sdk/<v>" ou <Sdk Name="Aspire.AppHost.Sdk"
+# Version="<v>"/>) ou o pacote Aspire.Hosting.AppHost (no .csproj ou no Directory.Packages.props); vazio sem AppHost
+aspire_version() {
+  tracked '*Directory.Packages.props' '*.csproj' | while IFS= read -r f; do
+    regular "$f" || continue
+    grep -o -- 'Aspire\.AppHost\.Sdk/[0-9][^"]*"' "$f" 2> /dev/null | sed 's#.*/##; s/"$//'
+    grep -o -- 'Name="Aspire\.AppHost\.Sdk"[^>]*Version="[^"]*"' "$f" 2> /dev/null | sed -n 's/.*Version="\([^"]*\)".*/\1/p'
+    grep -o -- 'Include="Aspire\.Hosting\.AppHost"[^>]*Version="[^"]*"' "$f" 2> /dev/null | sed -n 's/.*Version="\([^"]*\)".*/\1/p'
+  done | head -1
+}
+aspire_has() { command -v aspire > /dev/null && aspire --version 2> /dev/null | head -1 | grep -q -- "$1"; }
 node_want() { # .nvmrc ou .node-version rastreado (o primeiro); "24", "v24.1.0" ou "lts/*" (lts fica com o Node da VM)
   local f v
   f=$(tracked '.nvmrc' '*/.nvmrc' '.node-version' '*/.node-version' | head -1)
@@ -248,6 +259,22 @@ if dotnet_repo; then
     if [ -n "$sln" ]; then dotnet restore "$sln" || warn "dotnet restore falhou; as sessões restauram sob demanda"; fi
   elif [ "$mode" = plan ]; then
     plan "dotnet: restaurar ferramentas e a solução da raiz"
+  fi
+  # CLI do Aspire na versão do AppHost: sem ela no PATH, o AppHost não compila (ASPIRE009)
+  av=$(aspire_version)
+  if [ -n "$av" ] && ! safe "$av"; then warn "versão do Aspire fora do alfabeto permitido; ignorada"; av=""; fi
+  if [ -n "$av" ]; then
+    if aspire_has "$av"; then
+      [ "$mode" = plan ] && plan "dotnet: CLI do Aspire $av já instalada"
+    elif [ "$mode" = plan ]; then
+      plan "dotnet: instalar a CLI do Aspire $av (dotnet tool install -g Aspire.Cli)"
+    elif [ "$mode" = check ]; then
+      lack "CLI do Aspire $av (o AppHost não compila sem ela)"
+    elif dotnet_has "$want"; then
+      { dotnet tool update -g Aspire.Cli --version "$av" > /dev/null 2>&1 || dotnet tool install -g Aspire.Cli --version "$av"; } \
+        && ln -sf "$HOME/.dotnet/tools/aspire" /usr/local/bin/aspire \
+        || warn "CLI do Aspire $av não instalada (dotnet tool install -g Aspire.Cli)"
+    fi
   fi
 fi
 
