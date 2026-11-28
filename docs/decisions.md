@@ -1140,3 +1140,17 @@ passam a usar nomes neutros (`app`, `servico`, `docs/onde-paramos.md`, `docs/arm
 
 **Por quê:** o plugin precisa servir a qualquer projeto. Um projeto complexo serve para prová-lo, não para moldá-lo, e
 nome de projeto num exemplo induz a ler o recurso como específico dele.
+
+## 2026-11-28: a prova do verifier grava na pasta temporária
+
+**Decisão:** no `review-verifier`, cada forma de prova liberada pode terminar num redirecionamento (`>`, `>>`, `&>`, com
+`2>&1` opcional) para a pasta temporária da sessão ou para `/dev/null`. A pasta temporária é conferida pelo `inTempDir`
+do `closed-forms.mjs`, o mesmo do `redirect-guard` e do `dotnet-allow`: caminho real, fora do projeto, sem `..` e sem
+symlink nem hardlink no alvo. Redirecionamento para qualquer outro lugar continua pedindo aprovação.
+
+**Por quê:** proposta de um projeto que adota o wstack: a sessão parava pedindo aprovação a cada prova com saída longa
+em arquivo, que é a forma que a `lead` e o `CLAUDE.md` modelo recomendam (saída na pasta temporária, lida depois com
+Read). Gravar ali não toca o projeto nem executa nada, e a regra já valia para a sessão principal.
+
+**Fica para a proposta das chaves do push-guard:** `--force-with-lease` sem pedido nas branches de atividade e apagar
+branch de atividade já incorporada à branch padrão, ambos opcionais por projeto, com validade, porque afrouxam a trava.

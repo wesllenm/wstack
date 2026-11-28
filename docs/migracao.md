@@ -231,6 +231,9 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.46: medições `measure-hook-cost.sh`, `measure-permission-asks.sh` e `measure-stop-locked-build.sh`, para rodar
   à mão na máquina do projeto, também no Windows com Git Bash. Os exemplos do plugin passam a usar nomes neutros, e o
   `test-skills-agents.sh` recusa nome de projeto em qualquer arquivo do plugin. Sem ação no projeto.
+- 0.0.47: o `verifier-guard` deixa a prova terminar em redirecionamento para a pasta temporária da sessão ou para
+  `/dev/null` (`> <arquivo> 2>&1`, `>>`, `&>`); para o repositório, com `..` ou por symlink, continua pedindo
+  aprovação. Sem ação no projeto.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
