@@ -306,6 +306,13 @@ mkdir -p "$proj/docs/planos" && printf '# plano\n' > "$proj/docs/planos/ci.md" &
 expect 0 plano-commitado-nao-cobra
 printf 'codigo\n' >> "$proj/a.txt" && gitc commit -qam codigo
 expect 2 codigo-cobra 'Aprendizado não registrado'
+# com subagente em segundo plano rodando (background_tasks da entrada, como o Claude Code manda ao Stop), o fim de turno é
+# espera e não cobra o Registro; subagente que terminou, tarefa de outro tipo e campo ilegível cobram
+bg() { jq -cn --arg t "$1" --arg s "$2" '{session_id:"s1",background_tasks:[{id:"a1",type:$t,status:$s,agent_type:"wstack:review-critical"}]}'; }
+RAW_INPUT=$(bg subagent running) expect 0 subagente-rodando-nao-cobra
+RAW_INPUT=$(bg subagent completed) expect 2 subagente-terminado-cobra 'Aprendizado não registrado'
+RAW_INPUT=$(bg shell running) expect 2 shell-rodando-cobra 'Aprendizado não registrado'
+RAW_INPUT='{"session_id":"s1","background_tasks":"running"}' expect 2 background-ilegivel-cobra 'Aprendizado não registrado'
 
 # pedidos: conta até a gravação da linha de Registro (a última edição do arquivo de calibração na transcrição); o pedido do
 # push que publica a linha, depois dela, não reabre o gate

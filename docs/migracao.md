@@ -246,6 +246,8 @@ modelos e bootstrap determinístico). Diferenças em relação às tabelas abaix
 - 0.0.51: o `setup.sh` instala a CLI do Aspire na versão do AppHost; o `review-verifier` pode clonar raso uma URL
   https para a pasta temporária; o `revisao.md` dá prazo às lentes (10 min, 15 para `review-critical` e
   `security-agent` em CRITICA) e escopo ao diff pequeno. Projeto com Aspire: sai o passo manual da CLI.
+- 0.0.52: o gate de aprendizado do `Stop` não cobra o Registro enquanto um subagente em segundo plano roda
+  (`background_tasks` da entrada); cobra no fim de turno depois que ele termina.
 - Sem origem no harness, e por isso fora das tabelas abaixo (`docs/decisions.md`, entradas de 2026-11-25): o núcleo da
   skill lead com `reference/` e `playbooks/`; as skills `correct`, `how`, `why` e `unslop`; os scripts
   `interrogate.mjs`, `principles.mjs` e `slop-check.mjs`, com os testes deles.
