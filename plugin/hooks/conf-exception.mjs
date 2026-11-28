@@ -1,5 +1,6 @@
 // Exceção do .claude/risk.conf com validade. As chaves que afrouxam um gate (allow_module libera formas de comando no
-// path-guard; review_exclude tira arquivos da revisão; smell_exclude tira arquivos do diff-smells) só valem com motivo
+// path-guard; review_exclude tira arquivos da revisão; smell_exclude tira arquivos do diff-smells; push_force_with_lease
+// e push_delete liberam formas de push no push-guard) só valem com motivo
 // e data de vencimento no futuro (ou hoje):
 //   allow_module = dotnet | vence: 2027-03-31 | motivo: formas fechadas do dotnet, aprovado no bootstrap
 // Sem data, data inválida, data passada ou sem motivo, a exceção é ignorada (o gate volta ao normal) e o session-start
@@ -11,7 +12,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const EXCEPTION_KEYS = ['allow_module', 'review_exclude', 'smell_exclude'];
+export const EXCEPTION_KEYS = ['allow_module', 'review_exclude', 'smell_exclude', 'push_force_with_lease', 'push_delete'];
 
 const today = () => new Date().toISOString().slice(0, 10);
 const realDate = (s) => {

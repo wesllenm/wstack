@@ -16,6 +16,14 @@
 // por git -C: com verificação pendente no projeto, recusa; senão, este mesmo hook julga o push num processo em que o
 // companheiro é o projeto (CLAUDE_PROJECT_DIR), com as branches, os caminhos protegidos, o origin e os marcadores dele,
 // e o comando sem o -C, rodando na raiz do companheiro. Repositório fora da lista segue como repositório estranho (ASK).
+// Duas formas a mais, só no projeto que as declara no risk.conf, no formato com validade (conf-exception.mjs), porque
+// afrouxam a trava; sem a declaração, continuam ASK (lease) e DENY (apagar):
+//   push_force_with_lease = activity   git [-C dir] push [-u] --force-with-lease[=<branch>[:<sha>]] origin <branch de
+//                                      atividade> sai OK, ainda com a conferência do que o push publica
+//   push_delete = merged               git [-C dir] push origin --delete <branch de atividade> sai OK quando o conteúdo
+//                                      da branch (origin/<branch>, do último fetch) já está em origin/<branch padrão>
+//                                      em cada arquivo que ela mudou (vale para squash merge); senão, ASK
+// A branch padrão, main e master continuam recusadas nas duas formas.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
@@ -24,6 +32,7 @@ import { companions } from './companions.mjs';
 import { foreignRepo, git, left, projectRepo } from './git-repo.mjs';
 import { commitOf, defaultBranches, exactRefCommit, list, protectedChanged } from './protected-paths.mjs';
 import { confAbsent, confValues } from './risk-conf.mjs';
+import { validValues } from './conf-exception.mjs';
 
 let d = '';
 process.stdin.on('data', (c) => (d += c)).on('end', () => {
@@ -82,6 +91,8 @@ function verdict(cmd, cwd) {
   if (!/\bpush\b/.test(joined)) return 'OK';
   const comp = companionVerdict(cmd, cwd);
   if (comp) return comp;
+  const ext = optInVerdict(cmd, cwd);
+  if (ext) return ext;
   const v = scan(cmd, cwd);
   if (v.startsWith('DENY')) return v;
   // Turno encerrado pela exceção de verificação (o Stop grava .claude/.session/unverified-<sessão>; só um Stop da mesma
@@ -109,6 +120,58 @@ function verdict(cmd, cwd) {
   const bare = cmd.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, ' ');
   if (/(^|[^A-Za-z0-9_.\/-])git\b[^\n]*\bpush\b/.test(bare)) return v.startsWith('ASK') ? v : 'ASK git push fora do formato liberado (use: git push -u origin <branch de atividade>, sozinho no comando)';
   return 'OK';
+}
+
+// As formas declaradas no risk.conf (push_force_with_lease, push_delete), ou '' quando o comando não é uma delas ou o
+// projeto não as declarou (o resto do hook decide, como antes).
+const optIn = (key, value) => validValues(confValues(key)).includes(value);
+function optInVerdict(cmd, cwd) {
+  if (!/^[ ]*[^\r\n\t\v\f]*[ ]*$/.test(cmd)) return '';
+  const lease = /^git(?: +-C +(DIR))? +push(?: +(?:-u|--set-upstream))? +--force-with-lease(?:=(P)(?::([0-9a-f]{7,40}))?)? +origin +(P)$/
+    .source.replace(/DIR/g, DIR).replace(/P/g, P);
+  const del = /^git(?: +-C +(DIR))? +push +origin +(?:--delete|-d) +(P)$/.source.replace(/DIR/g, DIR).replace(/P/g, P);
+  const t = cmd.trim();
+  const ml = new RegExp(lease).exec(t), md = new RegExp(del).exec(t);
+  if (!ml && !md) return '';
+  if (ml && !optIn('push_force_with_lease', 'activity')) return '';
+  if (md && !optIn('push_delete', 'merged')) return '';
+  if (t.includes('..')) return 'ASK caminho ou destino com .. no comando';
+  const branch = (ml ? ml[4] : md[2]).replace(/^(?:refs\/)?heads\//, '');
+  if (R().NEVER.has(branch)) return `DENY push para ${branch}`;
+  if (!R().ACT.test(branch)) return `ASK destino fora dos branches de atividade: ${branch}`;
+  if (ml && ml[2] && ml[2].replace(/^(?:refs\/)?heads\//, '') !== branch) return `ASK --force-with-lease de ${ml[2]} com destino ${branch}`;
+  const pending = unverified(cwd);
+  if (pending) return `DENY verificação pendente: o push espera um encerramento da mesma sessão com build e testes verdes sobre a árvore limpa (turno encerrado pela exceção de verificação: ${pending}`;
+  const dir = resolve(cwd, (ml ?? md)[1] ?? '.');
+  const c = redirected(dir) || destination(dir);
+  if (c) return `ASK a configuração do git desvia o push: ${c}`;
+  if (ml) return published(dir, [branch]);
+  return mergedContent(dir, branch);
+}
+
+// O conteúdo de origin/<branch> já está na branch padrão: cada arquivo que a branch mudou desde a base comum tem o
+// mesmo conteúdo em origin/<padrão> (um squash merge deixa o conteúdo igual sem deixar o commit como ancestral).
+function mergedContent(dir, branch) {
+  const def = defaultBranches()[0] ?? 'main';
+  const ref = (b) => `refs/remotes/origin/${b}`;
+  let tip, base, mb, files;
+  try {
+    tip = git(dir, 'rev-parse', '--verify', '-q', `${ref(branch)}^{commit}`);
+    base = git(dir, 'rev-parse', '--verify', '-q', `${ref(def)}^{commit}`);
+  } catch { return `ASK sem origin/${branch} ou origin/${def} locais para conferir o que a branch tem (rode git fetch origin)`; }
+  try {
+    mb = git(dir, 'merge-base', base, tip);
+    files = git(dir, 'diff', '--no-renames', '--name-only', '-z', mb, tip).split('\0').filter(Boolean);
+  } catch { return `ASK não deu para comparar origin/${branch} com origin/${def}`; }
+  if (!files.length) return 'OK';
+  try {
+    execFileSync('git', ['-C', dir, 'diff', '--quiet', '--no-renames', base, tip, '--', ...files], { stdio: 'ignore', timeout: left() });
+    return 'OK';
+  } catch (e) {
+    return e?.status === 1
+      ? `ASK origin/${branch} tem mudança que não está em origin/${def}: apagar a branch perderia trabalho`
+      : `ASK não deu para comparar origin/${branch} com origin/${def}`;
+  }
 }
 
 // O veredito do push num companheiro declarado, ou '' quando o comando não é push de um companheiro.
