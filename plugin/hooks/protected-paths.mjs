@@ -61,8 +61,20 @@ export function exactRefCommit(dir, name) {
 
 // { files, failed }: os arquivos protegidos alterados entre o merge-base de origin/<branch padrão> com o commit e o commit,
 // ou o motivo de não ter conseguido conferir (failed não vazio vale como alterado: falha fechada).
-export function protectedChanged(dir, commit) {
+// since (opcional): o commit que o remoto já tem na branch de destino, lido do remoto pelo push-guard. Quando é ancestral
+// de commit, só conta o que muda depois dele: o caminho protegido que já saiu num push anterior não pede de novo.
+export function protectedChanged(dir, commit, since = '') {
   if (confError() && !confAbsent()) return { files: [], failed: `não foi possível ler o .claude/risk.conf do projeto (${confError()}): sem ele faltam os caminhos protegidos do projeto` };
+  if (since && /^[0-9a-f]{40}$/.test(since)) {
+    let ancestor = false;
+    try { git(dir, 'merge-base', '--is-ancestor', since, commit); ancestor = true; } catch { ancestor = false; }
+    if (ancestor) {
+      try {
+        const out = git(dir, 'diff-tree', '-r', '--no-renames', '--name-only', '-z', since, commit);
+        return { files: out.split('\0').filter((f) => f && isProtected(f)), failed: '' };
+      } catch { /* cai na comparação com a branch padrão */ }
+    }
+  }
   const origin = `origin/${baseBranch()}`;
   try {
     git(dir, 'rev-parse', '--verify', '-q', `refs/remotes/${origin}^{commit}`);

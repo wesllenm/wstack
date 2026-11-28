@@ -158,7 +158,10 @@ export function verdict(cmd, cwd) {
   if (READONLY.test(text)) return '';
   const locked = LOCKED.find(([, re, cloudOnly]) => (!cloudOnly || remote) && re.test(text));
   if (locked) return `DENY o comando mexe em ${locked[0]}: só os hooks (ou o desenvolvedor, fora do agente) gravam ali`;
-  const guard = hit(guards, text);
+  // URL de repositório remoto (https://…/x.git, ssh://…, git@host:x.git) não é caminho da máquina: o .git do fim dela
+  // não é a pasta .git do repositório. Só a conferência das travas ignora a URL; segredo e programa já foram vistos acima.
+  const local = text.replace(/(?:https?|ssh|git):\/\/[^\s'"`;&|)]+|(?<![\w/.-])[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^\s'"`;&|)]+/gi, ' <url> ');
+  const guard = hit(guards, local);
   if (guard) return `ASK o comando cita uma trava do harness (${guard}): no modo automático o Claude Code não aplica o ask de Edit a comandos de terminal`;
   return '';
 }

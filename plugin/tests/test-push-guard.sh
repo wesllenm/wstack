@@ -698,6 +698,25 @@ sed -i 's/vence: 2099-12-31/vence: 2020-01-01/' "$opt/.claude/risk.conf"
 expect ask 'git push --force-with-lease origin feat/aberta'
 expect deny 'git push origin --delete feat/feita'
 
+# -c push.negotiate=true é a única opção global aceita antes do push
+expect ok 'git -c push.negotiate=true push -u origin feat/nova'
+expect deny 'git -c push.negotiate=false push -u origin feat/nova'
+expect deny 'git -c push.negotiate=true -c core.sshCommand=x push -u origin feat/nova'
+
+# o caminho protegido que o remoto já tem na branch não pede de novo: compara com o que o próprio remoto informa
+gco checkout -q -f main; gco checkout -q -b feat/wf; mkdir -p "$opt/.github/workflows"; printf 'on: push\n' > "$opt/.github/workflows/ci.yml"
+gco add .github; gco commit -qm wf
+expect ask 'git push -u origin feat/wf' 'caminho protegido'
+gco push -q origin feat/wf 2> /dev/null # o desenvolvedor aprovou o primeiro push
+mkdir -p "$opt/docs" && printf 'nota\n' > "$opt/docs/nota.md"; gco add docs; gco commit -qm docs
+expect ok 'git push -u origin feat/wf'
+printf 'on: [push, pull_request]\n' > "$opt/.github/workflows/ci.yml"; gco commit -qam wf2
+expect ask 'git push -u origin feat/wf' 'caminho protegido'
+# origin/<branch> forjado no repositório local (update-ref) não conta: o remoto não tem a branch
+gco checkout -q -f main; gco checkout -q -b feat/forjada; mkdir -p "$opt/.github/workflows"; printf 'on: x\n' > "$opt/.github/workflows/ci.yml"; gco add .github; gco commit -qm wf
+gco update-ref refs/remotes/origin/feat/forjada HEAD; mkdir -p "$opt/docs"; printf 'y\n' > "$opt/docs/y.md"; gco add docs; gco commit -qm docs
+expect ask 'git push -u origin feat/forjada' 'caminho protegido'
+
 if [ "$fails" -eq 0 ]; then echo "test-push-guard: todos os casos passaram"; exit 0; fi
 echo "test-push-guard: $fails falha(s)"
 exit 1
